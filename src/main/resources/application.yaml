@@ -3,8 +3,12 @@ spring:
   application:
     name: lifelog
 
+  # 로컬에서 프로젝트 루트의 .env를 환경변수처럼 읽음 (없으면 무시)
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5433/lifelog}
+    url: ${DB_URL:jdbc:postgresql://localhost:${DB_PORT:5433}/lifelog}
     username: lifelog
     password: ${DB_PASSWORD}
 

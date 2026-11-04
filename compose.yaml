@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: lifelog
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - lifelog-postgres-data:/var/lib/postgresql/data
     healthcheck:
