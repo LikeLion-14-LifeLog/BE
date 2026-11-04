@@ -26,8 +26,28 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/lifelog
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    # 외부에는 caddy(80/443)만 공개, 8080은 서버 내부 헬스 체크용
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+
+  caddy:
+    image: caddy:2
+    container_name: lifelog-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   lifelog-postgres-data:
+  caddy-data:
+  caddy-config:

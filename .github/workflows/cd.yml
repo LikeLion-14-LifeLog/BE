@@ -41,13 +41,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Copy compose file to EC2
+      - name: Copy deploy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: compose.prod.yaml
+          source: compose.prod.yaml,Caddyfile
           target: ~/lifelog
 
       - name: Deploy on EC2
@@ -68,6 +68,8 @@ jobs:
             export IMAGE_TAG
             docker compose -f compose.prod.yaml pull app
             docker compose -f compose.prod.yaml up -d
+            # Caddyfile 변경 반영 (컨테이너 재시작 없이)
+            docker compose -f compose.prod.yaml exec -T caddy caddy reload --config /etc/caddy/Caddyfile
             docker logout ghcr.io
             docker image prune -f
 

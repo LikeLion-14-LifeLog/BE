@@ -1,0 +1,4 @@
+# DOMAIN은 EC2의 ~/lifelog/.env에서 주입 (HTTPS 인증서 자동 발급/갱신)
+{$DOMAIN} {
+    reverse_proxy app:8080
+}
