@@ -9,6 +9,11 @@ public record ApiResponse<T>(
         T data
 ) {
     private static final String SUCCESS_CODE = "COMMON_200";
+    private static final String SUCCESS_MESSAGE = "요청이 성공했습니다.";
+
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(true, SUCCESS_CODE, SUCCESS_MESSAGE, data);
+    }
 
     public static <T> ApiResponse<T> success(String message, T data) {
         return new ApiResponse<>(true, SUCCESS_CODE, message, data);
