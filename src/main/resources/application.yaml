@@ -4,7 +4,7 @@ spring:
     name: lifelog
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/lifelog
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/lifelog}
     username: lifelog
     password: ${DB_PASSWORD}
 
