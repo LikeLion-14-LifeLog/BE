@@ -19,8 +19,8 @@ public class LanguageExamController {
     private final LanguageExamService languageExamService;
 
     // TODO: 인증 도입 후 ADMIN 권한만 호출 가능하도록 제한
-    @PostMapping("/api/admin/language-exams/import")
-    public ApiResponse<LanguageExamImportResponse> importLanguageExams() {
+    @PostMapping("/api/admin/language-exams/init")
+    public ApiResponse<LanguageExamImportResponse> initLanguageExams() {
         return ApiResponse.success(languageExamService.importFromCsv());
     }
 

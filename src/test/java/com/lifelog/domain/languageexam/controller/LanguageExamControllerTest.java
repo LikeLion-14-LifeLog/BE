@@ -31,8 +31,8 @@ class LanguageExamControllerTest {
     }
 
     @Test
-    void import_응답_형식() throws Exception {
-        mockMvc.perform(post("/api/admin/language-exams/import"))
+    void init_응답_형식() throws Exception {
+        mockMvc.perform(post("/api/admin/language-exams/init"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
@@ -44,7 +44,7 @@ class LanguageExamControllerTest {
 
     @Test
     void 목록_조회_응답_형식() throws Exception {
-        mockMvc.perform(post("/api/admin/language-exams/import"));
+        mockMvc.perform(post("/api/admin/language-exams/init"));
 
         mockMvc.perform(get("/api/language-exams")
                         .param("keyword", "toeic")
