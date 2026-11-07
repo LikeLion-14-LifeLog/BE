@@ -1,6 +1,6 @@
 package com.lifelog.domain.languageexam.controller;
 
-import com.lifelog.domain.languageexam.dto.LanguageExamImportResponse;
+import com.lifelog.domain.languageexam.dto.LanguageExamInitResponse;
 import com.lifelog.domain.languageexam.dto.LanguageExamListResponse;
 import com.lifelog.domain.languageexam.entity.LanguageType;
 import com.lifelog.domain.languageexam.entity.ScoreType;
@@ -20,8 +20,8 @@ public class LanguageExamController {
 
     // TODO: 인증 도입 후 ADMIN 권한만 호출 가능하도록 제한
     @PostMapping("/api/admin/language-exams/init")
-    public ApiResponse<LanguageExamImportResponse> initLanguageExams() {
-        return ApiResponse.success(languageExamService.importFromCsv());
+    public ApiResponse<LanguageExamInitResponse> initLanguageExams() {
+        return ApiResponse.success(languageExamService.initFromCsv());
     }
 
     @GetMapping("/api/language-exams")

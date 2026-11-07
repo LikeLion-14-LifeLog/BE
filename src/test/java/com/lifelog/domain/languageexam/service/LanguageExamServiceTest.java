@@ -1,6 +1,6 @@
 package com.lifelog.domain.languageexam.service;
 
-import com.lifelog.domain.languageexam.dto.LanguageExamImportResponse;
+import com.lifelog.domain.languageexam.dto.LanguageExamInitResponse;
 import com.lifelog.domain.languageexam.dto.LanguageExamListResponse;
 import com.lifelog.domain.languageexam.dto.LanguageExamResponse;
 import com.lifelog.domain.languageexam.entity.LanguageExam;
@@ -36,8 +36,8 @@ class LanguageExamServiceTest {
     }
 
     @Test
-    void 처음_import하면_전부_created() {
-        LanguageExamImportResponse response = languageExamService.importFromCsv();
+    void 처음_init하면_전부_created() {
+        LanguageExamInitResponse response = languageExamService.initFromCsv();
 
         assertThat(response.totalCount()).isEqualTo(CSV_ROW_COUNT);
         assertThat(response.createdCount()).isEqualTo(CSV_ROW_COUNT);
@@ -46,11 +46,11 @@ class LanguageExamServiceTest {
     }
 
     @Test
-    void 두번_import해도_개수와_ID가_같고_전부_unchanged() {
-        languageExamService.importFromCsv();
+    void 두번_init해도_개수와_ID가_같고_전부_unchanged() {
+        languageExamService.initFromCsv();
         List<Long> firstIds = findAllIds();
 
-        LanguageExamImportResponse second = languageExamService.importFromCsv();
+        LanguageExamInitResponse second = languageExamService.initFromCsv();
 
         assertThat(second.createdCount()).isZero();
         assertThat(second.updatedCount()).isZero();
@@ -61,12 +61,12 @@ class LanguageExamServiceTest {
 
     @Test
     void 값이_다르면_updated() {
-        languageExamService.importFromCsv();
+        languageExamService.initFromCsv();
         languageExamRepository.findById(1L).orElseThrow()
                 .update("OLD TOEIC", LanguageType.ENGLISH, ScoreType.GRADE);
         languageExamRepository.flush();
 
-        LanguageExamImportResponse response = languageExamService.importFromCsv();
+        LanguageExamInitResponse response = languageExamService.initFromCsv();
 
         assertThat(response.updatedCount()).isEqualTo(1);
         assertThat(response.unchangedCount()).isEqualTo(CSV_ROW_COUNT - 1);
@@ -77,7 +77,7 @@ class LanguageExamServiceTest {
     void CSV에_없는_기존_데이터는_삭제하지_않음() {
         languageExamRepository.saveAndFlush(new LanguageExam(100L, "CSV 밖 시험", LanguageType.JAPANESE, ScoreType.GRADE));
 
-        languageExamService.importFromCsv();
+        languageExamService.initFromCsv();
 
         assertThat(languageExamRepository.findById(100L)).isPresent();
         assertThat(languageExamRepository.count()).isEqualTo(CSV_ROW_COUNT + 1);
@@ -85,7 +85,7 @@ class LanguageExamServiceTest {
 
     @Test
     void CSV의_ID를_그대로_저장() {
-        languageExamService.importFromCsv();
+        languageExamService.initFromCsv();
 
         assertThat(languageExamRepository.findById(1L).orElseThrow().getName()).isEqualTo("TOEIC");
         assertThat(languageExamRepository.findById(9L).orElseThrow().getScoreType()).isEqualTo(ScoreType.NONE);
@@ -93,7 +93,7 @@ class LanguageExamServiceTest {
 
     @Test
     void keyword_앞뒤공백_제거_대소문자_무시() {
-        languageExamService.importFromCsv();
+        languageExamService.initFromCsv();
 
         LanguageExamListResponse response = languageExamService.search("  toeic ", null, null);
 
@@ -103,7 +103,7 @@ class LanguageExamServiceTest {
 
     @Test
     void keyword와_enum_조건_조합() {
-        languageExamService.importFromCsv();
+        languageExamService.initFromCsv();
 
         LanguageExamListResponse response =
                 languageExamService.search("toeic", LanguageType.ENGLISH, ScoreType.NUMERIC_AND_GRADE);
@@ -113,7 +113,7 @@ class LanguageExamServiceTest {
 
     @Test
     void 조건이_없거나_공백_keyword면_전체를_ID_오름차순으로() {
-        languageExamService.importFromCsv();
+        languageExamService.initFromCsv();
 
         LanguageExamListResponse noCondition = languageExamService.search(null, null, null);
         LanguageExamListResponse blankKeyword = languageExamService.search("   ", null, null);

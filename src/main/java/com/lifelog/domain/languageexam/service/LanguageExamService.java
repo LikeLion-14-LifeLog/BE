@@ -1,7 +1,7 @@
 package com.lifelog.domain.languageexam.service;
 
 import com.lifelog.domain.languageexam.dto.LanguageExamCsvRow;
-import com.lifelog.domain.languageexam.dto.LanguageExamImportResponse;
+import com.lifelog.domain.languageexam.dto.LanguageExamInitResponse;
 import com.lifelog.domain.languageexam.dto.LanguageExamListResponse;
 import com.lifelog.domain.languageexam.dto.LanguageExamResponse;
 import com.lifelog.domain.languageexam.entity.LanguageExam;
@@ -33,7 +33,7 @@ public class LanguageExamService {
 
     // CSV 기준 upsert: 없으면 생성, 값이 다르면 수정, CSV에 없는 기존 데이터는 유지
     @Transactional
-    public LanguageExamImportResponse importFromCsv() {
+    public LanguageExamInitResponse initFromCsv() {
         List<LanguageExamCsvRow> rows = languageExamCsvReader.read();
 
         Map<Long, LanguageExam> existing = languageExamRepository.findAll().stream()
@@ -57,7 +57,7 @@ public class LanguageExamService {
         }
         languageExamRepository.saveAll(created);
 
-        return new LanguageExamImportResponse(rows.size(), created.size(), updatedCount, unchangedCount);
+        return new LanguageExamInitResponse(rows.size(), created.size(), updatedCount, unchangedCount);
     }
 
     // 데이터가 수십 건이라 전체 조회 후 메모리에서 필터링

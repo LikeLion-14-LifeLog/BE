@@ -1,6 +1,6 @@
 package com.lifelog.domain.languageexam.dto;
 
-public record LanguageExamImportResponse(
+public record LanguageExamInitResponse(
         int totalCount,
         int createdCount,
         int updatedCount,
