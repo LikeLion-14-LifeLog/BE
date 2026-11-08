@@ -69,22 +69,36 @@ public class JobCsvReader {
         String subCode = columns.get(4);
         String code = columns.get(6);
 
-        // 분류 코드는 숫자이고, 하위 코드는 상위 코드로 시작해야 함
-        if (!mainCode.matches("\\d")
+        // 미분류처럼 대분류 코드가 없으면 중·소분류도 모두 비어 있어야 함
+        boolean uncategorized = mainCode.isEmpty();
+        if (uncategorized) {
+            if (!middleCode.isEmpty() || !columns.get(3).isEmpty()
+                    || !subCode.isEmpty() || !columns.get(5).isEmpty()
+                    || !code.matches("\\d{4}")) {
+                throw invalidFormat(lineNumber, "대분류 코드가 없으면 중·소분류는 비어 있어야 합니다.");
+            }
+        } else if (!mainCode.matches("\\d")
+                // 분류 코드는 숫자이고, 하위 코드는 상위 코드로 시작해야 함
                 || !middleCode.matches("\\d{2}") || !middleCode.startsWith(mainCode)
                 || !subCode.matches("\\d{3}") || !subCode.startsWith(middleCode)
                 || !code.matches("\\d{4}") || !code.startsWith(subCode)) {
             throw invalidFormat(lineNumber, "분류 코드가 올바르지 않습니다.");
         }
-        for (int nameIndex : new int[]{1, 3, 5, 7}) {
+        for (int nameIndex : uncategorized ? new int[]{1, 7} : new int[]{1, 3, 5, 7}) {
             String name = columns.get(nameIndex);
             if (name.isEmpty() || name.length() > MAX_NAME_LENGTH) {
                 throw invalidFormat(lineNumber, "이름은 1~100자여야 합니다.");
             }
         }
 
-        return new Job(mainCode, columns.get(1), middleCode, columns.get(3),
-                subCode, columns.get(5), code, columns.get(7));
+        return new Job(emptyToNull(mainCode), columns.get(1),
+                emptyToNull(middleCode), emptyToNull(columns.get(3)),
+                emptyToNull(subCode), emptyToNull(columns.get(5)),
+                code, columns.get(7));
+    }
+
+    private String emptyToNull(String value) {
+        return value.isEmpty() ? null : value;
     }
 
     // 큰따옴표로 감싼 값 안의 쉼표 처리 (예: "경찰관, 소방관 및 교도관")

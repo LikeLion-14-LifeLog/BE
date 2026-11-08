@@ -10,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 @Getter
 @Entity
 @Table(name = "job")
@@ -21,22 +23,23 @@ public class Job {
     @Column(name = "job_id")
     private Long id;
 
-    @Column(nullable = false, length = 1)
+    // 미분류(9999)는 대분류 코드와 중·소분류가 null
+    @Column(length = 1)
     private String mainCategoryCode;
 
     @Column(nullable = false, length = 100)
     private String mainCategoryName;
 
-    @Column(nullable = false, length = 2)
+    @Column(length = 2)
     private String middleCategoryCode;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String middleCategoryName;
 
-    @Column(nullable = false, length = 3)
+    @Column(length = 3)
     private String subCategoryCode;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String subCategoryName;
 
     // 8차 고용직업분류 세분류 코드 (앞자리 0 유지)
@@ -61,12 +64,12 @@ public class Job {
     }
 
     public boolean hasSameValues(Job other) {
-        return mainCategoryCode.equals(other.mainCategoryCode)
+        return Objects.equals(mainCategoryCode, other.mainCategoryCode)
                 && mainCategoryName.equals(other.mainCategoryName)
-                && middleCategoryCode.equals(other.middleCategoryCode)
-                && middleCategoryName.equals(other.middleCategoryName)
-                && subCategoryCode.equals(other.subCategoryCode)
-                && subCategoryName.equals(other.subCategoryName)
+                && Objects.equals(middleCategoryCode, other.middleCategoryCode)
+                && Objects.equals(middleCategoryName, other.middleCategoryName)
+                && Objects.equals(subCategoryCode, other.subCategoryCode)
+                && Objects.equals(subCategoryName, other.subCategoryName)
                 && name.equals(other.name);
     }
 

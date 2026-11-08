@@ -7,11 +7,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record JobResponse(
         @Schema(description = "직무 ID", example = "1")
         Long jobId,
-        @Schema(description = "대분류")
+        @Schema(description = "대분류 (미분류 직무는 code가 null)")
         JobCategoryResponse mainCategory,
-        @Schema(description = "중분류")
+        @Schema(description = "중분류 (미분류 직무는 null)", nullable = true)
         JobCategoryResponse middleCategory,
-        @Schema(description = "소분류")
+        @Schema(description = "소분류 (미분류 직무는 null)", nullable = true)
         JobCategoryResponse subCategory,
         @Schema(description = "세분류 코드 (4자리, 앞자리 0 유지)", example = "0111")
         String code,
@@ -22,10 +22,14 @@ public record JobResponse(
         return new JobResponse(
                 job.getId(),
                 new JobCategoryResponse(job.getMainCategoryCode(), job.getMainCategoryName()),
-                new JobCategoryResponse(job.getMiddleCategoryCode(), job.getMiddleCategoryName()),
-                new JobCategoryResponse(job.getSubCategoryCode(), job.getSubCategoryName()),
+                categoryOrNull(job.getMiddleCategoryCode(), job.getMiddleCategoryName()),
+                categoryOrNull(job.getSubCategoryCode(), job.getSubCategoryName()),
                 job.getCode(),
                 job.getName()
         );
+    }
+
+    private static JobCategoryResponse categoryOrNull(String code, String name) {
+        return code == null ? null : new JobCategoryResponse(code, name);
     }
 }

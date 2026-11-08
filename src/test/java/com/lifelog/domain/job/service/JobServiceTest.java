@@ -153,6 +153,46 @@ class JobServiceTest {
         assertThat(response.hasNext()).isFalse();
     }
 
+    @Test
+    void 미분류_9999는_대분류코드와_중소분류가_null로_저장() {
+        jobService.initFromCsv();
+
+        Job job = findByCode("9999");
+
+        assertThat(job.getMainCategoryCode()).isNull();
+        assertThat(job.getMainCategoryName()).isEqualTo("미분류");
+        assertThat(job.getMiddleCategoryCode()).isNull();
+        assertThat(job.getMiddleCategoryName()).isNull();
+        assertThat(job.getSubCategoryCode()).isNull();
+        assertThat(job.getSubCategoryName()).isNull();
+        assertThat(job.getName()).isEqualTo("미분류");
+    }
+
+    @Test
+    void 대분류_9_필터에_미분류_9999는_나오지_않음() {
+        jobService.initFromCsv();
+
+        JobListResponse response = jobService.search(null, null, "9", null, null, 1, 100);
+
+        assertThat(response.jobs()).isNotEmpty()
+                .extracting(JobResponse::code)
+                .contains("9050")
+                .doesNotContain("9999");
+    }
+
+    @Test
+    void 기존_9_99_999로_저장된_미분류는_init하면_null로_갱신() {
+        jobRepository.saveAndFlush(new Job("9", "미분류", "99", "미분류", "999", "미분류", "9999", "미분류"));
+
+        JobInitResponse response = jobService.initFromCsv();
+        jobRepository.flush();
+
+        assertThat(response.updatedCount()).isEqualTo(1);
+        assertThat(response.createdCount()).isEqualTo(CSV_ROW_COUNT - 1);
+        assertThat(findByCode("9999").getMainCategoryCode()).isNull();
+        assertThat(findByCode("9999").getSubCategoryCode()).isNull();
+    }
+
     private Map<String, Long> findIdsByCode() {
         return jobRepository.findAll().stream()
                 .collect(Collectors.toMap(Job::getCode, Job::getId));
