@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -49,7 +50,8 @@ public class Job {
     @Column(nullable = false, length = 100)
     private String name;
 
-    public Job(String mainCategoryCode, String mainCategoryName,
+    @Builder
+    private Job(String mainCategoryCode, String mainCategoryName,
                String middleCategoryCode, String middleCategoryName,
                String subCategoryCode, String subCategoryName,
                String code, String name) {

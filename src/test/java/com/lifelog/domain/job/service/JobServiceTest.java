@@ -5,6 +5,7 @@ import com.lifelog.domain.job.dto.JobListResponse;
 import com.lifelog.domain.job.dto.JobResponse;
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.JobRepository;
+import com.lifelog.global.response.SliceResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,7 +65,12 @@ class JobServiceTest {
         jobService.initFromCsv();
         Job job = findByCode("0111");
         Long jobId = job.getId();
-        job.update(new Job("0", "변경", "01", "변경", "011", "변경", "0111", "변경된 이름"));
+        job.update(Job.builder()
+                .mainCategoryCode("0").mainCategoryName("변경")
+                .middleCategoryCode("01").middleCategoryName("변경")
+                .subCategoryCode("011").subCategoryName("변경")
+                .code("0111").name("변경된 이름")
+                .build());
         jobRepository.flush();
 
         JobInitResponse response = jobService.initFromCsv();
@@ -78,7 +84,12 @@ class JobServiceTest {
 
     @Test
     void CSV에_없는_기존_직무는_삭제하지_않음() {
-        jobRepository.saveAndFlush(new Job("9", "기타", "99", "기타", "999", "기타", "9998", "CSV 밖 직무"));
+        jobRepository.saveAndFlush(Job.builder()
+                .mainCategoryCode("9").mainCategoryName("기타")
+                .middleCategoryCode("99").middleCategoryName("기타")
+                .subCategoryCode("999").subCategoryName("기타")
+                .code("9998").name("CSV 밖 직무")
+                .build());
 
         jobService.initFromCsv();
 
@@ -89,17 +100,17 @@ class JobServiceTest {
     void keyword_임원_검색() {
         jobService.initFromCsv();
 
-        JobListResponse response = jobService.search("임원", null, null, null, null, 1, 20);
+        SliceResponse<JobListResponse> response = jobService.search("임원", null, null, null, null, 1, 20);
 
-        assertThat(response.jobs()).extracting(JobResponse::code).contains("0111", "0112");
+        assertThat(response.content().jobs()).extracting(JobResponse::code).contains("0111", "0112");
     }
 
     @Test
     void keyword_앞뒤공백_제거() {
         jobService.initFromCsv();
 
-        JobListResponse trimmed = jobService.search("  임원 ", null, null, null, null, 1, 20);
-        JobListResponse plain = jobService.search("임원", null, null, null, null, 1, 20);
+        SliceResponse<JobListResponse> trimmed =jobService.search("  임원 ", null, null, null, null, 1, 20);
+        SliceResponse<JobListResponse> plain =jobService.search("임원", null, null, null, null, 1, 20);
 
         assertThat(trimmed.totalElements()).isEqualTo(plain.totalElements());
     }
@@ -108,21 +119,21 @@ class JobServiceTest {
     void code로_정확히_1건() {
         jobService.initFromCsv();
 
-        JobListResponse response = jobService.search(null, "0111", null, null, null, 1, 20);
+        SliceResponse<JobListResponse> response = jobService.search(null, "0111", null, null, null, 1, 20);
 
         assertThat(response.totalElements()).isEqualTo(1);
-        assertThat(response.jobs().get(0).code()).isEqualTo("0111");
-        assertThat(response.jobs().get(0).mainCategory().code()).isEqualTo("0");
-        assertThat(response.jobs().get(0).subCategory().code()).isEqualTo("011");
+        assertThat(response.content().jobs().get(0).code()).isEqualTo("0111");
+        assertThat(response.content().jobs().get(0).mainCategory().code()).isEqualTo("0");
+        assertThat(response.content().jobs().get(0).subCategory().code()).isEqualTo("011");
     }
 
     @Test
     void 분류_조건은_AND로_적용() {
         jobService.initFromCsv();
 
-        JobListResponse response = jobService.search("관리자", null, "0", "01", "013", 1, 100);
+        SliceResponse<JobListResponse> response = jobService.search("관리자", null, "0", "01", "013", 1, 100);
 
-        assertThat(response.jobs()).isNotEmpty()
+        assertThat(response.content().jobs()).isNotEmpty()
                 .allSatisfy(job -> assertThat(job.subCategory().code()).isEqualTo("013"));
     }
 
@@ -130,15 +141,15 @@ class JobServiceTest {
     void 조건_없으면_code_오름차순_페이지네이션() {
         jobService.initFromCsv();
 
-        JobListResponse first = jobService.search(null, null, null, null, null, 1, 20);
-        JobListResponse last = jobService.search(null, null, null, null, null, 23, 20);
+        SliceResponse<JobListResponse> first =jobService.search(null, null, null, null, null, 1, 20);
+        SliceResponse<JobListResponse> last =jobService.search(null, null, null, null, null, 23, 20);
 
         assertThat(first.totalElements()).isEqualTo(CSV_ROW_COUNT);
         assertThat(first.totalPages()).isEqualTo(23);
         assertThat(first.hasNext()).isTrue();
-        assertThat(first.jobs()).hasSize(20);
-        assertThat(first.jobs()).extracting(JobResponse::code).isSorted();
-        assertThat(last.jobs()).hasSize(11);
+        assertThat(first.content().jobs()).hasSize(20);
+        assertThat(first.content().jobs()).extracting(JobResponse::code).isSorted();
+        assertThat(last.content().jobs()).hasSize(11);
         assertThat(last.hasNext()).isFalse();
     }
 
@@ -146,7 +157,7 @@ class JobServiceTest {
     void 결과가_없으면_totalPages_0() {
         jobService.initFromCsv();
 
-        JobListResponse response = jobService.search("존재하지않는직무", null, null, null, null, 1, 20);
+        SliceResponse<JobListResponse> response = jobService.search("존재하지않는직무", null, null, null, null, 1, 20);
 
         assertThat(response.totalElements()).isZero();
         assertThat(response.totalPages()).isZero();
@@ -172,9 +183,9 @@ class JobServiceTest {
     void 대분류_9_필터에_미분류_9999는_나오지_않음() {
         jobService.initFromCsv();
 
-        JobListResponse response = jobService.search(null, null, "9", null, null, 1, 100);
+        SliceResponse<JobListResponse> response = jobService.search(null, null, "9", null, null, 1, 100);
 
-        assertThat(response.jobs()).isNotEmpty()
+        assertThat(response.content().jobs()).isNotEmpty()
                 .extracting(JobResponse::code)
                 .contains("9050")
                 .doesNotContain("9999");
@@ -182,7 +193,12 @@ class JobServiceTest {
 
     @Test
     void 기존_9_99_999로_저장된_미분류는_init하면_null로_갱신() {
-        jobRepository.saveAndFlush(new Job("9", "미분류", "99", "미분류", "999", "미분류", "9999", "미분류"));
+        jobRepository.saveAndFlush(Job.builder()
+                .mainCategoryCode("9").mainCategoryName("미분류")
+                .middleCategoryCode("99").middleCategoryName("미분류")
+                .subCategoryCode("999").subCategoryName("미분류")
+                .code("9999").name("미분류")
+                .build());
 
         JobInitResponse response = jobService.initFromCsv();
         jobRepository.flush();

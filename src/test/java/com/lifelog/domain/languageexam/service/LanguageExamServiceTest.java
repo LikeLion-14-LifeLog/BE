@@ -75,7 +75,12 @@ class LanguageExamServiceTest {
 
     @Test
     void CSV에_없는_기존_데이터는_삭제하지_않음() {
-        languageExamRepository.saveAndFlush(new LanguageExam(100L, "CSV 밖 시험", LanguageType.JAPANESE, ScoreType.GRADE));
+        languageExamRepository.saveAndFlush(LanguageExam.builder()
+                .id(100L)
+                .name("CSV 밖 시험")
+                .languageType(LanguageType.JAPANESE)
+                .scoreType(ScoreType.GRADE)
+                .build());
 
         languageExamService.initFromCsv();
 

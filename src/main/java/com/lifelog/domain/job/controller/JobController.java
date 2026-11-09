@@ -4,6 +4,7 @@ import com.lifelog.domain.job.dto.JobInitResponse;
 import com.lifelog.domain.job.dto.JobListResponse;
 import com.lifelog.domain.job.service.JobService;
 import com.lifelog.global.response.ApiResponse;
+import com.lifelog.global.response.SliceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +38,7 @@ public class JobController {
             description = "8차 고용직업분류 기준 직무 목록을 검색합니다. 모든 조건은 AND로 적용되며 code 오름차순으로 정렬됩니다."
     )
     @GetMapping("/jobs")
-    public ApiResponse<JobListResponse> getJobs(
+    public ApiResponse<SliceResponse<JobListResponse>> getJobs(
             @Parameter(description = "직무명 검색어 (부분 일치, 대소문자 무시, 앞뒤 공백 제거 후 최대 50자)", example = "임원")
             @RequestParam(required = false) String keyword,
             @Parameter(description = "세분류 코드 (정확히 일치)", example = "0111")
