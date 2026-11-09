@@ -1,6 +1,7 @@
 package com.lifelog.global.exception;
 
 import com.lifelog.global.response.ApiResponse;
+import com.lifelog.domain.auth.exception.InvalidCredentialsException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -25,6 +26,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.failure(errorCode, e.getData()));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(
+            InvalidCredentialsException e
+    ) {
+        return toResponse(CommonErrorCode.UNAUTHORIZED, null);
     }
 
     // @Valid 검증 실패 시 필드별 에러 메시지를 data로 반환
