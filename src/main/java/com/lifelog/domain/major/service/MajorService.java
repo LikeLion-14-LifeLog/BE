@@ -9,6 +9,7 @@ import com.lifelog.domain.major.exception.MajorErrorCode;
 import com.lifelog.domain.major.mapper.MajorMapper;
 import com.lifelog.domain.major.repository.MajorRepository;
 import com.lifelog.global.exception.CustomException;
+import com.lifelog.global.exception.CommonErrorCode;
 import com.lifelog.global.response.SliceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,10 +46,10 @@ public class MajorService {
                 mainField, page, size);
         /* (1) 요청 검증: 페이지 범위와 정규화된 검색어 길이를 검사한다. */
         if (page < 1) {
-            throw new CustomException(MajorErrorCode.INVALID_PAGE);
+            throw new CustomException(CommonErrorCode.INVALID_PAGE);
         }
         if (size < 1 || size > MAX_SIZE) {
-            throw new CustomException(MajorErrorCode.INVALID_SIZE);
+            throw new CustomException(CommonErrorCode.INVALID_SIZE);
         }
         String normalizedKeyword = normalizeKeyword(keyword);
         /* (2) 페이지 조회: 고유 학과코드 순으로 조회하고 같은 조건의 전체 건수를 구한다. */

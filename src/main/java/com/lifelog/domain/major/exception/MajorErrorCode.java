@@ -9,8 +9,6 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum MajorErrorCode implements ErrorCode {
     INVALID_KEYWORD("MAJOR_400_1", "검색어는 앞뒤 공백 제거 후 100자 이하여야 합니다.", HttpStatus.BAD_REQUEST),
-    INVALID_PAGE("MAJOR_400_2", "페이지 번호는 1 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
-    INVALID_SIZE("MAJOR_400_3", "페이지 크기는 1 이상 100 이하여야 합니다.", HttpStatus.BAD_REQUEST),
     CSV_READ_FAILED("MAJOR_500_1", "전공 데이터 파일을 읽을 수 없습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_CSV_FORMAT("MAJOR_500_2", "전공 데이터 파일 형식이 올바르지 않습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     CONFLICTING_CSV_CODE("MAJOR_500_3", "같은 학과코드에 서로 다른 전공 데이터가 있습니다.", HttpStatus.INTERNAL_SERVER_ERROR),

@@ -8,6 +8,7 @@ import com.lifelog.domain.major.enums.MajorSubField;
 import com.lifelog.domain.major.exception.MajorErrorCode;
 import com.lifelog.domain.major.repository.MajorRepository;
 import com.lifelog.global.exception.CustomException;
+import com.lifelog.global.exception.CommonErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -84,16 +85,16 @@ class MajorSearchServiceTest {
     }
 
     @Test
-    @DisplayName("페이지 번호와 크기가 허용 범위를 벗어나면 도메인 오류를 반환한다")
+    @DisplayName("페이지 번호와 크기가 허용 범위를 벗어나면 공통 오류를 반환한다")
     void 페이지_검증_실패_범위초과() {
         // given / when / then
         assertThatThrownBy(() -> service.searchMajors(null, null, 0, 20))
                 .isInstanceOfSatisfying(CustomException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(MajorErrorCode.INVALID_PAGE));
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_PAGE));
         for (int size : new int[]{0, 101}) {
             assertThatThrownBy(() -> service.searchMajors(null, null, 1, size))
                     .isInstanceOfSatisfying(CustomException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(MajorErrorCode.INVALID_SIZE));
+                            e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_SIZE));
         }
     }
 

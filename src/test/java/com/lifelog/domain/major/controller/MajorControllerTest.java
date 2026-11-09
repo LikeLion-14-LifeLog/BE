@@ -9,7 +9,7 @@ import com.lifelog.domain.major.service.MajorService;
 import com.lifelog.global.config.SecurityConfig;
 import com.lifelog.global.exception.CustomException;
 import com.lifelog.global.exception.GlobalExceptionHandler;
-import com.lifelog.domain.major.exception.MajorErrorCode;
+import com.lifelog.global.exception.CommonErrorCode;
 import com.lifelog.global.response.SliceResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -96,16 +96,24 @@ class MajorControllerTest {
     }
 
     @Test
-    @DisplayName("검색 조건 검증 실패는 도메인 400 응답을 반환한다")
+    @DisplayName("페이지 번호와 크기 검증 실패는 공통 400 응답을 반환한다")
     void 검색조건_실패_검증오류() throws Exception {
         // given
         given(service.searchMajors(null, null, 0, 20))
-                .willThrow(new CustomException(MajorErrorCode.INVALID_PAGE));
+                .willThrow(new CustomException(CommonErrorCode.INVALID_PAGE));
+        given(service.searchMajors(null, null, 1, 101))
+                .willThrow(new CustomException(CommonErrorCode.INVALID_SIZE));
         // when / then
         mvc.perform(get("/api/majors").param("page", "0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("MAJOR_400_2"));
+                .andExpect(jsonPath("$.code").value("COMMON_400_1"))
+                .andExpect(jsonPath("$.message").value("페이지 번호는 1 이상이어야 합니다."));
+        mvc.perform(get("/api/majors").param("size", "101"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400_2"))
+                .andExpect(jsonPath("$.message").value("페이지 크기는 1 이상 100 이하여야 합니다."));
     }
 
     @Test
