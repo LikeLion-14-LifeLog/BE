@@ -91,10 +91,16 @@ public class JobCsvReader {
             }
         }
 
-        return new Job(emptyToNull(mainCode), columns.get(1),
-                emptyToNull(middleCode), emptyToNull(columns.get(3)),
-                emptyToNull(subCode), emptyToNull(columns.get(5)),
-                code, columns.get(7));
+        return Job.builder()
+                .mainCategoryCode(emptyToNull(mainCode))
+                .mainCategoryName(columns.get(1))
+                .middleCategoryCode(emptyToNull(middleCode))
+                .middleCategoryName(emptyToNull(columns.get(3)))
+                .subCategoryCode(emptyToNull(subCode))
+                .subCategoryName(emptyToNull(columns.get(5)))
+                .code(code)
+                .name(columns.get(7))
+                .build();
     }
 
     private String emptyToNull(String value) {

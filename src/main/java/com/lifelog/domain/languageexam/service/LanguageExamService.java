@@ -47,7 +47,12 @@ public class LanguageExamService {
             LanguageExam languageExam = existing.get(row.languageExamId());
 
             if (languageExam == null) {
-                created.add(new LanguageExam(row.languageExamId(), row.name(), row.languageType(), row.scoreType()));
+                created.add(LanguageExam.builder()
+                        .id(row.languageExamId())
+                        .name(row.name())
+                        .languageType(row.languageType())
+                        .scoreType(row.scoreType())
+                        .build());
             } else if (languageExam.hasSameValues(row.name(), row.languageType(), row.scoreType())) {
                 unchangedCount++;
             } else {

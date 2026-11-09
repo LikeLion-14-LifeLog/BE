@@ -57,6 +57,7 @@ class JobControllerTest {
                 .andExpect(jsonPath("$.data.jobs[0].middleCategory.code").value("01"))
                 .andExpect(jsonPath("$.data.jobs[0].subCategory.code").value("011"))
                 .andExpect(jsonPath("$.data.jobs[0].code").value("0111"))
+                .andExpect(jsonPath("$.data.content").doesNotExist())
                 .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.size").value(20))
                 .andExpect(jsonPath("$.data.totalElements").value(1))
@@ -95,21 +96,22 @@ class JobControllerTest {
         mockMvc.perform(get("/api/jobs")
                         .param("page", "0")
                         .param("size", "101"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400_1"));
     }
 
     @Test
     void page_0이면_400() throws Exception {
         mockMvc.perform(get("/api/jobs").param("page", "0"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("JOB_400_2"));
+                .andExpect(jsonPath("$.code").value("COMMON_400_1"));
     }
 
     @Test
     void size_101이면_400() throws Exception {
         mockMvc.perform(get("/api/jobs").param("size", "101"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("JOB_400_3"));
+                .andExpect(jsonPath("$.code").value("COMMON_400_2"));
     }
 
     @Test
