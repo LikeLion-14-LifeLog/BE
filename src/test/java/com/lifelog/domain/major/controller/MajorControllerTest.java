@@ -18,6 +18,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -32,10 +33,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MajorController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @ContextConfiguration(classes = MajorControllerTest.TestConfiguration.class)
 class MajorControllerTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private MajorService service;
+    @MockitoBean
+    private com.lifelog.global.security.JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockitoBean
+    private com.lifelog.global.security.JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Test
     @DisplayName("기본 조회는 ApiResponse 내부에 majors와 페이징 정보를 펼쳐서 반환한다")

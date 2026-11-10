@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -39,3 +40,4 @@ jobs:
           ./gradlew build
         env:
           DB_PASSWORD: test
+          JWT_SECRET: "VGhpcy1pcy1hLXRlc3Qtb25seS1qd3Qtc2VjcmV0LWZvci1jaS0yMDI2IQ=="
