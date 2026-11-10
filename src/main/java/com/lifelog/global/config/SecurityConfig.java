@@ -66,7 +66,9 @@ public class SecurityConfig {
                         // 관리자만 허용되는 엔드포인트들
                         .requestMatchers(
                                 "/api/admin/certifications/init",
-                                "/api/admin/majors/init"
+                                "/api/admin/majors/init",
+                                "/api/admin/jobs/init",
+                                "/api/admin/language-exams/init"
                         ).hasRole("ADMIN")
 
                         // 나머지 API는 인증 필요

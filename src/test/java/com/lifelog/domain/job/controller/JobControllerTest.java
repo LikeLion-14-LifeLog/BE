@@ -9,11 +9,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -38,7 +42,7 @@ class JobControllerTest {
 
     @Test
     void init_응답_형식() throws Exception {
-        mockMvc.perform(post("/api/admin/jobs/init"))
+        mockMvc.perform(post("/api/admin/jobs/init").with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
                 .andExpect(jsonPath("$.data.totalCount").value(451))
@@ -46,8 +50,24 @@ class JobControllerTest {
     }
 
     @Test
+    void init_비로그인이면_401() throws Exception {
+        mockMvc.perform(post("/api/admin/jobs/init").with(anonymous()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void init_일반회원이면_403이고_저장하지_않음() throws Exception {
+        mockMvc.perform(post("/api/admin/jobs/init"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_403"));
+
+        assertThat(jobRepository.count()).isZero();
+    }
+
+    @Test
     void 목록_조회_응답_형식() throws Exception {
-        mockMvc.perform(post("/api/admin/jobs/init"));
+        mockMvc.perform(post("/api/admin/jobs/init").with(admin()));
 
         mockMvc.perform(get("/api/jobs").param("code", "0111"))
                 .andExpect(status().isOk())
@@ -67,7 +87,7 @@ class JobControllerTest {
 
     @Test
     void 미분류_9999_응답은_대분류코드와_중소분류가_null() throws Exception {
-        mockMvc.perform(post("/api/admin/jobs/init"));
+        mockMvc.perform(post("/api/admin/jobs/init").with(admin()));
 
         mockMvc.perform(get("/api/jobs").param("code", "9999"))
                 .andExpect(status().isOk())
@@ -81,7 +101,7 @@ class JobControllerTest {
 
     @Test
     void 대분류_9_필터에_미분류_9999는_나오지_않음() throws Exception {
-        mockMvc.perform(post("/api/admin/jobs/init"));
+        mockMvc.perform(post("/api/admin/jobs/init").with(admin()));
 
         mockMvc.perform(get("/api/jobs")
                         .param("mainCategoryCode", "9")
@@ -120,5 +140,9 @@ class JobControllerTest {
                         .param("keyword", "가".repeat(51)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("JOB_400_1"));
+    }
+
+    private static RequestPostProcessor admin() {
+        return user("admin").roles("ADMIN");
     }
 }
