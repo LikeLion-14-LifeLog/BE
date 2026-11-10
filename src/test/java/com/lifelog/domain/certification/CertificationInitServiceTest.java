@@ -19,8 +19,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
-@SpringBootTest(classes = CertificationInitServiceTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = "spring.datasource.url=jdbc:h2:mem:certification;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000")
+@SpringBootTest(classes = CertificationInitServiceTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class CertificationInitServiceTest {
     @Autowired CertificationService service;

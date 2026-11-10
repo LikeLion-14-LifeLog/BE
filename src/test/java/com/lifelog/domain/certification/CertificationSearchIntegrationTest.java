@@ -4,10 +4,16 @@ import com.lifelog.domain.certification.entity.Certification;
 import com.lifelog.domain.certification.enums.CertificationMainCategory;
 import com.lifelog.domain.certification.enums.CertificationType;
 import com.lifelog.domain.certification.repository.CertificationRepository;
+import com.lifelog.domain.member.entity.Member;
+import com.lifelog.domain.member.repository.MemberRepository;
+import com.lifelog.global.security.JwtProvider;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,19 +39,33 @@ import static com.lifelog.domain.certification.enums.CertificationType.NATIONAL_
 import static com.lifelog.domain.certification.enums.CertificationType.PRIVATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "spring.datasource.url=jdbc:h2:mem:certification-search-api;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.flyway.enabled=false"
-})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Execution(ExecutionMode.SAME_THREAD)
 class CertificationSearchIntegrationTest {
     @LocalServerPort private int port;
     @Autowired private CertificationRepository repository;
+    @Autowired private MemberRepository memberRepository;
+    @Autowired private JwtProvider jwtProvider;
     @Autowired private JsonMapper mapper;
 
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    private Member authenticatedMember;
+    private String accessToken;
+
+    @BeforeAll
+    void prepareAuthentication() {
+        authenticatedMember = memberRepository.saveAndFlush(new Member("certification-search@example.com"));
+        accessToken = jwtProvider.createAccessToken(authenticatedMember.getId());
+    }
+
+    @AfterAll
+    void cleanAuthentication() {
+        if (authenticatedMember != null) {
+            memberRepository.deleteById(authenticatedMember.getId());
+        }
+    }
 
     @BeforeEach
     void prepareDatabase() {
@@ -295,7 +315,11 @@ class CertificationSearchIntegrationTest {
 
     private ApiResult get(String query) throws Exception {
         URI uri = URI.create("http://localhost:" + port + "/api/certifications" + (query.isEmpty() ? "" : "?" + query));
-        HttpRequest request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(10)).GET().build();
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(10))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         assertThat(response.headers().firstValue("content-type").orElse("")).startsWith("application/json");
         return new ApiResult(response.statusCode(), mapper.readTree(response.body()));
