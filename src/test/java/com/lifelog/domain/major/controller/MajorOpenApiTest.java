@@ -38,6 +38,16 @@ class MajorOpenApiTest {
             assertThat(data.path("properties").has(field)).as(field).isTrue();
         }
         assertThat(document.at("/paths/~1api~1admin~1majors~1init/put").isMissingNode()).isFalse();
+        assertThat(document.at("/components/securitySchemes/bearerAuth/scheme").asString()).isEqualTo("bearer");
+        for (String path : new String[]{"~1api~1majors/get", "~1api~1certifications/get",
+                "~1api~1admin~1majors~1init/put", "~1api~1admin~1certifications~1init/put"}) {
+            JsonNode operation = document.at("/paths/" + path);
+            assertThat(operation.at("/security/0/bearerAuth").isArray()).as(path).isTrue();
+            assertThat(operation.path("responses").has("401")).as(path).isTrue();
+            if (path.contains("admin")) {
+                assertThat(operation.path("responses").has("403")).as(path).isTrue();
+            }
+        }
     }
 
     private JsonNode resolve(JsonNode document, JsonNode schema) {

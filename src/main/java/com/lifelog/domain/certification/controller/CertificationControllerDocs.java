@@ -12,17 +12,18 @@ import com.lifelog.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.web.bind.annotation.PutMapping;
 @Tag(name = "Certification", description = "자격증 API")
+@SecurityRequirement(name = "bearerAuth")
 public interface CertificationControllerDocs {
-    // TODO: Bearer 인증 도입 후 로그인한 사용자만 호출 가능하도록 연결한다.
     @Operation(summary = "자격증 목록 조회 및 검색", description = """
             ### 1. API 역할
             자격증명 부분 일치 검색과 유형·대분류 필터를 AND로 적용합니다.
             영문 대소문자를 구분하지 않으며 이름 오름차순, 같은 이름은 ID 오름차순입니다.
             자격증 선택이나 사용자 보유 자격증 저장은 수행하지 않습니다.
             ### 2. Request Header
-            현재 인증 미적용. 추후 Bearer 인증을 연결합니다.
+            Authorization: Bearer {accessToken}. 로그인한 사용자 인증이 필요합니다.
             ### 3. Path Variable
             없음
             ### 4. Query String
@@ -51,6 +52,7 @@ public interface CertificationControllerDocs {
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "자격증 조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 검색 조건"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 내부 오류")
     })
     @GetMapping(value = "/api/certifications", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -71,7 +73,7 @@ public interface CertificationControllerDocs {
             서버의 data/certification.csv로 등록·갱신하며 기존 PK와 참조를 유지합니다.
             코드가 없으면 유형·이름으로 식별합니다. 원본 밖 기존 행은 삭제하지 않습니다.
             ### 2. Request Header
-            현재 인증 미적용. 추후 Bearer 토큰과 관리자 권한을 연결합니다.
+            Authorization: Bearer {accessToken}. ADMIN 권한이 필요합니다.
             ### 3. Path Variable
             없음
             ### 4. Query String
@@ -92,6 +94,8 @@ public interface CertificationControllerDocs {
             """)
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "초기화 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "식별 충돌"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "파일·저장 실패")
     })
