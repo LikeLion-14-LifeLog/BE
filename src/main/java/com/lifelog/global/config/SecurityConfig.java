@@ -50,7 +50,8 @@ public class SecurityConfig {
                         // 회원가입 및 로그인은 인증 없이 접근 가능
                         .requestMatchers(
                                 "/api/auth/signup",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/health"
                         ).permitAll()
 
                         // Swagger 허용 (개발용)
