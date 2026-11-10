@@ -1,0 +1,3 @@
+ALTER TABLE member
+    ADD COLUMN role VARCHAR(30) NOT NULL DEFAULT 'USER'
+        CHECK (role IN ('USER', 'ADMIN'));

@@ -1,6 +1,7 @@
 
 package com.lifelog.domain.member.entity;
 
+import com.lifelog.domain.member.enums.MemberRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -24,6 +25,10 @@ public class Member {
 
     @Column(nullable = false, length = 30)
     private String status = "ACTIVE";
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private MemberRole role = MemberRole.USER;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

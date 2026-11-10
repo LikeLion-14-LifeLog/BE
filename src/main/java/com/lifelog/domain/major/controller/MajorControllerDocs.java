@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,15 +18,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "Major", description = "전공 API")
+@SecurityRequirement(name = "bearerAuth")
 public interface MajorControllerDocs {
 
-    // TODO: Bearer 인증 도입 후 로그인한 사용자만 호출 가능하도록 연결한다.
     @Operation(summary = "전공 목록 조회 및 검색", description = """
             ### 1. API 역할
             학과명을 대소문자 구분 없이 부분 일치 검색하고 대계열로 필터링합니다.
             학과코드 오름차순이며 이름이 같아도 코드가 다르면 각각 반환합니다.
             ### 2. Request Header
-            현재 인증 헤더는 필요하지 않습니다. Bearer 인증 도입 후 로그인 제한을 연결합니다.
+            Authorization: Bearer {accessToken}. 로그인한 사용자 인증이 필요합니다.
             ### 3. Path Variable
             없음
             ### 4. Query String
@@ -49,6 +50,7 @@ public interface MajorControllerDocs {
             """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "전공 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 검색 조건",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class)))
     })
@@ -63,14 +65,13 @@ public interface MajorControllerDocs {
             @Parameter(description = "페이지 크기 (1~100)", example = "20")
             @RequestParam(value = "size", defaultValue = "20") int size);
 
-    // TODO: 인증 API 도입 후 ADMIN 권한만 호출 가능하도록 제한한다.
     @Operation(summary = "[관리자] 전공 데이터 초기화", description = """
             ### 1. API 역할
             서버의 data/major.csv를 검증한 뒤 code 기준으로 전공을 등록·갱신합니다.
             동일 코드·동일 내용의 중복 행은 제외하며, 내용이 충돌하면 전체 실패합니다.
             기존 majorId와 학력 참조 관계를 유지하고 원본에 없는 전공은 삭제하지 않습니다.
             ### 2. Request Header
-            현재 인증 헤더는 필요하지 않습니다. 인증 API 도입 후 관리자 권한을 적용합니다.
+            Authorization: Bearer {accessToken}. ADMIN 권한이 필요합니다.
             ### 3. Path Variable
             없음
             ### 4. Query String
@@ -89,6 +90,8 @@ public interface MajorControllerDocs {
             """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "전공 데이터 초기화 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "원본 읽기·검증 또는 DB 저장 실패",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class)))
     })

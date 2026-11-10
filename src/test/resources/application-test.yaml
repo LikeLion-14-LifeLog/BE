@@ -1,13 +1,21 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:major-init;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000
+    url: jdbc:h2:mem:lifelog-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
 
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: create-drop
 
   flyway:
     enabled: false
+
+  test:
+    database:
+      replace: none
+
+jwt:
+  secret: pGSLl8fFPPjfeEgszNgUTGGTOv7LfpRCQywEJgCFmBB
+  access-token-expiration: 3600000
