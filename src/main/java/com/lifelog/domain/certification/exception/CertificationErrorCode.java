@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum CertificationErrorCode implements ErrorCode {
+    INVALID_KEYWORD("INVALID_REQUEST", "검색어는 앞뒤 공백 제거 후 100자 이하여야 합니다.", HttpStatus.BAD_REQUEST),
     CSV_READ_FAILED("INTERNAL_SERVER_ERROR", "자격증 파일을 읽을 수 없습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_CSV_FORMAT("INTERNAL_SERVER_ERROR", "자격증 파일 형식이 올바르지 않습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     INIT_FAILED("INTERNAL_SERVER_ERROR", "자격증 저장에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
