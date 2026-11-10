@@ -4,6 +4,7 @@ package com.lifelog.domain.auth.controller;
 import com.lifelog.domain.auth.dto.LoginRequest;
 import com.lifelog.domain.auth.dto.SignupRequest;
 import com.lifelog.domain.auth.service.AuthService;
+import com.lifelog.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,26 +22,25 @@ public class AuthController {
 
     // 회원가입 API
     @PostMapping("/signup")
-    public ResponseEntity<Map<String, Object>> signup(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> signup(
             @Valid @RequestBody SignupRequest request
     ) {
         Long memberId = authService.signup(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of(
-                        "memberId", memberId,
-                        "message", "회원가입 성공"
+                .body(ApiResponse.success(
+                        Map.of("memberId", memberId)
                 ));
     }
 
     // 로그인 API
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(
+    public ApiResponse<Map<String, String>> login(
             @Valid @RequestBody LoginRequest request
     ) {
         String accessToken = authService.login(request);
 
-        return ResponseEntity.ok(
+        return ApiResponse.success(
                 Map.of(
                         "accessToken", accessToken,
                         "tokenType", "Bearer"
