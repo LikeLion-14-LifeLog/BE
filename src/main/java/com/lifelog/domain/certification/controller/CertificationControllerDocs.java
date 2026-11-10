@@ -1,5 +1,13 @@
 package com.lifelog.domain.certification.controller;
 import com.lifelog.domain.certification.dto.CertificationInitResDto;
+import com.lifelog.domain.certification.dto.CertificationListResDto;
+import com.lifelog.domain.certification.enums.CertificationType;
+import com.lifelog.domain.certification.enums.CertificationMainCategory;
+import com.lifelog.global.response.SliceResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.lifelog.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -7,6 +15,57 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.web.bind.annotation.PutMapping;
 @Tag(name = "Certification", description = "자격증 API")
 public interface CertificationControllerDocs {
+    // TODO: Bearer 인증 도입 후 로그인한 사용자만 호출 가능하도록 연결한다.
+    @Operation(summary = "자격증 목록 조회 및 검색", description = """
+            ### 1. API 역할
+            자격증명 부분 일치 검색과 유형·대분류 필터를 AND로 적용합니다.
+            영문 대소문자를 구분하지 않으며 이름 오름차순, 같은 이름은 ID 오름차순입니다.
+            자격증 선택이나 사용자 보유 자격증 저장은 수행하지 않습니다.
+            ### 2. Request Header
+            현재 인증 미적용. 추후 Bearer 인증을 연결합니다.
+            ### 3. Path Variable
+            없음
+            ### 4. Query String
+            keyword: 선택. 앞뒤 공백 제거 후 최대 100자. 누락·공백이면 전체 조회.
+            type: 선택. NATIONAL_PROFESSIONAL, NATIONAL_TECHNICAL, INTERNATIONAL, PRIVATE.
+            mainCategory: 선택. 자격증 대분류 enum.
+            page: 선택. 기본값 1, 최솟값 1.
+            size: 선택. 기본값 20, 1~100.
+            ### 5. Request Body
+            없음
+            ### 6. Response Header
+            Content-Type: application/json
+            ### 7. Response Body
+            success: true, code: COMMON_200, message: 자격증 데이터 조회 성공.
+            data.certifications: certificationId, name, code(nullable), type(enum 문자열),
+            mainCategoryName(한글명), authorizedInstitutionName(nullable)을 포함한 배열.
+            data.page: 1 기반 페이지, size: 페이지 크기, totalElements: 전체 건수,
+            totalPages: 전체 페이지 수, hasNext: 다음 페이지 여부.
+            검색 결과가 없으면 빈 배열, totalElements: 0, totalPages: 0, hasNext: false.
+            페이지 범위를 초과하면 빈 배열과 실제 전체 집계를 반환합니다.
+            오류는 공통 success/code/message/data 형식입니다.
+            파라미터 변환 실패: 400 COMMON_400, 페이지 번호 오류: 400 COMMON_400_1,
+            페이지 크기 오류: 400 COMMON_400_2, 검색어 길이 초과: 400 INVALID_REQUEST,
+            서버 오류: 500 COMMON_500.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "자격증 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 검색 조건"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @GetMapping(value = "/api/certifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    ApiResponse<SliceResponse<CertificationListResDto>> searchCertifications(
+            @Parameter(description = "자격증명 검색어. 앞뒤 공백 제거 후 최대 100자")
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @Parameter(description = "자격증 유형")
+            @RequestParam(value = "type", required = false) CertificationType type,
+            @Parameter(description = "자격증 대분류")
+            @RequestParam(value = "mainCategory", required = false) CertificationMainCategory mainCategory,
+            @Parameter(description = "1부터 시작하는 페이지 번호", example = "1")
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기 (1~100)", example = "20")
+            @RequestParam(value = "size", defaultValue = "20") int size);
+
     @Operation(summary = "[관리자] 자격증 데이터 초기화", description = """
             ### 1. API 역할
             서버의 data/certification.csv로 등록·갱신하며 기존 PK와 참조를 유지합니다.
