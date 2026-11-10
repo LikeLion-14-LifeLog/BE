@@ -7,6 +7,8 @@ import com.lifelog.global.response.ApiResponse;
 import com.lifelog.global.response.SliceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Job", description = "직무 API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -23,11 +26,15 @@ public class JobController {
 
     private final JobService jobService;
 
-    // TODO: 인증 도입 후 ADMIN 권한만 호출 가능하도록 제한
     @Operation(
-            summary = "직무 기준 데이터 일괄 등록/갱신",
-            description = "서버의 job.csv를 읽어 code 기준으로 등록/갱신합니다. 반복 호출해도 중복 생성되지 않으며 jobId는 유지됩니다. CSV에 없는 기존 직무는 삭제하지 않습니다."
+            summary = "[관리자] 직무 기준 데이터 일괄 등록/갱신",
+            description = "서버의 job.csv를 읽어 code 기준으로 등록/갱신합니다. 반복 호출해도 중복 생성되지 않으며 jobId는 유지됩니다. CSV에 없는 기존 직무는 삭제하지 않습니다. ADMIN 권한이 필요합니다."
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "등록/갱신 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 없음")
+    })
     @PostMapping("/admin/jobs/init")
     public ApiResponse<JobInitResponse> initJobs() {
         return ApiResponse.success(jobService.initFromCsv());
