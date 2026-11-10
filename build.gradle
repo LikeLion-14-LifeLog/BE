@@ -59,10 +59,3 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
-
-// 요청한 소스 파일명을 유지하면서 Flyway 기본 명명 규칙으로 패키징한다.
-tasks.named('processResources') {
-    filesMatching('db/migration/V20261110_1_modify_certification_field.sql') {
-        name = 'V20261110_1__modify_certification_field.sql'
-    }
-}
