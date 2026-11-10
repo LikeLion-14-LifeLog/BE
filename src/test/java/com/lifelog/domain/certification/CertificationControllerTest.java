@@ -3,6 +3,11 @@ import com.lifelog.domain.certification.controller.CertificationController;
 import com.lifelog.domain.certification.dto.CertificationInitResDto;
 import com.lifelog.domain.certification.service.CertificationService;
 import com.lifelog.global.config.SecurityConfig;
+import com.lifelog.domain.member.repository.MemberRepository;
+import com.lifelog.global.security.JwtAccessDeniedHandler;
+import com.lifelog.global.security.JwtAuthenticationEntryPoint;
+import com.lifelog.global.security.JwtAuthenticationFilter;
+import com.lifelog.global.security.JwtProvider;
 import com.lifelog.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,15 +16,19 @@ import org.springframework.context.annotation.*;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 @WebMvcTest(CertificationController.class)
 @ContextConfiguration(classes = CertificationControllerTest.TestConfiguration.class)
+@WithMockUser(roles = "ADMIN")
 class CertificationControllerTest {
     @Autowired MockMvc mvc;
     @MockitoBean CertificationService service;
-    @Test @DisplayName("Body와 인증 없이 초기화 집계를 공통 형식으로 반환한다")
+    @MockitoBean JwtProvider jwtProvider;
+    @MockitoBean MemberRepository memberRepository;
+    @Test @DisplayName("관리자 인증으로 Body 없이 초기화 집계를 공통 형식으로 반환한다")
     void 초기화_성공() throws Exception {
         // given
         given(service.initFromCsv()).willReturn(CertificationInitResDto.create(1424,1424,0,0));
@@ -43,6 +52,7 @@ class CertificationControllerTest {
             .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"));
     }
     @Configuration(proxyBeanMethods = false)
-    @Import({CertificationController.class, SecurityConfig.class, GlobalExceptionHandler.class})
+    @Import({CertificationController.class, SecurityConfig.class, GlobalExceptionHandler.class,
+            JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class})
     static class TestConfiguration {}
 }

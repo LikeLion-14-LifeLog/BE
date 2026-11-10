@@ -26,7 +26,11 @@ class CertificationMigrationIntegrationTest {
                 var flyway = Flyway.configure().dataSource(url,user,password).schemas(schema).load();
                 flyway.migrate();
                 // then
-                assertThat(flyway.info().current().getVersion().toString()).isEqualTo("20261110.1");
+                assertThat(flyway.info().current().getVersion().toString()).isEqualTo("20261110.2");
+                try (var result = sql.executeQuery("SELECT role FROM member WHERE member_id=1")) {
+                    assertThat(result.next()).isTrue();
+                    assertThat(result.getString(1)).isEqualTo("USER");
+                }
                 try (var result = sql.executeQuery("SELECT c.main_category,c.authorized_institution_name FROM certificate c JOIN spec_profile_certificate s ON c.certificate_id=s.certificate_id WHERE c.certificate_id=100")) {
                     assertThat(result.next()).isTrue();
                     assertThat(result.getString(1)).isEqualTo("COMMON");

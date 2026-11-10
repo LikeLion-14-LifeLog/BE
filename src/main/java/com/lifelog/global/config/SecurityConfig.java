@@ -3,6 +3,7 @@ package com.lifelog.global.config;
 
 import com.lifelog.global.security.JwtAuthenticationEntryPoint;
 import com.lifelog.global.security.JwtAuthenticationFilter;
+import com.lifelog.global.security.JwtAccessDeniedHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
@@ -39,7 +41,7 @@ public class SecurityConfig {
                 .exceptionHandling(exception ->
                         exception.authenticationEntryPoint(
                                 jwtAuthenticationEntryPoint
-                        )
+                        ).accessDeniedHandler(jwtAccessDeniedHandler)
                 )
 
                 // API 접근 권한 설정
@@ -60,6 +62,12 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
+
+                        // 관리자만 허용되는 엔드포인트들
+                        .requestMatchers(
+                                "/api/admin/certifications/init",
+                                "/api/admin/majors/init"
+                        ).hasRole("ADMIN")
 
                         // 나머지 API는 인증 필요
                         .anyRequest().authenticated()

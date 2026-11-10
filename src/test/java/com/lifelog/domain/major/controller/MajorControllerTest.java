@@ -7,6 +7,11 @@ import com.lifelog.domain.major.enums.DegreeProcess;
 import com.lifelog.domain.major.enums.MajorMainField;
 import com.lifelog.domain.major.service.MajorService;
 import com.lifelog.global.config.SecurityConfig;
+import com.lifelog.domain.member.repository.MemberRepository;
+import com.lifelog.global.security.JwtAccessDeniedHandler;
+import com.lifelog.global.security.JwtAuthenticationEntryPoint;
+import com.lifelog.global.security.JwtAuthenticationFilter;
+import com.lifelog.global.security.JwtProvider;
 import com.lifelog.global.exception.CustomException;
 import com.lifelog.global.exception.GlobalExceptionHandler;
 import com.lifelog.global.exception.CommonErrorCode;
@@ -18,7 +23,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -33,15 +38,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MajorController.class)
-@AutoConfigureMockMvc(addFilters = false)
 @ContextConfiguration(classes = MajorControllerTest.TestConfiguration.class)
+@WithMockUser(roles = "USER")
 class MajorControllerTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private MajorService service;
-    @MockitoBean
-    private com.lifelog.global.security.JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockitoBean
-    private com.lifelog.global.security.JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    @MockitoBean private JwtProvider jwtProvider;
+    @MockitoBean private MemberRepository memberRepository;
 
     @Test
     @DisplayName("기본 조회는 ApiResponse 내부에 majors와 페이징 정보를 펼쳐서 반환한다")
@@ -124,6 +127,7 @@ class MajorControllerTest {
 
     @Test
     @DisplayName("관리자 초기화 API의 기존 경로가 유지된다")
+    @WithMockUser(roles = "ADMIN")
     void 초기화_기존경로_성공() throws Exception {
         // given
         given(service.initFromCsv()).willReturn(MajorInitResDto.create(0, 0, 0, 0, 0, 0));
@@ -134,7 +138,8 @@ class MajorControllerTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @Import({MajorController.class, GlobalExceptionHandler.class, SecurityConfig.class})
+    @Import({MajorController.class, GlobalExceptionHandler.class, SecurityConfig.class,
+            JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class})
     static class TestConfiguration {
     }
 }
