@@ -1,3 +1,4 @@
+
 package com.lifelog.domain.languageexam.controller;
 
 import com.lifelog.domain.languageexam.repository.LanguageExamRepository;
@@ -6,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@WithMockUser(username = "testuser", roles = "USER")
 class LanguageExamControllerTest {
 
     @Autowired
@@ -59,14 +62,16 @@ class LanguageExamControllerTest {
 
     @Test
     void 잘못된_enum_값이면_400() throws Exception {
-        mockMvc.perform(get("/api/language-exams").param("languageType", "FRENCH"))
+        mockMvc.perform(get("/api/language-exams")
+                        .param("languageType", "FRENCH"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
     }
 
     @Test
     void keyword가_20자를_넘으면_400() throws Exception {
-        mockMvc.perform(get("/api/language-exams").param("keyword", "a".repeat(21)))
+        mockMvc.perform(get("/api/language-exams")
+                        .param("keyword", "a".repeat(21)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("LANGUAGE_EXAM_400"));
     }

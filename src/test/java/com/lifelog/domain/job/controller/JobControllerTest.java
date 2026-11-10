@@ -1,3 +1,4 @@
+
 package com.lifelog.domain.job.controller;
 
 import com.lifelog.domain.job.repository.JobRepository;
@@ -6,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@WithMockUser(username = "testuser", roles = "USER")
 class JobControllerTest {
 
     @Autowired
@@ -80,7 +83,9 @@ class JobControllerTest {
     void 대분류_9_필터에_미분류_9999는_나오지_않음() throws Exception {
         mockMvc.perform(post("/api/admin/jobs/init"));
 
-        mockMvc.perform(get("/api/jobs").param("mainCategoryCode", "9").param("size", "100"))
+        mockMvc.perform(get("/api/jobs")
+                        .param("mainCategoryCode", "9")
+                        .param("size", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.jobs[*].code", hasItem("9050")))
                 .andExpect(jsonPath("$.data.jobs[*].code", not(hasItem("9999"))));
@@ -88,7 +93,9 @@ class JobControllerTest {
 
     @Test
     void page_0_size_101이면_400() throws Exception {
-        mockMvc.perform(get("/api/jobs").param("page", "0").param("size", "101"))
+        mockMvc.perform(get("/api/jobs")
+                        .param("page", "0")
+                        .param("size", "101"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400_1"));
     }
@@ -109,7 +116,8 @@ class JobControllerTest {
 
     @Test
     void keyword가_50자를_넘으면_400() throws Exception {
-        mockMvc.perform(get("/api/jobs").param("keyword", "가".repeat(51)))
+        mockMvc.perform(get("/api/jobs")
+                        .param("keyword", "가".repeat(51)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("JOB_400_1"));
     }
