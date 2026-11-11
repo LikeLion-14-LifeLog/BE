@@ -96,6 +96,21 @@ public class JobPosting extends BaseTimeEntity {
     @Column(length = 50)
     private String educationRequirement;
 
+    // 원본 모집직종코드 (서울 일자리포털 JOBS_CD, 고용24 6자리)
+    @Column(length = 10)
+    private String externalJobCode;
+
+    @Column(length = 255)
+    private String workSchedule;
+
+    // 4대보험·퇴직금·기타 복리후생을 줄바꿈으로 합친 값
+    @Column(columnDefinition = "TEXT")
+    private String benefits;
+
+    // 전형 방법·접수 방법·제출 서류를 줄바꿈으로 합친 값
+    @Column(columnDefinition = "TEXT")
+    private String applicationMethod;
+
     // 동시 요청에도 꼬이지 않도록 UPDATE 쿼리로만 증감, 엔티티 변경 감지로는 쓰지 않음
     @ColumnDefault("0")
     @Column(nullable = false, insertable = false, updatable = false)
@@ -121,6 +136,8 @@ public class JobPosting extends BaseTimeEntity {
                        LocalDateTime publishedAt, DeadlineType deadlineType, LocalDateTime closesAt,
                        String source, String externalId,
                        String applyUrl, String jobGroup, String educationRequirement,
+                       String externalJobCode, String workSchedule,
+                       String benefits, String applicationMethod,
                        Company company) {
         this.title = title;
         this.employmentType = employmentType;
@@ -140,6 +157,10 @@ public class JobPosting extends BaseTimeEntity {
         this.applyUrl = applyUrl;
         this.jobGroup = jobGroup;
         this.educationRequirement = educationRequirement;
+        this.externalJobCode = externalJobCode;
+        this.workSchedule = workSchedule;
+        this.benefits = benefits;
+        this.applicationMethod = applicationMethod;
         this.company = company;
     }
 
