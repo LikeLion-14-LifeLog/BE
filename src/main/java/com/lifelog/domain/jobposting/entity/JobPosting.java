@@ -24,7 +24,9 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.ColumnDefault;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -192,6 +194,11 @@ public class JobPosting extends BaseTimeEntity {
 
     public boolean isOpen() {
         return status == JobPostingStatus.OPEN;
+    }
+
+    // 마감까지 남은 일수 (마감일 당일 0, 지났으면 음수, 상시 채용이면 null)
+    public Integer daysUntilClose(LocalDate today) {
+        return closesAt == null ? null : (int) ChronoUnit.DAYS.between(today, closesAt.toLocalDate());
     }
 
     // source·externalId·company·저장 수를 제외한 공고 내용과 하위 급여·자격요건 비교

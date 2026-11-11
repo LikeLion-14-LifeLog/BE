@@ -12,6 +12,8 @@ public interface JobPostingBookmarkRepository extends JpaRepository<JobPostingBo
 
     long countByMember_Id(Long memberId);
 
+    boolean existsByMember_IdAndJobPosting_Id(Long memberId, Long jobPostingId);
+
     // 주어진 공고 중 회원이 저장한 공고 ID
     @Query("""
             SELECT b.jobPosting.id FROM JobPostingBookmark b

@@ -1,5 +1,6 @@
 package com.lifelog.domain.jobposting.controller;
 
+import com.lifelog.domain.jobposting.dto.JobPostingDetailResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingSyncResponse;
 import com.lifelog.domain.jobposting.entity.JobGroup;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +55,24 @@ public class JobPostingController {
             @RequestParam(defaultValue = "6") int size
     ) {
         return ApiResponse.success(jobPostingService.search(memberId, jobGroup, region, sort, page, size));
+    }
+
+    @Operation(
+            summary = "공고 상세 조회",
+            description = "공고 상세를 조회합니다. 마감된 공고(status=CLOSE)나 마감일이 지난 공고도 조회할 수 있습니다. "
+                    + "sections는 값이 있는 섹션만 포함합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "없는 공고 (JOB_POSTING_404)")
+    })
+    @GetMapping("/job-postings/{jobPostingId}")
+    public ApiResponse<JobPostingDetailResponse> getJobPosting(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "채용공고 ID", example = "101")
+            @PathVariable Long jobPostingId
+    ) {
+        return ApiResponse.success(jobPostingService.getDetail(memberId, jobPostingId));
     }
 
     @Operation(

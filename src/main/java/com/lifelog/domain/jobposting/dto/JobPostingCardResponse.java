@@ -6,7 +6,6 @@ import com.lifelog.domain.jobposting.entity.JobPosting;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 
 @Schema(description = "채용공고 카드")
 public record JobPostingCardResponse(
@@ -51,8 +50,7 @@ public record JobPostingCardResponse(
                 // TODO: 연봉 모델 도입 후 예상 연봉 계산
                 null,
                 null,
-                posting.getClosesAt() == null ? null
-                        : (int) ChronoUnit.DAYS.between(today, posting.getClosesAt().toLocalDate()),
+                posting.daysUntilClose(today),
                 posting.getBookmarkCount(),
                 bookmarked
         );

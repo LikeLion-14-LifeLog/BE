@@ -1,6 +1,8 @@
 package com.lifelog.domain.jobposting.service;
 
 import com.lifelog.domain.jobposting.dto.JobPostingCardResponse;
+import com.lifelog.domain.jobposting.dto.JobPostingDetailResponse;
+import com.lifelog.domain.jobposting.exception.JobPostingErrorCode;
 import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingTabCounts;
 import com.lifelog.domain.jobposting.entity.JobGroup;
@@ -67,6 +69,19 @@ public class JobPostingService {
                 memberId == null ? 0 : jobPostingBookmarkRepository.countByMember_Id(memberId));
 
         return SliceResponse.of(result, new JobPostingListResponse(tabCounts, cards));
+    }
+
+    /**
+     * 공고 상세. 상태(OPEN/CLOSE)·마감일과 관계없이 조회한다 (저장한 공고에서 들어올 수 있음).
+     * @param memberId 로그인 회원 ID, null이면 저장하지 않은 것으로 처리
+     */
+    @Transactional(readOnly = true)
+    public JobPostingDetailResponse getDetail(Long memberId, Long jobPostingId) {
+        JobPosting posting = jobPostingRepository.findById(jobPostingId)
+                .orElseThrow(() -> new CustomException(JobPostingErrorCode.JOB_POSTING_NOT_FOUND));
+        boolean bookmarked = memberId != null
+                && jobPostingBookmarkRepository.existsByMember_IdAndJobPosting_Id(memberId, jobPostingId);
+        return JobPostingDetailResponse.of(posting, bookmarked, LocalDate.now(SEOUL));
     }
 
     private Set<Long> findBookmarkedIds(Long memberId, List<JobPosting> postings) {
