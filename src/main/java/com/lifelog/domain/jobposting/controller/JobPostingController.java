@@ -1,15 +1,25 @@
 package com.lifelog.domain.jobposting.controller;
 
+import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingSyncResponse;
+import com.lifelog.domain.jobposting.entity.JobGroup;
+import com.lifelog.domain.jobposting.entity.JobPostingRegion;
+import com.lifelog.domain.jobposting.entity.JobPostingSort;
+import com.lifelog.domain.jobposting.service.JobPostingService;
 import com.lifelog.domain.jobposting.service.JobPostingSyncService;
 import com.lifelog.global.response.ApiResponse;
+import com.lifelog.global.response.SliceResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "JobPosting", description = "채용공고 API")
@@ -20,6 +30,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class JobPostingController {
 
     private final JobPostingSyncService jobPostingSyncService;
+    private final JobPostingService jobPostingService;
+
+    @Operation(
+            summary = "맞춤 공고 목록 조회",
+            description = "모집 중인 공고를 직무 그룹·지역으로 걸러 조회합니다. "
+                    + "jobGroup을 지정하지 않으면 그룹이 정해지지 않은 공고까지 모두 포함합니다. "
+                    + "tabCounts.recommended는 필터 적용 전 모집 중 공고 수, bookmarked는 내가 저장한 공고 수입니다."
+    )
+    @GetMapping("/job-postings")
+    public ApiResponse<SliceResponse<JobPostingListResponse>> getJobPostings(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "직무 그룹 (없으면 전체)", example = "BACKEND")
+            @RequestParam(required = false) JobGroup jobGroup,
+            @Parameter(description = "지역 (없으면 전체)", example = "SEOUL")
+            @RequestParam(required = false) JobPostingRegion region,
+            @Parameter(description = "정렬 (DEADLINE: 마감 임박순, POPULAR: 저장 많은 순)", example = "DEADLINE")
+            @RequestParam(defaultValue = "DEADLINE") JobPostingSort sort,
+            @Parameter(description = "페이지 번호 (1부터 시작)", example = "1")
+            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기 (1~100)", example = "6")
+            @RequestParam(defaultValue = "6") int size
+    ) {
+        return ApiResponse.success(jobPostingService.search(memberId, jobGroup, region, sort, page, size));
+    }
 
     @Operation(
             summary = "[관리자] 채용공고 수집",

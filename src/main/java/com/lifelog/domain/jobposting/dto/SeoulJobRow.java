@@ -12,6 +12,7 @@ public record SeoulJobRow(
         @JsonProperty("TITLE") String title,
         @JsonProperty("REG_DT") String regDt,
         @JsonProperty("CLOSE_DT") String closeDt,
+        @JsonProperty("REGION") String region,
         @JsonProperty("REGION_CD") String regionCd,
         @JsonProperty("WORK_REGION") String workRegion,
         @JsonProperty("CORP_ADDR") String corpAddr,

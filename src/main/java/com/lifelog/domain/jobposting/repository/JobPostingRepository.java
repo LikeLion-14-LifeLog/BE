@@ -3,6 +3,7 @@ package com.lifelog.domain.jobposting.repository;
 import com.lifelog.domain.jobposting.entity.JobPosting;
 import com.lifelog.domain.jobposting.entity.JobPostingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,7 +13,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
+public interface JobPostingRepository extends JpaRepository<JobPosting, Long>, JpaSpecificationExecutor<JobPosting> {
+
+    long countByStatus(JobPostingStatus status);
 
     List<JobPosting> findBySourceAndExternalIdIn(String source, Collection<String> externalIds);
 

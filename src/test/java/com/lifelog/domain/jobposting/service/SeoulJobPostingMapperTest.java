@@ -36,6 +36,8 @@ class SeoulJobPostingMapperTest {
         assertThat(posting.getEmploymentType()).isEqualTo(EmploymentType.FULL_TIME);
         assertThat(posting.getCareerType()).isEqualTo(CareerType.EXPERIENCED);
         assertThat(posting.getRegionCode()).isEqualTo("11710");
+        assertThat(posting.getRegionName()).isEqualTo("서울 송파구");
+        assertThat(posting.getJobGroup()).isNull();
         assertThat(posting.getWorkplaceAddress()).isEqualTo("서울특별시 송파구 중대로 178 (가락동)");
         assertThat(posting.getPublishedAt()).isEqualTo(LocalDateTime.of(2026, 9, 14, 0, 0));
         assertThat(posting.getExternalJobCode()).isEqualTo("133200");

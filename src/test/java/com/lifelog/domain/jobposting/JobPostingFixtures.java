@@ -14,6 +14,7 @@ public final class JobPostingFixtures {
                 .title(title)
                 .regDt("26-09-14")
                 .closeDt("채용시까지  99-12-31")
+                .region("서울 송파구")
                 .regionCd("11710")
                 .workRegion("(05824)  서울특별시 송파구 중대로 178 (가락동)")
                 .corpAddr("05824 서울특별시 송파구 중대로 178 (가락동)")

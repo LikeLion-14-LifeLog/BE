@@ -92,9 +92,14 @@ public class JobPosting extends BaseTimeEntity {
     @Column(length = 500)
     private String applyUrl;
 
-    // TODO: 3단계에서 명세 기준 enum으로 변경
+    // 어느 그룹에도 해당하지 않으면 null
+    @Enumerated(EnumType.STRING)
     @Column(length = 30)
-    private String jobGroup;
+    private JobGroup jobGroup;
+
+    // 카드 표시용 근무 지역명 (예: "서울 강남구")
+    @Column(length = 50)
+    private String regionName;
 
     @Column(length = 50)
     private String educationRequirement;
@@ -141,7 +146,7 @@ public class JobPosting extends BaseTimeEntity {
                        String responsibilities, String description,
                        LocalDateTime publishedAt, DeadlineType deadlineType, LocalDateTime closesAt,
                        JobPostingStatus status, String source, String externalId,
-                       String applyUrl, String jobGroup, String educationRequirement,
+                       String applyUrl, JobGroup jobGroup, String regionName, String educationRequirement,
                        String externalJobCode, String workSchedule,
                        String benefits, String applicationMethod,
                        Company company) {
@@ -162,6 +167,7 @@ public class JobPosting extends BaseTimeEntity {
         this.externalId = externalId;
         this.applyUrl = applyUrl;
         this.jobGroup = jobGroup;
+        this.regionName = regionName;
         this.educationRequirement = educationRequirement;
         this.externalJobCode = externalJobCode;
         this.workSchedule = workSchedule;
@@ -204,7 +210,8 @@ public class JobPosting extends BaseTimeEntity {
                 && Objects.equals(closesAt, other.closesAt)
                 && status == other.status
                 && Objects.equals(applyUrl, other.applyUrl)
-                && Objects.equals(jobGroup, other.jobGroup)
+                && jobGroup == other.jobGroup
+                && Objects.equals(regionName, other.regionName)
                 && Objects.equals(educationRequirement, other.educationRequirement)
                 && Objects.equals(externalJobCode, other.externalJobCode)
                 && Objects.equals(workSchedule, other.workSchedule)
@@ -231,6 +238,7 @@ public class JobPosting extends BaseTimeEntity {
         this.status = source.status;
         this.applyUrl = source.applyUrl;
         this.jobGroup = source.jobGroup;
+        this.regionName = source.regionName;
         this.educationRequirement = source.educationRequirement;
         this.externalJobCode = source.externalJobCode;
         this.workSchedule = source.workSchedule;
