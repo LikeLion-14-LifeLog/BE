@@ -4,8 +4,7 @@ import com.lifelog.domain.jobposting.dto.JobPostingBookmarkListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingBookmarkResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingDetailResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
-import com.lifelog.domain.jobposting.dto.JobPostingSyncResponse;
-import com.lifelog.domain.jobposting.entity.JobGroup;
+import com.lifelog.domain.jobposting.dto.JobPostingSyncStatusResponse;
 import com.lifelog.domain.jobposting.entity.JobPostingRegion;
 import com.lifelog.domain.jobposting.entity.JobPostingSort;
 import com.lifelog.domain.jobposting.service.JobPostingBookmarkService;
@@ -19,6 +18,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,16 +42,20 @@ public class JobPostingController {
 
     @Operation(
             summary = "맞춤 공고 목록 조회",
-            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망·목표 직무에 해당하고 "
+            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망·목표 직무와 소분류가 같고 "
                     + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망·목표 직무가 없으면 전체 공고를 보여주고 personalized=false입니다. "
-                    + "jobGroup·region은 맞춤 조건 위에 추가로 적용하며, jobGroup을 지정하지 않으면 그룹이 정해지지 않은 공고까지 포함합니다. "
-                    + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(jobGroup·region 제외), bookmarked는 내가 저장한 공고 수입니다."
+                    + "jobCategory(직무 중분류)·region은 맞춤 조건 위에 추가로 적용합니다. "
+                    + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(jobCategory·region 제외), bookmarked는 내가 저장한 공고 수입니다."
     )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "page·size 범위 오류 또는 jobCategory·region·sort 형식 오류")
+    })
     @GetMapping("/job-postings")
     public ApiResponse<SliceResponse<JobPostingListResponse>> getJobPostings(
             @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
-            @Parameter(description = "직무 그룹 (없으면 전체)", example = "BACKEND")
-            @RequestParam(required = false) JobGroup jobGroup,
+            @Parameter(description = "직무 중분류 코드 2자리 (한국고용직업분류 2025, 없으면 전체)", example = "13")
+            @RequestParam(required = false) String jobCategory,
             @Parameter(description = "지역 (없으면 전체)", example = "SEOUL")
             @RequestParam(required = false) JobPostingRegion region,
             @Parameter(description = "정렬 (DEADLINE: 마감 임박순, POPULAR: 저장 많은 순)", example = "DEADLINE")
@@ -60,7 +65,7 @@ public class JobPostingController {
             @Parameter(description = "페이지 크기 (1~100)", example = "6")
             @RequestParam(defaultValue = "6") int size
     ) {
-        return ApiResponse.success(jobPostingService.search(memberId, jobGroup, region, sort, page, size));
+        return ApiResponse.success(jobPostingService.search(memberId, jobCategory, region, sort, page, size));
     }
 
     @Operation(
@@ -132,22 +137,37 @@ public class JobPostingController {
     }
 
     @Operation(
-            summary = "[관리자] 채용공고 수집",
-            description = "서울시 일자리포털 채용정보 전체를 받아 등록/갱신합니다. "
+            summary = "[관리자] 채용공고 수집 시작",
+            description = "서울시 일자리포털 채용정보 전체 수집을 백그라운드에서 시작하고 바로 202를 반환합니다. "
+                    + "결과는 GET /api/admin/job-postings/sync/status로 확인합니다. "
                     + "원본에서 사라졌거나 마감일이 지난 공고는 마감(CLOSE) 처리합니다. "
-                    + "외부 API 호출이 하나라도 실패하면 아무것도 저장하지 않고 502를 반환합니다. "
+                    + "외부 API 호출이 하나라도 실패하면 아무것도 저장하지 않고 상태가 FAILED(errorCode JOB_POSTING_502)가 됩니다. "
                     + "호출은 성공했지만 전체 건수보다 적게 받았으면 받은 공고만 저장하고 마감 처리는 건너뜁니다(complete=false). "
-                    + "수 분이 걸릴 수 있으며 실행 중에 다시 호출하면 409를 반환합니다. ADMIN 권한이 필요합니다."
+                    + "실행 중에 다시 호출하면 409를 반환합니다. ADMIN 권한이 필요합니다."
     )
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수집 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "수집 시작 (data는 시작 시점 상태)"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 수집 중 (JOB_POSTING_409)"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "외부 API 호출 실패 (JOB_POSTING_502)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 수집 중 (JOB_POSTING_409)")
     })
     @PostMapping("/admin/job-postings/sync")
-    public ApiResponse<JobPostingSyncResponse> syncJobPostings() {
-        return ApiResponse.success(jobPostingSyncService.sync());
+    public ResponseEntity<ApiResponse<JobPostingSyncStatusResponse>> syncJobPostings() {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(jobPostingSyncService.start()));
+    }
+
+    @Operation(
+            summary = "[관리자] 채용공고 수집 상태 조회",
+            description = "마지막 수집 실행의 상태(IDLE·RUNNING·SUCCEEDED·FAILED), 시작·종료 시각, 결과 또는 실패 에러 코드를 반환합니다. "
+                    + "상태는 서버 메모리에 보관하므로 서버를 재시작하면 IDLE입니다. ADMIN 권한이 필요합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 정보 없음 또는 유효하지 않은 토큰"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 없음")
+    })
+    @GetMapping("/admin/job-postings/sync/status")
+    public ApiResponse<JobPostingSyncStatusResponse> getSyncStatus() {
+        return ApiResponse.success(jobPostingSyncService.getStatus());
     }
 }

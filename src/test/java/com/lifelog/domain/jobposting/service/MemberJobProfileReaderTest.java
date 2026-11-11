@@ -1,5 +1,7 @@
 package com.lifelog.domain.jobposting.service;
 
+import com.lifelog.domain.job.entity.Job;
+import com.lifelog.domain.job.repository.JobRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,9 @@ class MemberJobProfileReaderTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private JobRepository jobRepository;
 
     @BeforeEach
     void setUp() {
@@ -56,26 +61,33 @@ class MemberJobProfileReaderTest {
     }
 
     @Test
-    void 희망_직무와_목표_직무를_합치고_가장_높은_학력을_읽음() {
-        execute("INSERT INTO desired_job (job_id, member_id) VALUES (11, " + MEMBER + "), (12, " + MEMBER + ")");
-        execute("INSERT INTO spec_profile (spec_profile_id, type, target_job_id, member_id) VALUES (501, 'TARGET', 13, " + MEMBER + ")");
+    void 희망_직무와_목표_직무의_소분류를_합치고_가장_높은_학력을_읽음() {
+        long app = saveJob("1", "13", "133", "1332");
+        long web = saveJob("1", "13", "133", "1333");
+        long care = saveJob("5", "55", "550", "5501");
+        long uncategorized = saveJob(null, null, null, "9999");
+        long other = saveJob("1", "13", "134", "1341");
+        execute("INSERT INTO desired_job (job_id, member_id) VALUES (" + app + ", " + MEMBER + "), (" + web + ", " + MEMBER
+                + "), (" + uncategorized + ", " + MEMBER + ")");
+        execute("INSERT INTO spec_profile (spec_profile_id, type, target_job_id, member_id) VALUES (501, 'TARGET', " + care + ", " + MEMBER + ")");
         // 임시 저장 스펙도 사용
         execute("INSERT INTO spec_profile (spec_profile_id, type, temporary_stored, member_id) VALUES (502, 'CURRENT', TRUE, " + MEMBER + ")");
         execute("INSERT INTO academic_ability (type, status, spec_profile_id) VALUES ('HIGH_SCHOOL', 'GRADUATED', 502)");
         // 재학 중이어도 그 단계로 인정
         execute("INSERT INTO academic_ability (type, status, spec_profile_id) VALUES ('UNIVERSITY', 'ATTENDING', 502)");
-        execute("INSERT INTO desired_job (job_id, member_id) VALUES (99, " + OTHER + ")");
+        execute("INSERT INTO desired_job (job_id, member_id) VALUES (" + other + ", " + OTHER + ")");
 
         MemberJobProfile profile = reader.read(MEMBER);
 
-        assertThat(profile.jobIds()).containsExactlyInAnyOrder(11L, 12L, 13L);
+        // 같은 소분류는 한 번만, 미분류(소분류 없음)는 제외, 다른 회원 직무는 제외
+        assertThat(profile.subCategoryCodes()).containsExactlyInAnyOrder("133", "550");
         assertThat(profile.educationLevel()).isEqualTo(5);
         assertThat(profile.isPersonalizable()).isTrue();
     }
 
     @Test
     void 목표_스펙의_학력과_ETC는_학력_판단에_쓰지_않음() {
-        execute("INSERT INTO desired_job (job_id, member_id) VALUES (11, " + MEMBER + ")");
+        execute("INSERT INTO desired_job (job_id, member_id) VALUES (" + saveJob("1", "13", "133", "1332") + ", " + MEMBER + ")");
         execute("INSERT INTO spec_profile (spec_profile_id, type, member_id) VALUES (601, 'CURRENT', " + MEMBER + ")");
         execute("INSERT INTO spec_profile (spec_profile_id, type, member_id) VALUES (602, 'TARGET', " + MEMBER + ")");
         execute("INSERT INTO academic_ability (type, status, spec_profile_id) VALUES ('COLLEGE', 'LEAVE_FROM_SCHOOL', 601)");
@@ -89,7 +101,7 @@ class MemberJobProfileReaderTest {
     void 희망_목표_직무가_없으면_맞춤_불가이고_학력이_없으면_null() {
         MemberJobProfile profile = reader.read(MEMBER);
 
-        assertThat(profile.jobIds()).isEmpty();
+        assertThat(profile.subCategoryCodes()).isEmpty();
         assertThat(profile.educationLevel()).isNull();
         assertThat(profile.isPersonalizable()).isFalse();
     }
@@ -97,6 +109,15 @@ class MemberJobProfileReaderTest {
     @Test
     void 비로그인이면_빈_프로필() {
         assertThat(reader.read(null)).isEqualTo(MemberJobProfile.empty());
+    }
+
+    private long saveJob(String mainCode, String middleCode, String subCode, String code) {
+        return jobRepository.saveAndFlush(Job.builder()
+                .mainCategoryCode(mainCode).mainCategoryName(mainCode == null ? "미분류" : "대분류 " + mainCode)
+                .middleCategoryCode(middleCode).middleCategoryName(middleCode == null ? null : "중분류 " + middleCode)
+                .subCategoryCode(subCode).subCategoryName(subCode == null ? null : "소분류 " + subCode)
+                .code(code).name("직무 " + code)
+                .build()).getId();
     }
 
     private void execute(String sql) {

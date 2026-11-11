@@ -36,21 +36,25 @@ public class MemberJobProfileReader {
         if (memberId == null) {
             return MemberJobProfile.empty();
         }
-        return new MemberJobProfile(findJobIds(memberId), findEducationLevel(memberId));
+        return new MemberJobProfile(findSubCategoryCodes(memberId), findEducationLevel(memberId));
     }
 
-    private Set<Long> findJobIds(Long memberId) {
+    // 희망 직무 + 목표 직무의 소분류 코드 (미분류처럼 소분류가 없으면 제외)
+    private Set<String> findSubCategoryCodes(Long memberId) {
         List<?> rows = entityManager.createNativeQuery("""
-                        SELECT dj.job_id FROM desired_job dj WHERE dj.member_id = :memberId
+                        SELECT j.sub_category_code FROM desired_job dj
+                          JOIN job j ON j.job_id = dj.job_id
+                         WHERE dj.member_id = :memberId
                         UNION
-                        SELECT sp.target_job_id FROM spec_profile sp
-                         WHERE sp.member_id = :memberId AND sp.type = 'TARGET' AND sp.target_job_id IS NOT NULL
+                        SELECT j.sub_category_code FROM spec_profile sp
+                          JOIN job j ON j.job_id = sp.target_job_id
+                         WHERE sp.member_id = :memberId AND sp.type = 'TARGET'
                         """)
                 .setParameter("memberId", memberId)
                 .getResultList();
-        Set<Long> jobIds = new HashSet<>();
-        rows.stream().filter(Objects::nonNull).forEach(id -> jobIds.add(((Number) id).longValue()));
-        return jobIds;
+        Set<String> codes = new HashSet<>();
+        rows.stream().filter(Objects::nonNull).forEach(code -> codes.add(String.valueOf(code)));
+        return codes;
     }
 
     // CURRENT 스펙의 학력 중 가장 높은 단계

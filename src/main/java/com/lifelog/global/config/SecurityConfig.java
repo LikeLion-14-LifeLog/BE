@@ -69,7 +69,8 @@ public class SecurityConfig {
                                 "/api/admin/majors/init",
                                 "/api/admin/jobs/init",
                                 "/api/admin/language-exams/init",
-                                "/api/admin/job-postings/sync"
+                                "/api/admin/job-postings/sync",
+                                "/api/admin/job-postings/sync/status"
                         ).hasRole("ADMIN")
 
                         // 나머지 API는 인증 필요

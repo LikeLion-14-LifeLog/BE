@@ -65,7 +65,7 @@ class JobPostingListCareerFilterTest {
         save(company, job, "신입", CareerType.NEW);
         save(company, job, "무관", CareerType.ANY);
         save(company, job, "경력", CareerType.EXPERIENCED);
-        given(memberJobProfileReader.read(any())).willReturn(new MemberJobProfile(Set.of(job.getId()), 5));
+        given(memberJobProfileReader.read(any())).willReturn(new MemberJobProfile(Set.of("133"), 5));
 
         mockMvc.perform(get("/api/job-postings").with(authentication(new UsernamePasswordAuthenticationToken(
                         1L, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))))))

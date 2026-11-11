@@ -95,11 +95,6 @@ public class JobPosting extends BaseTimeEntity {
     @Column(length = 500)
     private String applyUrl;
 
-    // 어느 그룹에도 해당하지 않으면 null
-    @Enumerated(EnumType.STRING)
-    @Column(length = 30)
-    private JobGroup jobGroup;
-
     // 카드 표시용 근무 지역명 (예: "서울 강남구")
     @Column(length = 50)
     private String regionName;
@@ -157,7 +152,7 @@ public class JobPosting extends BaseTimeEntity {
                        String responsibilities, String description,
                        LocalDateTime publishedAt, DeadlineType deadlineType, LocalDateTime closesAt,
                        JobPostingStatus status, String source, String externalId,
-                       String applyUrl, JobGroup jobGroup, String regionName,
+                       String applyUrl, String regionName,
                        String educationRequirement, short educationLevel,
                        String externalJobCode, String workSchedule,
                        String benefits, String applicationMethod,
@@ -178,7 +173,6 @@ public class JobPosting extends BaseTimeEntity {
         this.source = source;
         this.externalId = externalId;
         this.applyUrl = applyUrl;
-        this.jobGroup = jobGroup;
         this.regionName = regionName;
         this.educationRequirement = educationRequirement;
         this.educationLevel = educationLevel;
@@ -247,7 +241,6 @@ public class JobPosting extends BaseTimeEntity {
                 && Objects.equals(closesAt, other.closesAt)
                 && status == other.status
                 && Objects.equals(applyUrl, other.applyUrl)
-                && jobGroup == other.jobGroup
                 && Objects.equals(regionName, other.regionName)
                 && Objects.equals(educationRequirement, other.educationRequirement)
                 && educationLevel == other.educationLevel
@@ -275,7 +268,6 @@ public class JobPosting extends BaseTimeEntity {
         this.closesAt = source.closesAt;
         this.status = source.status;
         this.applyUrl = source.applyUrl;
-        this.jobGroup = source.jobGroup;
         this.regionName = source.regionName;
         this.educationRequirement = source.educationRequirement;
         this.educationLevel = source.educationLevel;

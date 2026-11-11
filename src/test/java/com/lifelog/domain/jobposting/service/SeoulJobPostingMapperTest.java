@@ -11,6 +11,10 @@ import com.lifelog.domain.jobposting.entity.PayPolicy;
 import com.lifelog.domain.jobposting.entity.RequirementPriority;
 import com.lifelog.domain.jobposting.entity.RequirementType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,7 +41,6 @@ class SeoulJobPostingMapperTest {
         assertThat(posting.getCareerType()).isEqualTo(CareerType.EXPERIENCED);
         assertThat(posting.getRegionCode()).isEqualTo("11710");
         assertThat(posting.getRegionName()).isEqualTo("서울 송파구");
-        assertThat(posting.getJobGroup()).isNull();
         assertThat(posting.getWorkplaceAddress()).isEqualTo("서울특별시 송파구 중대로 178 (가락동)");
         assertThat(posting.getPublishedAt()).isEqualTo(LocalDateTime.of(2026, 9, 14, 0, 0));
         assertThat(posting.getExternalJobCode()).isEqualTo("133200");
@@ -54,25 +57,33 @@ class SeoulJobPostingMapperTest {
     }
 
     @Test
-    void 직무그룹_8차직무코드_학력단계_지역명을_변환() {
+    void 직무코드_학력단계_지역명을_변환() {
         JobPostingSyncItem item = mapper.toItem(row("Java 백엔드 개발자 채용")
                 .jobsCd("133200")
                 .minEdubg("대졸(4년)").minEdubgIcd("05")
                 .region("경기도 화성시 만세구")
                 .build(), TODAY);
 
-        assertThat(item.posting().getJobGroup()).isEqualTo(com.lifelog.domain.jobposting.entity.JobGroup.BACKEND);
         assertThat(item.jobCode()).isEqualTo("1332");
         assertThat(item.posting().getEducationLevel()).isEqualTo((short) 5);
         assertThat(item.posting().getRegionName()).isEqualTo("경기 화성시 만세구");
     }
 
-    @Test
-    void 예외_변환표_코드와_학력무관() {
-        JobPostingSyncItem item = mapper.toItem(row("정보보안 전문가 모집").jobsCd("134200").build(), TODAY);
+    // 고용24 직종코드는 한국고용직업분류 2025 기준이라 앞 4자리가 그대로 job.code
+    @ParameterizedTest(name = "{0} → {1}")
+    @CsvSource({"134200, 1342", "561300, 5613", "026202, 0262", "550102, 5501", "137000, 1370"})
+    void 직무코드는_6자리_앞_4자리(String jobsCd, String expected) {
+        JobPostingSyncItem item = mapper.toItem(row("공고").jobsCd(jobsCd).build(), TODAY);
 
-        assertThat(item.jobCode()).isEqualTo("1350");
+        assertThat(item.jobCode()).isEqualTo(expected);
         assertThat(item.posting().getEducationLevel()).isZero();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"1332", "13320A"})
+    void 직무코드가_6자리_숫자가_아니면_연결하지_않음(String jobsCd) {
+        assertThat(mapper.toItem(row("공고").jobsCd(jobsCd).build(), TODAY).jobCode()).isNull();
     }
 
     @Test

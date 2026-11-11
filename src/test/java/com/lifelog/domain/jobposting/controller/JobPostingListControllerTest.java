@@ -9,7 +9,6 @@ import com.lifelog.domain.jobposting.service.MemberJobProfileReader;
 import com.lifelog.domain.jobposting.entity.CareerType;
 import com.lifelog.domain.jobposting.entity.DeadlineType;
 import com.lifelog.domain.jobposting.entity.EmploymentType;
-import com.lifelog.domain.jobposting.entity.JobGroup;
 import com.lifelog.domain.jobposting.entity.JobPosting;
 import com.lifelog.domain.jobposting.entity.JobPostingBookmark;
 import com.lifelog.domain.jobposting.entity.JobPostingStatus;
@@ -20,6 +19,8 @@ import com.lifelog.domain.member.repository.MemberRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -96,7 +97,7 @@ class JobPostingListControllerTest {
 
     @Test
     void 응답_형식() throws Exception {
-        JobPosting posting = save("주니어 백엔드 개발자", "11680", "서울 강남구", JobGroup.BACKEND, TODAY.plusDays(3));
+        JobPosting posting = save("주니어 백엔드 개발자", "11680", "서울 강남구", null, TODAY.plusDays(3));
         save("다른 공고", "11680", "서울 강남구", null, null);
         bookmark(posting);
 
@@ -131,9 +132,9 @@ class JobPostingListControllerTest {
 
     @Test
     void 마감된_공고는_제외하고_recommended는_필터와_무관() throws Exception {
-        save("서울", "11680", "서울 강남구", JobGroup.BACKEND, null);
-        save("경기", "41135", "경기 성남시 분당구", JobGroup.FRONTEND, null);
-        JobPosting closed = save("마감", "11680", "서울 강남구", JobGroup.BACKEND, null);
+        save("서울", "11680", "서울 강남구", null, null);
+        save("경기", "41135", "경기 성남시 분당구", null, null);
+        JobPosting closed = save("마감", "11680", "서울 강남구", null, null);
         setStatusClosed(closed);
 
         mockMvc.perform(request(get(URL).param("region", "SEOUL")))
@@ -185,15 +186,25 @@ class JobPostingListControllerTest {
     }
 
     @Test
-    void 직무_그룹을_지정하면_그_그룹만_없으면_그룹_없는_공고까지_전체() throws Exception {
-        save("백엔드", "11680", null, JobGroup.BACKEND, null);
-        save("AI", "11680", null, JobGroup.AI_ML, null);
-        save("미분류", "11680", null, null, null);
+    void 직무_중분류를_지정하면_연결된_직무의_중분류가_같은_공고만_없으면_전체() throws Exception {
+        saveFor("백엔드", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
+        saveFor("요양보호사", saveJob("5", "55", "550", "5501", "요양 보호사"), 0, CareerType.ANY);
+        saveFor("직무 연결 없음", null, 0, CareerType.ANY);
 
-        mockMvc.perform(request(get(URL).param("jobGroup", "BACKEND")))
+        mockMvc.perform(request(get(URL).param("jobCategory", "13")))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", contains("백엔드")));
+        mockMvc.perform(request(get(URL).param("jobCategory", "55")))
+                .andExpect(jsonPath("$.data.jobPostings[*].title", contains("요양보호사")));
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.totalElements").value(3));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "133", "ab"})
+    void 직무_중분류가_2자리_숫자가_아니면_400(String jobCategory) throws Exception {
+        mockMvc.perform(request(get(URL).param("jobCategory", jobCategory)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
     }
 
     @Test
@@ -220,41 +231,42 @@ class JobPostingListControllerTest {
     }
 
     @Test
-    void 맞춤_조건은_희망_목표_직무와_학력으로_거르고_recommended에도_적용() throws Exception {
-        Job backend = saveJob("1332", "응용 소프트웨어 개발자");
+    void 맞춤_조건은_희망_목표_직무와_같은_소분류와_학력으로_거르고_recommended에도_적용() throws Exception {
+        Job app = saveJob("1332", "응용 소프트웨어 개발자");
         Job web = saveJob("1333", "웹 개발자");
-        saveFor("응용SW 학사", backend, 5, CareerType.EXPERIENCED);
-        saveFor("응용SW 석사", backend, 6, CareerType.NEW);
+        Job network = saveJob("1341", "네트워크 시스템 개발자");
+        saveFor("응용SW 학사", app, 5, CareerType.EXPERIENCED);
+        saveFor("응용SW 석사", app, 6, CareerType.NEW);
+        // 희망 직무(1332)와 세분류는 달라도 소분류(133)가 같으면 포함
         saveFor("웹 학력무관", web, 0, CareerType.ANY);
+        saveFor("네트워크", network, 0, CareerType.ANY);
         saveFor("직무 없음", null, 0, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of(backend.getId()), 5));
+                .willReturn(new MemberJobProfile(Set.of("133"), 5));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.personalized").value(true))
-                .andExpect(jsonPath("$.data.tabCounts.recommended").value(1))
-                .andExpect(jsonPath("$.data.jobPostings[*].title", contains("응용SW 학사")));
+                .andExpect(jsonPath("$.data.tabCounts.recommended").value(2))
+                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW 학사", "웹 학력무관")));
     }
 
     @Test
-    void 희망_목표_직무가_여러_개면_합집합() throws Exception {
-        Job backend = saveJob("1332", "응용 소프트웨어 개발자");
-        Job web = saveJob("1333", "웹 개발자");
-        saveFor("응용SW", backend, 0, CareerType.ANY);
-        saveFor("웹", web, 0, CareerType.ANY);
+    void 희망_목표_직무의_소분류가_여러_개면_합집합() throws Exception {
+        saveFor("응용SW", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
+        saveFor("네트워크", saveJob("1341", "네트워크 시스템 개발자"), 0, CareerType.ANY);
+        saveFor("요양보호사", saveJob("5", "55", "550", "5501", "요양 보호사"), 0, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of(backend.getId(), web.getId()), 5));
+                .willReturn(new MemberJobProfile(Set.of("133", "134"), 5));
 
         mockMvc.perform(request(get(URL)))
-                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW", "웹")));
+                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW", "네트워크")));
     }
 
     @Test
     void 학력_정보가_없으면_학력_조건은_적용하지_않음() throws Exception {
-        Job backend = saveJob("1332", "응용 소프트웨어 개발자");
-        saveFor("석사 이상", backend, 6, CareerType.ANY);
+        saveFor("석사 이상", saveJob("1332", "응용 소프트웨어 개발자"), 6, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of(backend.getId()), null));
+                .willReturn(new MemberJobProfile(Set.of("133"), null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.personalized").value(true))
@@ -263,24 +275,21 @@ class JobPostingListControllerTest {
 
     @Test
     void 경력_조건은_설정이_꺼져_있으면_적용하지_않음() throws Exception {
-        Job backend = saveJob("1332", "응용 소프트웨어 개발자");
-        saveFor("경력직", backend, 0, CareerType.EXPERIENCED);
+        saveFor("경력직", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.EXPERIENCED);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of(backend.getId()), 5));
+                .willReturn(new MemberJobProfile(Set.of("133"), 5));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", contains("경력직")));
     }
 
     @Test
-    void 직무_그룹_지역_필터는_맞춤_조건_위에_추가로_적용하고_recommended에는_반영하지_않음() throws Exception {
+    void 직무_중분류_지역_필터는_맞춤_조건_위에_추가로_적용하고_recommended에는_반영하지_않음() throws Exception {
         Job backend = saveJob("1332", "응용 소프트웨어 개발자");
         saveFor("서울 백엔드", backend, 0, CareerType.ANY);
-        JobPosting gyeonggi = save("경기 공고", "41117", null, JobGroup.BACKEND, null);
-        gyeonggi.replaceJob(backend);
-        jobPostingRepository.saveAndFlush(gyeonggi);
+        JobPosting gyeonggi = save("경기 공고", "41117", null, backend, null);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of(backend.getId()), 5));
+                .willReturn(new MemberJobProfile(Set.of("133"), 5));
 
         mockMvc.perform(request(get(URL).param("region", "GYEONGGI")))
                 .andExpect(jsonPath("$.data.tabCounts.recommended").value(2))
@@ -342,7 +351,7 @@ class JobPostingListControllerTest {
                 member.getId(), null, List.of(new SimpleGrantedAuthority("ROLE_USER")))));
     }
 
-    private JobPosting save(String title, String regionCode, String regionName, JobGroup jobGroup, LocalDate closeDate) {
+    private JobPosting save(String title, String regionCode, String regionName, Job job, LocalDate closeDate) {
         JobPosting posting = JobPosting.builder()
                 .title(title)
                 .employmentType(EmploymentType.FULL_TIME)
@@ -355,14 +364,14 @@ class JobPostingListControllerTest {
                 .publishedAt(LocalDateTime.now())
                 .source("TEST")
                 .externalId(title + regionCode)
-                .jobGroup(jobGroup)
                 .educationRequirement("대졸(4년)")
                 .company(company)
                 .build();
+        posting.replaceJob(job);
         return jobPostingRepository.saveAndFlush(posting);
     }
 
-    // 서울 지역, 상시 채용, jobGroup 없음
+    // 서울 지역, 상시 채용
     private JobPosting saveFor(String title, Job job, int educationLevel, CareerType careerType) {
         JobPosting posting = JobPosting.builder()
                 .title(title)
@@ -380,11 +389,16 @@ class JobPostingListControllerTest {
         return jobPostingRepository.saveAndFlush(posting);
     }
 
+    // 정보통신 연구개발직(중분류 13) 직무
     private Job saveJob(String code, String name) {
+        return saveJob("1", "13", code.substring(0, 3), code, name);
+    }
+
+    private Job saveJob(String mainCode, String middleCode, String subCode, String code, String name) {
         return jobRepository.saveAndFlush(Job.builder()
-                .mainCategoryCode("1").mainCategoryName("연구직 및 공학 기술직")
-                .middleCategoryCode("13").middleCategoryName("정보통신 연구개발직 및 공학기술직")
-                .subCategoryCode(code.substring(0, 3)).subCategoryName("소프트웨어 개발자")
+                .mainCategoryCode(mainCode).mainCategoryName("대분류 " + mainCode)
+                .middleCategoryCode(middleCode).middleCategoryName("중분류 " + middleCode)
+                .subCategoryCode(subCode).subCategoryName("소분류 " + subCode)
                 .code(code).name(name)
                 .build());
     }

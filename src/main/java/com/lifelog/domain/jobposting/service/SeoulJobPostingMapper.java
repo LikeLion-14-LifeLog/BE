@@ -62,7 +62,6 @@ public class SeoulJobPostingMapper {
                 .careerType(careerType(row.enterTpCd()))
                 .regionCode(truncate(row.regionCd().strip(), 30))
                 .regionName(truncate(RegionNameNormalizer.normalize(trimToNull(row.region())), 50))
-                .jobGroup(JobGroupClassifier.classify(externalJobCode, title))
                 .workplaceAddress(truncate(workplaceAddress(row), 255))
                 .description(trimToNull(row.jobCont()))
                 .publishedAt(regDate == null ? null : regDate.atStartOfDay())
@@ -87,7 +86,7 @@ public class SeoulJobPostingMapper {
 
         return new JobPostingSyncItem(posting, truncate(required(trimToNull(row.company()), "COMPANY"), 200),
                 truncate(SeoulTextCleaner.cleanIndustryName(row.industryName()), 100),
-                JobCodeMapper.toJobCode(externalJobCode));
+                jobCode(externalJobCode));
     }
 
     // 고유 ID가 없어 기업명·제목·등록일·근무지로 식별. 제목이 바뀌면 다른 공고로 취급 (MVP에서 감수)
@@ -231,6 +230,14 @@ public class SeoulJobPostingMapper {
     // 정리 규칙은 SeoulTextCleaner에 모아 둠 (？ 치환, 줄바꿈 통일, 공백 정리)
     private static String trimToNull(String value) {
         return SeoulTextCleaner.clean(value);
+    }
+
+    // 고용24 6자리 직종코드의 앞 4자리 = 한국고용직업분류 2025 세분류(job.code). 형식이 다르면 null
+    static String jobCode(String externalJobCode) {
+        if (externalJobCode == null || !externalJobCode.matches("\\d{6}")) {
+            return null;
+        }
+        return externalJobCode.substring(0, 4);
     }
 
     // MIN_EDUBG_ICD "00"~"07" → 0~7 (0 학력무관), 형식이 다르면 0

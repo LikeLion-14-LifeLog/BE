@@ -30,17 +30,16 @@ seoul:
     key: ${SEOUL_OPENAPI_KEY:}
     base-url: http://openapi.seoul.go.kr:8088
 
+# 직무 기준 데이터 (한국고용직업분류 2025). 2018은 data/job_2018.csv로 참고용 보관
+job:
+  csv-path: data/job_2025.csv
+
 job-posting:
   sync:
-    # 저장할 6자리 모집직종코드 접두어 (쉼표로 여러 개). 13 = 정보통신 연구개발직 및 공학기술직
-    job-code-prefixes: 13
-    # 원본 오분류가 많은 코드는 제목에 아래 키워드 중 하나가 있을 때만 저장
-    keyword-required-job-codes: 135101,135102
-    required-title-keywords: 데이터,DB,SQL,AI,ML,LLM,빅데이터,분석
-  personalized:
-    # 맞춤 공고에서 신입·경력무관 공고만 볼지 (기획 확인 전이라 기본 꺼짐)
-    new-or-any-only: false
     scheduler:
       # 매일 1회 자동 수집, 기본 비활성화
       enabled: ${JOB_POSTING_SYNC_SCHEDULER_ENABLED:false}
       cron: "0 0 4 * * *"
+  personalized:
+    # 맞춤 공고에서 신입·경력무관 공고만 볼지 (기획 확인 전이라 기본 꺼짐)
+    new-or-any-only: false
