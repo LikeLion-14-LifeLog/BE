@@ -1,6 +1,8 @@
 package com.lifelog.domain.specprofile.controller;
 
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
+import org.springframework.web.bind.annotation.GetMapping;
 import com.lifelog.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,6 +18,44 @@ import org.springframework.web.bind.annotation.RequestBody;
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "회원 스펙 조회", description = """
+            ### 1. API 역할
+            - JWT 회원 본인의 CURRENT 프로필과 임시 저장된 최신 내용을 조회합니다.
+            - 기본 정보, 희망 직무, 학력, 자격증, 어학 성적, 활동 경험을 반환합니다.
+            - 연봉 진단은 실행하지 않습니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. 요청 Content-Type 지정은 필요하지 않습니다.
+            ### 3. Path Variable
+            - 없음
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: 회원 스펙 조회 성공.
+            - data: specProfileId, type(CURRENT), birthYear, residenceRegion.
+            - desiredJobId는 DesiredJob PK이며 저장 요청의 jobId(Job PK)와 다릅니다.
+            - desiredJobName은 연결된 직무의 이름입니다.
+            - academicAbilities는 학력과 전공 ID·이름·계열을 포함합니다.
+            - certificates는 보유 자격증 PK, 자격증 ID·이름과 취득 연월을 포함합니다.
+            - languageExamScores는 성적 PK, 시험 ID·이름, 숫자 점수·등급, 취득·만료 연월을 포함합니다.
+            - experiences는 경험 PK, 유형, 활동명, 시작·종료 연월, 설명 및 수상 정보를 포함합니다.
+            - 미입력 단일 값은 null, 목록은 []입니다. 각 목록은 항목 PK 오름차순입니다.
+            - 연월은 YYYY-MM, createdAt·updatedAt은 한국 시간 +09:00의 ISO 8601 문자열입니다.
+            - 오류 코드는 AUTH_401, SPEC_PROFILE_404_1, SPEC_PROFILE_500_1, SPEC_PROFILE_500_3입니다.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "회원 스펙 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CURRENT 프로필 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "프로필 또는 전공 연결 무결성 오류")
+    })
+    @GetMapping(value = "/api/spec-profile", produces = "application/json")
+    ApiResponse<SpecProfileResDto> getCurrentProfile(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId);
+
     @Operation(summary = "회원 스펙 임시 저장", description = """
             ### 1. API 역할
             - 본인 CURRENT 프로필과 회원의 희망 직무를 저장합니다. 연봉 진단은 실행하지 않습니다.

@@ -16,7 +16,8 @@ public enum SpecProfileErrorCode implements ErrorCode {
     CHILD_NOT_FOUND("SPEC_PROFILE_404_3", "본인 프로필의 항목을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     PROFILE_LIMIT("SPEC_PROFILE_409_1", "생성 가능한 프로필 개수를 초과했습니다.", HttpStatus.CONFLICT),
     INVALID_PROFILE_COUNT("SPEC_PROFILE_500_1", "현재 스펙 프로필 개수가 올바르지 않습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
-    LANGUAGE_EXAM_NOT_INITIALIZED("SPEC_PROFILE_500_2", "어학 데이터 초기화가 필요합니다", HttpStatus.INTERNAL_SERVER_ERROR);
+    LANGUAGE_EXAM_NOT_INITIALIZED("SPEC_PROFILE_500_2", "어학 데이터 초기화가 필요합니다", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_MAJOR_COUNT("SPEC_PROFILE_500_3", "학력에 연결된 전공 개수가 올바르지 않습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final String code;
     private final String message;

@@ -1,6 +1,7 @@
 package com.lifelog.domain.specprofile.controller;
 
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileResDto> getCurrentProfile(Long memberId) {
+        return ApiResponse.success("회원 스펙 조회 성공", service.getCurrentProfile(memberId));
+    }
 
     @Override
     public ResponseEntity<ApiResponse<Void>> saveTemporary(Long memberId, SpecProfileTemporarySaveReqDto request) {
