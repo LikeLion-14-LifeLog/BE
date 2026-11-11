@@ -1,11 +1,13 @@
 package com.lifelog.domain.jobposting.controller;
 
+import com.lifelog.domain.jobposting.dto.JobPostingBookmarkResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingDetailResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingSyncResponse;
 import com.lifelog.domain.jobposting.entity.JobGroup;
 import com.lifelog.domain.jobposting.entity.JobPostingRegion;
 import com.lifelog.domain.jobposting.entity.JobPostingSort;
+import com.lifelog.domain.jobposting.service.JobPostingBookmarkService;
 import com.lifelog.domain.jobposting.service.JobPostingService;
 import com.lifelog.domain.jobposting.service.JobPostingSyncService;
 import com.lifelog.global.response.ApiResponse;
@@ -17,6 +19,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +36,7 @@ public class JobPostingController {
 
     private final JobPostingSyncService jobPostingSyncService;
     private final JobPostingService jobPostingService;
+    private final JobPostingBookmarkService jobPostingBookmarkService;
 
     @Operation(
             summary = "맞춤 공고 목록 조회",
@@ -73,6 +77,40 @@ public class JobPostingController {
             @PathVariable Long jobPostingId
     ) {
         return ApiResponse.success(jobPostingService.getDetail(memberId, jobPostingId));
+    }
+
+    @Operation(
+            summary = "공고 저장",
+            description = "공고를 저장합니다. 이미 저장한 공고여도 성공하며 저장 수는 늘지 않습니다. 마감된 공고도 저장할 수 있습니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "저장됨"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "없는 공고 (JOB_POSTING_404)")
+    })
+    @PostMapping("/job-postings/{jobPostingId}/bookmark")
+    public ApiResponse<JobPostingBookmarkResponse> bookmark(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "채용공고 ID", example = "101")
+            @PathVariable Long jobPostingId
+    ) {
+        return ApiResponse.success(jobPostingBookmarkService.bookmark(memberId, jobPostingId));
+    }
+
+    @Operation(
+            summary = "공고 저장 취소",
+            description = "공고 저장을 취소합니다. 저장하지 않은 공고여도 성공하며 저장 수는 줄지 않습니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "저장 취소됨"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "없는 공고 (JOB_POSTING_404)")
+    })
+    @DeleteMapping("/job-postings/{jobPostingId}/bookmark")
+    public ApiResponse<JobPostingBookmarkResponse> unbookmark(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "채용공고 ID", example = "101")
+            @PathVariable Long jobPostingId
+    ) {
+        return ApiResponse.success(jobPostingBookmarkService.unbookmark(memberId, jobPostingId));
     }
 
     @Operation(
