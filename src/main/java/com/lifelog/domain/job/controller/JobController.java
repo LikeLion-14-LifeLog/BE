@@ -2,7 +2,6 @@ package com.lifelog.domain.job.controller;
 
 import com.lifelog.domain.job.dto.JobInitResponse;
 import com.lifelog.domain.job.dto.JobListResponse;
-import com.lifelog.domain.job.dto.JobSubCategoryListResponse;
 import com.lifelog.domain.job.service.JobService;
 import com.lifelog.global.response.ApiResponse;
 import com.lifelog.global.response.SliceResponse;
@@ -43,7 +42,7 @@ public class JobController {
 
     @Operation(
             summary = "직무 목록 조회",
-            description = "한국고용직업분류 2025 기준 직무(세분류) 목록을 검색합니다. 모든 조건은 AND로 적용되며 code 오름차순으로 정렬됩니다."
+            description = "8차 고용직업분류 기준 직무 목록을 검색합니다. 모든 조건은 AND로 적용되며 code 오름차순으로 정렬됩니다."
     )
     @GetMapping("/jobs")
     public ApiResponse<SliceResponse<JobListResponse>> getJobs(
@@ -64,19 +63,5 @@ public class JobController {
     ) {
         return ApiResponse.success(jobService.search(
                 keyword, code, mainCategoryCode, middleCategoryCode, subCategoryCode, page, size));
-    }
-
-    @Operation(
-            summary = "직무 소분류 검색",
-            description = "한국고용직업분류 2025 직무 소분류(140개)를 검색합니다. 검색형 선택 UI용이며, "
-                    + "검색어가 소분류명 또는 그 아래 세분류 직무명에 포함되면 해당 소분류를 반환합니다(대소문자 무시). "
-                    + "검색어가 없으면 전체를 반환하며 code 오름차순입니다. 선택한 소분류 code는 공고 목록의 jobCategory로 사용합니다."
-    )
-    @GetMapping("/jobs/sub-categories")
-    public ApiResponse<JobSubCategoryListResponse> getJobSubCategories(
-            @Parameter(description = "검색어 (부분 일치, 앞뒤 공백 제거 후 최대 50자)", example = "소프트웨어")
-            @RequestParam(required = false) String keyword
-    ) {
-        return ApiResponse.success(jobService.searchSubCategories(keyword));
     }
 }

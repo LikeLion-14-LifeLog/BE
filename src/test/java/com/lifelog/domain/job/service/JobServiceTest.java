@@ -1,11 +1,6 @@
 package com.lifelog.domain.job.service;
 
-import com.lifelog.domain.job.dto.JobCategoryResponse;
 import com.lifelog.domain.job.dto.JobInitResponse;
-import com.lifelog.domain.job.dto.JobSubCategoryListResponse;
-import com.lifelog.domain.job.dto.JobSubCategoryResponse;
-import com.lifelog.domain.job.exception.JobErrorCode;
-import com.lifelog.global.exception.CustomException;
 import com.lifelog.domain.job.dto.JobListResponse;
 import com.lifelog.domain.job.dto.JobResponse;
 import com.lifelog.domain.job.entity.Job;
@@ -22,7 +17,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional
@@ -214,42 +208,6 @@ class JobServiceTest {
         assertThat(response.createdCount()).isEqualTo(CSV_ROW_COUNT - 1);
         assertThat(findByCode("9999").getMainCategoryCode()).isNull();
         assertThat(findByCode("9999").getSubCategoryCode()).isNull();
-    }
-
-    @Test
-    void 소분류_검색어가_없으면_미분류를_뺀_소분류_전체() {
-        jobService.initFromCsv();
-
-        JobSubCategoryListResponse response = jobService.searchSubCategories(null);
-
-        // 한국고용직업분류 2025 소분류 140개, 미분류(9999)는 소분류가 없어 제외
-        assertThat(response.subCategories()).hasSize(140);
-        assertThat(response.subCategories()).extracting(JobSubCategoryResponse::code).isSorted();
-        JobSubCategoryResponse software = response.subCategories().stream()
-                .filter(sub -> sub.code().equals("133")).findFirst().orElseThrow();
-        assertThat(software.name()).isEqualTo("소프트웨어 개발자");
-        assertThat(software.middleCategory().code()).isEqualTo("13");
-        assertThat(software.mainCategory().code()).isEqualTo("1");
-        assertThat(software.jobs()).extracting(JobCategoryResponse::code).containsExactly("1331", "1332", "1333", "1339");
-    }
-
-    @Test
-    void 소분류명이나_세분류명에_검색어가_있으면_해당_소분류() {
-        jobService.initFromCsv();
-
-        // "소프트웨어 개발자"(133)는 소분류명, "웹 운영자"(136)는 세분류명으로 걸림
-        assertThat(jobService.searchSubCategories("소프트웨어").subCategories())
-                .extracting(JobSubCategoryResponse::code).contains("133");
-        assertThat(jobService.searchSubCategories(" 웹 ").subCategories())
-                .extracting(JobSubCategoryResponse::code).contains("133", "136");
-        assertThat(jobService.searchSubCategories("존재하지않는직무").subCategories()).isEmpty();
-    }
-
-    @Test
-    void 소분류_검색어가_50자를_넘으면_예외() {
-        assertThatThrownBy(() -> jobService.searchSubCategories("가".repeat(51)))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode").isEqualTo(JobErrorCode.INVALID_KEYWORD);
     }
 
     private Map<String, Long> findIdsByCode() {

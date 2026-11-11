@@ -49,7 +49,7 @@ public class JobPostingService {
      * 희망·목표 직무가 없으면 맞춤 조건 없이 전체를 보여주고 personalized=false.
      * 사용자가 고른 직무 소분류(jobCategory)·지역은 맞춤 조건 위에 추가로 적용한다 (지역은 자동으로 거르지 않음).
      * @param memberId    로그인 회원 ID, null이면 맞춤 조건·저장 여부 없이 조회
-     * @param jobCategory 직무 소분류 코드 3자리 (예: "133", GET /api/jobs/sub-categories의 code), null이면 전체
+     * @param jobCategory 직무 소분류 코드 3자리 (예: "133", GET /api/job-postings/job-categories의 code), null이면 전체
      */
     @Transactional(readOnly = true)
     public SliceResponse<JobPostingListResponse> search(Long memberId, String jobCategory, JobPostingRegion region,

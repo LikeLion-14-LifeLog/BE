@@ -3,11 +3,13 @@ package com.lifelog.domain.jobposting.controller;
 import com.lifelog.domain.jobposting.dto.JobPostingBookmarkListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingBookmarkResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingDetailResponse;
+import com.lifelog.domain.jobposting.dto.JobPostingJobCategoryListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingSyncStatusResponse;
 import com.lifelog.domain.jobposting.entity.JobPostingRegion;
 import com.lifelog.domain.jobposting.entity.JobPostingSort;
 import com.lifelog.domain.jobposting.service.JobPostingBookmarkService;
+import com.lifelog.domain.jobposting.service.JobPostingCategoryService;
 import com.lifelog.domain.jobposting.service.JobPostingService;
 import com.lifelog.domain.jobposting.service.JobPostingSyncService;
 import com.lifelog.global.response.ApiResponse;
@@ -39,12 +41,13 @@ public class JobPostingController {
     private final JobPostingSyncService jobPostingSyncService;
     private final JobPostingService jobPostingService;
     private final JobPostingBookmarkService jobPostingBookmarkService;
+    private final JobPostingCategoryService jobPostingCategoryService;
 
     @Operation(
             summary = "맞춤 공고 목록 조회",
             description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망·목표 직무와 소분류가 같고 "
                     + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망·목표 직무가 없으면 전체 공고를 보여주고 personalized=false입니다. "
-                    + "jobCategory(직무 소분류, GET /api/jobs/sub-categories의 code)·region은 맞춤 조건 위에 추가로 적용합니다. "
+                    + "jobCategory(직무 소분류, GET /api/job-postings/job-categories의 code)·region은 맞춤 조건 위에 추가로 적용합니다. "
                     + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(jobCategory·region 제외), bookmarked는 내가 저장한 공고 수입니다."
     )
     @ApiResponses({
@@ -66,6 +69,24 @@ public class JobPostingController {
             @RequestParam(defaultValue = "6") int size
     ) {
         return ApiResponse.success(jobPostingService.search(memberId, jobCategory, region, sort, page, size));
+    }
+
+    @Operation(
+            summary = "공고 직무 필터용 소분류 검색",
+            description = "공고 목록의 직무 필터(jobCategory)로 쓸 직무 소분류(한국고용직업분류 2025, 140개)를 검색합니다. "
+                    + "검색형 선택 UI용이며, 검색어가 소분류명 또는 그 아래 세분류 직무명에 포함되면 해당 소분류를 반환합니다(대소문자 무시). "
+                    + "검색어가 없으면 전체를 반환하며 code 오름차순입니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "검색어 50자 초과 (JOB_POSTING_400)")
+    })
+    @GetMapping("/job-postings/job-categories")
+    public ApiResponse<JobPostingJobCategoryListResponse> getJobCategories(
+            @Parameter(description = "검색어 (부분 일치, 앞뒤 공백 제거 후 최대 50자)", example = "소프트웨어")
+            @RequestParam(required = false) String keyword
+    ) {
+        return ApiResponse.success(jobPostingCategoryService.search(keyword));
     }
 
     @Operation(
