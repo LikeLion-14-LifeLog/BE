@@ -1,6 +1,9 @@
 package com.lifelog.domain.jobposting.repository;
 
 import com.lifelog.domain.jobposting.entity.JobPostingBookmark;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +15,10 @@ import java.util.List;
 public interface JobPostingBookmarkRepository extends JpaRepository<JobPostingBookmark, Long> {
 
     long countByMember_Id(Long memberId);
+
+    // 카드에 필요한 공고·기업을 함께 조회 (N+1 방지)
+    @EntityGraph(attributePaths = {"jobPosting", "jobPosting.company"})
+    Page<JobPostingBookmark> findByMember_Id(Long memberId, Pageable pageable);
 
     boolean existsByMember_IdAndJobPosting_Id(Long memberId, Long jobPostingId);
 

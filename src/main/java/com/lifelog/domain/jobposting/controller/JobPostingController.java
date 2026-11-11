@@ -1,5 +1,6 @@
 package com.lifelog.domain.jobposting.controller;
 
+import com.lifelog.domain.jobposting.dto.JobPostingBookmarkListResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingBookmarkResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingDetailResponse;
 import com.lifelog.domain.jobposting.dto.JobPostingListResponse;
@@ -59,6 +60,22 @@ public class JobPostingController {
             @RequestParam(defaultValue = "6") int size
     ) {
         return ApiResponse.success(jobPostingService.search(memberId, jobGroup, region, sort, page, size));
+    }
+
+    @Operation(
+            summary = "저장한 공고 목록 조회",
+            description = "내가 저장한 공고를 최근 저장 순으로 조회합니다. 마감된 공고도 포함하며, "
+                    + "응답 형식은 맞춤 공고 목록에서 tabCounts만 빠진 형태입니다."
+    )
+    @GetMapping("/job-postings/bookmarks")
+    public ApiResponse<SliceResponse<JobPostingBookmarkListResponse>> getBookmarkedJobPostings(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "페이지 번호 (1부터 시작)", example = "1")
+            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기 (1~100)", example = "6")
+            @RequestParam(defaultValue = "6") int size
+    ) {
+        return ApiResponse.success(jobPostingBookmarkService.getBookmarks(memberId, page, size));
     }
 
     @Operation(
