@@ -40,4 +40,10 @@ jobs:
           ./gradlew build
         env:
           DB_PASSWORD: test
+          SPEC_PROFILE_TEST_DB_URL: jdbc:postgresql://localhost:5433/lifelog
+          SPEC_PROFILE_TEST_DB_USER: lifelog
+          SPEC_PROFILE_TEST_DB_PASSWORD: test
+          CERTIFICATION_TEST_DB_URL: jdbc:postgresql://localhost:5433/lifelog
+          CERTIFICATION_TEST_DB_USER: lifelog
+          CERTIFICATION_TEST_DB_PASSWORD: test
           JWT_SECRET: "VGhpcy1pcy1hLXRlc3Qtb25seS1qd3Qtc2VjcmV0LWZvci1jaS0yMDI2IQ=="

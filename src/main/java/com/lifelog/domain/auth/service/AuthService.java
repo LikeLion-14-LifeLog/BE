@@ -8,6 +8,7 @@ import com.lifelog.domain.member.entity.Member;
 import com.lifelog.domain.member.entity.MemberIdentity;
 import com.lifelog.domain.member.repository.MemberIdentityRepository;
 import com.lifelog.domain.member.repository.MemberRepository;
+import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,15 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class AuthService {
 
     private final MemberRepository memberRepository;
     private final MemberIdentityRepository memberIdentityRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final SpecProfileService specProfileService;
 
+    /** 회원, 인증 정보, CURRENT 프로필을 하나의 트랜잭션으로 생성한다. */
     @Transactional
     public Long signup(SignupRequest request) {
+
+        log.info("[AuthService] signup() - START");
 
         if (memberRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
@@ -44,6 +50,9 @@ public class AuthService {
 
         memberIdentityRepository.save(identity);
 
+        specProfileService.createCurrentProfile(member);
+
+        log.info("[AuthService] signup() - END | memberId: {}", member.getId());
         return member.getId();
     }
 
