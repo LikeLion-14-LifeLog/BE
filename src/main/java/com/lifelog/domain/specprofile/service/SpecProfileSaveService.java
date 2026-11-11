@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -80,6 +81,7 @@ public class SpecProfileSaveService {
         languageExamScoreService.syncLanguageExamScores(profile, request.languageExamScores(), exams);
         experienceService.syncExperiences(profile, request.experiences());
         entityManager.flush();
+        profileRepository.updateModifiedAt(profile.getId(), LocalDateTime.now());
         log.info("[SpecProfileSaveService] 회원 스펙 프로필 임시 저장 종료 | saveTemporary() - END | profileId: {}", profile.getId());
     }
 
