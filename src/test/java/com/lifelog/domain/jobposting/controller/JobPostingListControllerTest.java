@@ -125,6 +125,19 @@ class JobPostingListControllerTest {
     }
 
     @Test
+    void 마감일이_지난_공고는_제외하고_오늘_마감과_상시는_포함() throws Exception {
+        save("어제 마감", "11680", null, null, TODAY.minusDays(1));
+        save("오늘 마감", "11680", null, null, TODAY);
+        save("상시", "11680", null, null, null);
+
+        mockMvc.perform(request(get(URL)))
+                .andExpect(jsonPath("$.data.tabCounts.recommended").value(2))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.jobPostings[*].title", contains("오늘 마감", "상시")))
+                .andExpect(jsonPath("$.data.jobPostings[0].dDay").value(0));
+    }
+
+    @Test
     void 마감_임박순은_마감일_오름차순_상시는_마지막_같으면_최신_ID_먼저() throws Exception {
         JobPosting always = save("상시", "11680", null, null, null);
         JobPosting later = save("나중", "11680", null, null, TODAY.plusDays(10));

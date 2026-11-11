@@ -50,19 +50,20 @@ public class JobPostingService {
             throw new CustomException(CommonErrorCode.INVALID_SIZE);
         }
 
+        LocalDate today = LocalDate.now(SEOUL);
         // Spring Data 페이지는 0부터 시작
         PageRequest pageable = PageRequest.of(page - 1, size, sort.toSort());
         Page<JobPosting> result = jobPostingRepository.findAll(
-                JobPostingSpecification.search(JobPostingStatus.OPEN, jobGroup, region), pageable);
+                JobPostingSpecification.search(JobPostingStatus.OPEN, today, jobGroup, region), pageable);
 
         Set<Long> bookmarkedIds = findBookmarkedIds(memberId, result.getContent());
-        LocalDate today = LocalDate.now(SEOUL);
         List<JobPostingCardResponse> cards = result.getContent().stream()
                 .map(posting -> JobPostingCardResponse.of(posting, bookmarkedIds.contains(posting.getId()), today))
                 .toList();
 
         JobPostingTabCounts tabCounts = new JobPostingTabCounts(
-                jobPostingRepository.countByStatus(JobPostingStatus.OPEN),
+                // 필터 없는 목록과 같은 조건 (모집 중이고 마감일이 지나지 않은 공고)
+                jobPostingRepository.count(JobPostingSpecification.search(JobPostingStatus.OPEN, today, null, null)),
                 memberId == null ? 0 : jobPostingBookmarkRepository.countByMember_Id(memberId));
 
         return SliceResponse.of(result, new JobPostingListResponse(tabCounts, cards));

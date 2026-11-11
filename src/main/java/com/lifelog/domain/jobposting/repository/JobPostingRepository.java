@@ -15,8 +15,6 @@ import java.util.Optional;
 
 public interface JobPostingRepository extends JpaRepository<JobPosting, Long>, JpaSpecificationExecutor<JobPosting> {
 
-    long countByStatus(JobPostingStatus status);
-
     List<JobPosting> findBySourceAndExternalIdIn(String source, Collection<String> externalIds);
 
     Optional<JobPosting> findBySourceAndExternalId(String source, String externalId);

@@ -34,7 +34,7 @@ public class JobPostingController {
 
     @Operation(
             summary = "맞춤 공고 목록 조회",
-            description = "모집 중인 공고를 직무 그룹·지역으로 걸러 조회합니다. "
+            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함)를 직무 그룹·지역으로 걸러 조회합니다. "
                     + "jobGroup을 지정하지 않으면 그룹이 정해지지 않은 공고까지 모두 포함합니다. "
                     + "tabCounts.recommended는 필터 적용 전 모집 중 공고 수, bookmarked는 내가 저장한 공고 수입니다."
     )
