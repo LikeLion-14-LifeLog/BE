@@ -76,6 +76,24 @@ class SeoulJobApiClientTest {
     }
 
     @Test
+    void 중간_페이지에_데이터가_없으면_EXTERNAL_API_FAILED() {
+        expect(1, 2, page(3, "A", "B"));
+        expect(3, 4, """
+                {"RESULT":{"CODE":"INFO-200","MESSAGE":"해당하는 데이터가 없습니다."}}
+                """);
+
+        assertFailed();
+    }
+
+    @Test
+    void 받은_건수가_전체보다_적으면_EXTERNAL_API_FAILED() {
+        expect(1, 2, page(3, "A"));
+        expect(3, 4, page(3, "C"));
+
+        assertFailed();
+    }
+
+    @Test
     void 인증키가_없으면_호출하지_않고_실패() {
         SeoulJobApiClient noKey = new SeoulJobApiClient(RestClient.create(), "", 2);
 

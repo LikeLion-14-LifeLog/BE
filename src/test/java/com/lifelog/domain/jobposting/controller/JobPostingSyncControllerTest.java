@@ -17,6 +17,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -24,6 +25,11 @@ import java.util.List;
 import static com.lifelog.domain.jobposting.JobPostingFixtures.row;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -58,7 +64,7 @@ class JobPostingSyncControllerTest {
     void 첫_수집_응답_형식() throws Exception {
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
 
-        mockMvc.perform(post(SYNC_URL))
+        mockMvc.perform(post(SYNC_URL).with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
@@ -76,9 +82,28 @@ class JobPostingSyncControllerTest {
     }
 
     @Test
+    void 비로그인이면_401() throws Exception {
+        mockMvc.perform(post(SYNC_URL).with(anonymous()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+
+        verify(seoulJobApiClient, never()).fetchAll();
+    }
+
+    @Test
+    void 일반회원이면_403이고_수집하지_않음() throws Exception {
+        mockMvc.perform(post(SYNC_URL))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_403"));
+
+        verify(seoulJobApiClient, never()).fetchAll();
+        assertThat(jobPostingRepository.count()).isZero();
+    }
+
+    @Test
     void 같은_원본을_다시_수집하면_변경_없음() throws Exception {
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
-        mockMvc.perform(post(SYNC_URL));
+        sync();
 
         sync()
                 .andExpect(jsonPath("$.data.createdCount").value(0))
@@ -89,7 +114,7 @@ class JobPostingSyncControllerTest {
     @Test
     void 내용이_바뀌면_수정하고_ID는_유지() throws Exception {
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
-        mockMvc.perform(post(SYNC_URL));
+        sync();
         Long id = findByTitle("A").getId();
 
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(
@@ -110,7 +135,7 @@ class JobPostingSyncControllerTest {
     @Test
     void 원본에서_사라진_공고는_마감() throws Exception {
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
-        mockMvc.perform(post(SYNC_URL));
+        sync();
 
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build()));
 
@@ -138,9 +163,9 @@ class JobPostingSyncControllerTest {
     @Test
     void 마감됐던_공고가_다시_나오면_모집중으로_수정() throws Exception {
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
-        mockMvc.perform(post(SYNC_URL));
+        sync();
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build()));
-        mockMvc.perform(post(SYNC_URL));
+        sync();
 
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
 
@@ -158,30 +183,64 @@ class JobPostingSyncControllerTest {
     }
 
     @Test
-    void 외부_API_실패면_502() throws Exception {
-        given(seoulJobApiClient.fetchAll())
-                .willThrow(new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED));
+    void 변환에_실패한_공고는_마감하지_않고_기존_데이터를_유지() throws Exception {
+        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        sync();
 
-        mockMvc.perform(post(SYNC_URL))
-                .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.code").value("JOB_POSTING_502"));
+        // regionCd가 없으면 변환 실패. 해시 기준(기업명·제목·등록일·근무지)은 같음
+        given(seoulJobApiClient.fetchAll()).willReturn(List.of(
+                row("A").build(),
+                row("B").regionCd(null).jobCont("바뀐 내용").build()));
+
+        sync()
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.unchangedCount").value(1))
+                .andExpect(jsonPath("$.data.updatedCount").value(0))
+                .andExpect(jsonPath("$.data.closedCount").value(0));
+
+        JobPosting kept = findByTitle("B");
+        assertThat(kept.getStatus()).isEqualTo(JobPostingStatus.OPEN);
+        assertThat(kept.getDescription()).isEqualTo("자동차종합검사 업무");
     }
 
     @Test
-    void 원본이_0건이면_502이고_기존_공고는_유지() throws Exception {
+    void 변환에_실패한_새_공고는_저장하지_않음() throws Exception {
+        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").regionCd(null).build()));
+
+        sync().andExpect(jsonPath("$.data.createdCount").value(1));
+        assertThat(jobPostingRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void 외부_API를_끝까지_받지_못하면_502이고_저장_마감_모두_하지_않음() throws Exception {
+        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        sync();
+
+        willThrow(new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED)).given(seoulJobApiClient).fetchAll();
+
+        mockMvc.perform(post(SYNC_URL).with(admin()))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("JOB_POSTING_502"));
+        assertThat(jobPostingRepository.count()).isEqualTo(2);
+        assertThat(findByTitle("A").getStatus()).isEqualTo(JobPostingStatus.OPEN);
+        assertThat(findByTitle("B").getStatus()).isEqualTo(JobPostingStatus.OPEN);
+    }
+
+    @Test
+    void 원본이_0건이면_마감하지_않고_모두_0() throws Exception {
         given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build()));
-        mockMvc.perform(post(SYNC_URL));
+        sync();
 
         given(seoulJobApiClient.fetchAll()).willReturn(List.<SeoulJobRow>of());
 
-        mockMvc.perform(post(SYNC_URL))
-                .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.code").value("JOB_POSTING_502"));
+        sync()
+                .andExpect(jsonPath("$.data.totalCount").value(0))
+                .andExpect(jsonPath("$.data.closedCount").value(0));
         assertThat(findByTitle("A").getStatus()).isEqualTo(JobPostingStatus.OPEN);
     }
 
     private ResultActions sync() throws Exception {
-        return mockMvc.perform(post(SYNC_URL)).andExpect(status().isOk());
+        return mockMvc.perform(post(SYNC_URL).with(admin())).andExpect(status().isOk());
     }
 
     private JobPosting findByTitle(String title) {
@@ -189,5 +248,9 @@ class JobPostingSyncControllerTest {
                 .filter(posting -> posting.getTitle().equals(title))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private static RequestPostProcessor admin() {
+        return user("admin").roles("ADMIN");
     }
 }

@@ -12,9 +12,11 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -49,21 +51,30 @@ public class JobPostingSyncService {
 
     private JobPostingSyncResponse doSync() {
         log.info("[JobPostingSyncService] 채용공고 수집 | sync() - START");
+        // 전 페이지를 받지 못하면 여기서 EXTERNAL_API_FAILED로 끝나 저장·마감 처리를 하지 않음
         List<SeoulJobRow> rows = seoulJobApiClient.fetchAll();
         // 빈 응답으로 기존 공고가 전부 마감 처리되는 것을 막음
         if (rows.isEmpty()) {
-            log.error("[JobPostingSyncService] 원본 공고가 0건이라 수집을 중단");
-            throw new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED);
+            log.warn("[JobPostingSyncService] 원본 공고가 0건이라 저장·마감 처리를 건너뜀");
+            return new JobPostingSyncResponse(0, 0, 0, 0, 0);
         }
 
         LocalDate today = LocalDate.now(SEOUL);
         Map<String, JobPostingSyncItem> items = new LinkedHashMap<>();
+        // 변환 실패 행도 포함한 "이번에 본 공고". 마감 대상에서 제외
+        Set<String> seenExternalIds = new HashSet<>();
         int skippedCount = 0;
         for (SeoulJobRow row : rows) {
+            // 변환 실패와 관계없이 식별할 수 있도록 원본 문자열로 먼저 계산
+            String externalId = SeoulJobPostingMapper.externalId(row);
+            seenExternalIds.add(externalId);
+            if (items.containsKey(externalId)) {
+                continue;
+            }
             try {
-                JobPostingSyncItem item = mapper.toItem(row, today);
-                items.putIfAbsent(item.externalId(), item);
+                items.put(externalId, mapper.toItem(row, today));
             } catch (RuntimeException e) {
+                // 기존 데이터는 그대로 둠
                 skippedCount++;
                 log.warn("[JobPostingSyncService] 변환 실패로 건너뜀 | company: {}, title: {} | {}",
                         row.company(), row.title(), e.toString());
@@ -83,7 +94,7 @@ public class JobPostingSyncService {
             unchanged += result.unchangedCount();
             closed += result.closedCount();
         }
-        closed += writer.closeMissing(items.keySet());
+        closed += writer.closeMissing(seenExternalIds);
 
         JobPostingSyncResponse response = new JobPostingSyncResponse(
                 items.size(), created, updated, unchanged, closed);

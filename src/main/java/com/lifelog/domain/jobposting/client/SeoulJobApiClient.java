@@ -41,7 +41,11 @@ public class SeoulJobApiClient {
         this.pageSize = pageSize;
     }
 
-    // 전체 공고를 pageSize 단위로 나눠 조회. 한 페이지라도 실패하면 EXTERNAL_API_FAILED
+    /**
+     * 전체 공고를 pageSize 단위로 나눠 조회한다.
+     * 전 페이지를 끝까지 받지 못하면(호출 실패, 오류 코드, 중간 페이지 누락, 건수 부족) EXTERNAL_API_FAILED.
+     * 원본이 처음부터 0건(INFO-200)이면 빈 목록을 반환한다.
+     */
     public List<SeoulJobRow> fetchAll() {
         if (apiKey == null || apiKey.isBlank()) {
             log.error("[SeoulJobApiClient] SEOUL_OPENAPI_KEY가 설정되지 않음");
@@ -50,20 +54,32 @@ public class SeoulJobApiClient {
 
         List<SeoulJobRow> rows = new ArrayList<>();
         int start = 1;
-        int totalCount;
-        do {
+        int totalCount = 0;
+        while (true) {
             int end = start + pageSize - 1;
             SeoulJobApiResponse.Body body = fetchPage(start, end);
             if (body == null) {
-                break;
+                if (start == 1) {
+                    log.info("[SeoulJobApiClient] 원본 공고 0건");
+                    return List.of();
+                }
+                log.error("[SeoulJobApiClient] 중간 페이지에 데이터 없음 | start: {}, end: {}", start, end);
+                throw new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED);
             }
             totalCount = body.totalCount();
             if (body.rows() != null) {
                 rows.addAll(body.rows());
             }
+            if (end >= totalCount) {
+                break;
+            }
             start = end + 1;
-        } while (start <= totalCount);
+        }
 
+        if (rows.size() < totalCount) {
+            log.error("[SeoulJobApiClient] 받은 건수가 전체보다 적음 | rows: {}, total: {}", rows.size(), totalCount);
+            throw new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED);
+        }
         log.info("[SeoulJobApiClient] 채용공고 조회 완료 | rows: {}", rows.size());
         return rows;
     }
