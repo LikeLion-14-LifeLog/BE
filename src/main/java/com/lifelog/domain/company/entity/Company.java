@@ -11,9 +11,11 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Getter
 @Entity
+@BatchSize(size = 1000)
 @Table(name = "company")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Company extends BaseTimeEntity {
@@ -49,5 +51,12 @@ public class Company extends BaseTimeEntity {
         this.industryName = industryName;
         this.sizeType = sizeType;
         this.homepageUrl = homepageUrl;
+    }
+
+    // 같은 이름의 다른 기업일 수 있어 비어 있을 때만 채움
+    public void fillIndustryNameIfAbsent(String industryName) {
+        if (this.industryName == null && industryName != null) {
+            this.industryName = industryName;
+        }
     }
 }

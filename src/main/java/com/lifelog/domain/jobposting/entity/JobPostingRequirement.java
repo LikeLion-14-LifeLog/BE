@@ -55,6 +55,13 @@ public class JobPostingRequirement extends BaseTimeEntity {
         this.sortOrder = sortOrder;
     }
 
+    boolean hasSameValues(JobPostingRequirement other) {
+        return priority == other.priority
+                && type == other.type
+                && content.equals(other.content)
+                && sortOrder == other.sortOrder;
+    }
+
     void assignJobPosting(JobPosting jobPosting) {
         this.jobPosting = jobPosting;
     }

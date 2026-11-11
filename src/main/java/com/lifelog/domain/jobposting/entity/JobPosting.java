@@ -21,11 +21,14 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiPredicate;
 
 @Getter
 @Entity
@@ -120,10 +123,13 @@ public class JobPosting extends BaseTimeEntity {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
+    // 수집 시 여러 공고의 하위 데이터를 IN 쿼리로 한 번에 읽도록 BatchSize 지정
+    @BatchSize(size = 1000)
     @OrderBy("id ASC")
     @OneToMany(mappedBy = "jobPosting", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<JobPostingPay> pays = new ArrayList<>();
 
+    @BatchSize(size = 1000)
     @OrderBy("sortOrder ASC")
     @OneToMany(mappedBy = "jobPosting", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<JobPostingRequirement> requirements = new ArrayList<>();
@@ -134,7 +140,7 @@ public class JobPosting extends BaseTimeEntity {
                        String regionCode, String workplaceAddress,
                        String responsibilities, String description,
                        LocalDateTime publishedAt, DeadlineType deadlineType, LocalDateTime closesAt,
-                       String source, String externalId,
+                       JobPostingStatus status, String source, String externalId,
                        String applyUrl, String jobGroup, String educationRequirement,
                        String externalJobCode, String workSchedule,
                        String benefits, String applicationMethod,
@@ -151,7 +157,7 @@ public class JobPosting extends BaseTimeEntity {
         this.publishedAt = publishedAt;
         this.deadlineType = deadlineType;
         this.closesAt = closesAt;
-        this.status = JobPostingStatus.OPEN;
+        this.status = status == null ? JobPostingStatus.OPEN : status;
         this.source = source;
         this.externalId = externalId;
         this.applyUrl = applyUrl;
@@ -172,5 +178,81 @@ public class JobPosting extends BaseTimeEntity {
     public void addRequirement(JobPostingRequirement requirement) {
         requirements.add(requirement);
         requirement.assignJobPosting(this);
+    }
+
+    public void assignCompany(Company company) {
+        this.company = company;
+    }
+
+    public boolean isOpen() {
+        return status == JobPostingStatus.OPEN;
+    }
+
+    // source·externalId·company·저장 수를 제외한 공고 내용과 하위 급여·자격요건 비교
+    public boolean hasSameValues(JobPosting other) {
+        return Objects.equals(title, other.title)
+                && employmentType == other.employmentType
+                && careerType == other.careerType
+                && Objects.equals(careerMinMonths, other.careerMinMonths)
+                && Objects.equals(careerMaxMonths, other.careerMaxMonths)
+                && Objects.equals(regionCode, other.regionCode)
+                && Objects.equals(workplaceAddress, other.workplaceAddress)
+                && Objects.equals(responsibilities, other.responsibilities)
+                && Objects.equals(description, other.description)
+                && Objects.equals(publishedAt, other.publishedAt)
+                && deadlineType == other.deadlineType
+                && Objects.equals(closesAt, other.closesAt)
+                && status == other.status
+                && Objects.equals(applyUrl, other.applyUrl)
+                && Objects.equals(jobGroup, other.jobGroup)
+                && Objects.equals(educationRequirement, other.educationRequirement)
+                && Objects.equals(externalJobCode, other.externalJobCode)
+                && Objects.equals(workSchedule, other.workSchedule)
+                && Objects.equals(benefits, other.benefits)
+                && Objects.equals(applicationMethod, other.applicationMethod)
+                && sameElements(pays, other.pays, JobPostingPay::hasSameValues)
+                && sameElements(requirements, other.requirements, JobPostingRequirement::hasSameValues);
+    }
+
+    // id·source·externalId·저장 수는 유지하고 나머지를 원본 값으로 교체 (source는 버려지는 임시 객체)
+    public void update(JobPosting source, Company company) {
+        this.title = source.title;
+        this.employmentType = source.employmentType;
+        this.careerType = source.careerType;
+        this.careerMinMonths = source.careerMinMonths;
+        this.careerMaxMonths = source.careerMaxMonths;
+        this.regionCode = source.regionCode;
+        this.workplaceAddress = source.workplaceAddress;
+        this.responsibilities = source.responsibilities;
+        this.description = source.description;
+        this.publishedAt = source.publishedAt;
+        this.deadlineType = source.deadlineType;
+        this.closesAt = source.closesAt;
+        this.status = source.status;
+        this.applyUrl = source.applyUrl;
+        this.jobGroup = source.jobGroup;
+        this.educationRequirement = source.educationRequirement;
+        this.externalJobCode = source.externalJobCode;
+        this.workSchedule = source.workSchedule;
+        this.benefits = source.benefits;
+        this.applicationMethod = source.applicationMethod;
+        this.company = company;
+
+        pays.clear();
+        List.copyOf(source.pays).forEach(this::addPay);
+        requirements.clear();
+        List.copyOf(source.requirements).forEach(this::addRequirement);
+    }
+
+    private static <T> boolean sameElements(List<T> a, List<T> b, BiPredicate<T, T> same) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            if (!same.test(a.get(i), b.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

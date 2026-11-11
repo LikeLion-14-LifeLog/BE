@@ -16,6 +16,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 @Getter
 @Entity
 @Table(name = "job_posting_pay")
@@ -60,6 +62,15 @@ public class JobPostingPay {
         this.amountMin = amountMin;
         this.amountMax = amountMax;
         this.description = description;
+    }
+
+    boolean hasSameValues(JobPostingPay other) {
+        return stage == other.stage
+                && payPolicy == other.payPolicy
+                && payPeriod == other.payPeriod
+                && Objects.equals(amountMin, other.amountMin)
+                && Objects.equals(amountMax, other.amountMax)
+                && Objects.equals(description, other.description);
     }
 
     void assignJobPosting(JobPosting jobPosting) {
