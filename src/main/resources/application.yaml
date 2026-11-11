@@ -32,6 +32,8 @@ seoul:
 
 job-posting:
   sync:
+    # 저장할 6자리 모집직종코드 접두어 (쉼표로 여러 개). 13 = 정보통신 연구개발직 및 공학기술직
+    job-code-prefixes: 13
     scheduler:
       # 매일 1회 자동 수집, 기본 비활성화
       enabled: ${JOB_POSTING_SYNC_SCHEDULER_ENABLED:false}

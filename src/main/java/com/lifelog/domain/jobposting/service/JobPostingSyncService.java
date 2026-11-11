@@ -26,6 +26,7 @@ public class JobPostingSyncService {
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     private final SeoulJobPostingFetcher fetcher;
+    private final JobPostingCollectFilter collectFilter;
     private final SeoulJobPostingMapper mapper;
     private final JobPostingSyncWriter writer;
 
@@ -63,7 +64,13 @@ public class JobPostingSyncService {
         // 읽기·변환 실패 행도 포함한 "이번에 본 공고". 마감 대상에서 제외
         Set<String> seenExternalIds = new HashSet<>(fetched.unreadableExternalIds());
         int skippedCount = fetched.unreadableExternalIds().size();
+        int filteredOutCount = 0;
         for (SeoulJobRow row : fetched.rows()) {
+            // 수집 대상이 아닌 공고는 저장하지 않고 "본 공고"에도 넣지 않음 (예전에 저장된 공고는 마감 대상)
+            if (!collectFilter.accepts(row)) {
+                filteredOutCount++;
+                continue;
+            }
             // 변환 실패와 관계없이 식별할 수 있도록 원본 문자열로 먼저 계산
             String externalId = SeoulJobPostingMapper.externalId(row);
             seenExternalIds.add(externalId);
@@ -104,7 +111,8 @@ public class JobPostingSyncService {
 
         JobPostingSyncResponse response = new JobPostingSyncResponse(
                 items.size(), created, updated, unchanged, closed, skippedCount, complete);
-        log.info("[JobPostingSyncService] 채용공고 수집 | sync() - END | result: {}", response);
+        log.info("[JobPostingSyncService] 채용공고 수집 | sync() - END | fetched: {}, filteredOut: {}, result: {}",
+                fetched.rows().size(), filteredOutCount, response);
         return response;
     }
 }

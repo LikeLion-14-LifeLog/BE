@@ -18,7 +18,7 @@ public final class JobPostingFixtures {
                 .workRegion("(05824)  서울특별시 송파구 중대로 178 (가락동)")
                 .corpAddr("05824 서울특별시 송파구 중대로 178 (가락동)")
                 .industryName("자동차 재제조 부품 제조업")
-                .jobsCd("817100")
+                .jobsCd("133200")
                 .jobCont("자동차종합검사 업무")
                 .empTpCd("10")
                 .enterTpCd("E")

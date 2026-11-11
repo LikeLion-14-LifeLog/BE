@@ -261,6 +261,22 @@ class JobPostingSyncControllerTest {
     }
 
     @Test
+    void IT_직종코드가_아닌_공고는_저장하지_않음() throws Exception {
+        given(fetcher.fetch()).willReturn(complete(
+                row("A").build(),
+                row("요양").jobsCd("550102").build(),
+                row("웹디자인").jobsCd("415501").build()));
+
+        sync()
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.createdCount").value(1))
+                .andExpect(jsonPath("$.data.skippedCount").value(0));
+        assertThat(jobPostingRepository.findAll())
+                .extracting(JobPosting::getTitle)
+                .containsExactly("A");
+    }
+
+    @Test
     void 건너뛴_공고_수를_skippedCount로_반환() throws Exception {
         String unreadable = "읽지 못한 공고의 externalId";
         given(fetcher.fetch()).willReturn(new SeoulJobFetchResult(

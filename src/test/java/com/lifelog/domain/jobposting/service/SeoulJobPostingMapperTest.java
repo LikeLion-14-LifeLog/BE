@@ -38,7 +38,7 @@ class SeoulJobPostingMapperTest {
         assertThat(posting.getRegionCode()).isEqualTo("11710");
         assertThat(posting.getWorkplaceAddress()).isEqualTo("서울특별시 송파구 중대로 178 (가락동)");
         assertThat(posting.getPublishedAt()).isEqualTo(LocalDateTime.of(2026, 9, 14, 0, 0));
-        assertThat(posting.getExternalJobCode()).isEqualTo("817100");
+        assertThat(posting.getExternalJobCode()).isEqualTo("133200");
         assertThat(posting.getEducationRequirement()).isEqualTo("학력무관");
         assertThat(posting.getApplyUrl()).isNull();
     }
