@@ -15,7 +15,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 공고 ↔ 직무(8차 고용직업분류) 연결. 맞춤 공고의 희망·목표 직무 조건에 사용
+// 공고 ↔ 직무(한국고용직업분류 2025) 연결. 맞춤 공고의 희망 직무 조건과 소분류 필터에 사용
 @Getter
 @Entity
 @Table(name = "job_posting_job",

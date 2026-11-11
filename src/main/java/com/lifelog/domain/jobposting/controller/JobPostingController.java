@@ -45,8 +45,8 @@ public class JobPostingController {
 
     @Operation(
             summary = "맞춤 공고 목록 조회",
-            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망·목표 직무와 소분류가 같고 "
-                    + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망·목표 직무가 없으면 전체 공고를 보여주고 personalized=false입니다. "
+            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망 직무와 소분류가 같고 "
+                    + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망 직무가 없으면 전체 공고를 보여주고 personalized=false입니다. "
                     + "jobCategory(직무 소분류, GET /api/job-postings/job-categories의 code)·region은 맞춤 조건 위에 추가로 적용합니다. "
                     + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(jobCategory·region 제외), bookmarked는 내가 저장한 공고 수입니다."
     )

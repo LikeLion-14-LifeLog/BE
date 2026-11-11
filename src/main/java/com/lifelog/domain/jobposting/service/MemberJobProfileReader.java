@@ -1,35 +1,44 @@
 package com.lifelog.domain.jobposting.service;
 
-import jakarta.persistence.EntityManager;
+import com.lifelog.domain.job.entity.Job;
+import com.lifelog.domain.job.repository.DesiredJobRepository;
+import com.lifelog.domain.specprofile.entity.AcademicAbility;
+import com.lifelog.domain.specprofile.entity.SpecProfile;
+import com.lifelog.domain.specprofile.enums.AcademicAbilityType;
+import com.lifelog.domain.specprofile.enums.SpecProfileType;
+import com.lifelog.domain.specprofile.repository.AcademicAbilityRepository;
+import com.lifelog.domain.specprofile.repository.SpecProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * 맞춤 공고 조건(희망·목표 직무, 학력)을 회원 프로필 테이블에서 읽는다.
- * desired_job·spec_profile·academic_ability는 아직 엔티티가 없어 네이티브 쿼리로 조회한다.
- * 임시 저장(temporary_stored=true) 스펙도 포함한다.
+ * 맞춤 공고 조건(희망 직무, 학력)을 회원 프로필에서 읽는다.
+ * 목표 직무(spec_profile.target_job_id)는 V20261110_3에서 삭제되어 희망 직무만 사용한다.
+ * 임시 저장 스펙도 포함한다.
  */
 @Component
 @RequiredArgsConstructor
 public class MemberJobProfileReader {
 
-    // academic_ability.type → 학력 단계 (공고 education_level과 같은 기준). ETC는 판단하지 않음
+    // 학력 유형 → 학력 단계 (공고 education_level과 같은 기준). ETC는 판단하지 않음
     // 재학·휴학·졸업유예도 해당 단계로 인정하므로 status는 보지 않음
-    private static final Map<String, Integer> EDUCATION_LEVELS = Map.of(
-            "HIGH_SCHOOL", 3,
-            "COLLEGE", 4,
-            "UNIVERSITY", 5,
-            "GRADUATE_SCHOOL", 6
+    private static final Map<AcademicAbilityType, Integer> EDUCATION_LEVELS = Map.of(
+            AcademicAbilityType.HIGH_SCHOOL, 3,
+            AcademicAbilityType.COLLEGE, 4,
+            AcademicAbilityType.UNIVERSITY, 5,
+            AcademicAbilityType.GRADUATE_SCHOOL, 6,
+            AcademicAbilityType.GRADUATE_SCHOOL_MASTER, 6,
+            AcademicAbilityType.GRADUATE_SCHOOL_DOCTORAL, 7
     );
 
-    private final EntityManager entityManager;
+    private final DesiredJobRepository desiredJobRepository;
+    private final SpecProfileRepository specProfileRepository;
+    private final AcademicAbilityRepository academicAbilityRepository;
 
     @Transactional(readOnly = true)
     public MemberJobProfile read(Long memberId) {
@@ -39,35 +48,23 @@ public class MemberJobProfileReader {
         return new MemberJobProfile(findSubCategoryCodes(memberId), findEducationLevel(memberId));
     }
 
-    // 희망 직무 + 목표 직무의 소분류 코드 (미분류처럼 소분류가 없으면 제외)
+    // 희망 직무의 소분류 코드 (미분류처럼 소분류가 없으면 빈 집합)
     private Set<String> findSubCategoryCodes(Long memberId) {
-        List<?> rows = entityManager.createNativeQuery("""
-                        SELECT j.sub_category_code FROM desired_job dj
-                          JOIN job j ON j.job_id = dj.job_id
-                         WHERE dj.member_id = :memberId
-                        UNION
-                        SELECT j.sub_category_code FROM spec_profile sp
-                          JOIN job j ON j.job_id = sp.target_job_id
-                         WHERE sp.member_id = :memberId AND sp.type = 'TARGET'
-                        """)
-                .setParameter("memberId", memberId)
-                .getResultList();
-        Set<String> codes = new HashSet<>();
-        rows.stream().filter(Objects::nonNull).forEach(code -> codes.add(String.valueOf(code)));
-        return codes;
+        return desiredJobRepository.findByMemberId(memberId)
+                .map(desiredJob -> desiredJob.getJob())
+                .map(Job::getSubCategoryCode)
+                .map(Set::of)
+                .orElse(Set.of());
     }
 
     // CURRENT 스펙의 학력 중 가장 높은 단계
     private Integer findEducationLevel(Long memberId) {
-        List<?> types = entityManager.createNativeQuery("""
-                        SELECT aa.type FROM academic_ability aa
-                          JOIN spec_profile sp ON sp.spec_profile_id = aa.spec_profile_id
-                         WHERE sp.member_id = :memberId AND sp.type = 'CURRENT'
-                        """)
-                .setParameter("memberId", memberId)
-                .getResultList();
-        return types.stream()
-                .map(type -> EDUCATION_LEVELS.get(String.valueOf(type)))
+        return specProfileRepository.findAllByMemberIdAndType(memberId, SpecProfileType.CURRENT).stream()
+                .map(SpecProfile::getId)
+                .flatMap(profileId -> academicAbilityRepository.findAllBySpecProfileId(profileId).stream())
+                .map(AcademicAbility::getType)
+                .filter(Objects::nonNull)
+                .map(EDUCATION_LEVELS::get)
                 .filter(Objects::nonNull)
                 .max(Integer::compareTo)
                 .orElse(null);
