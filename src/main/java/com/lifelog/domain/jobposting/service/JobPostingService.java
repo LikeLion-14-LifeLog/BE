@@ -17,6 +17,7 @@ import com.lifelog.global.exception.CommonErrorCode;
 import com.lifelog.global.exception.CustomException;
 import com.lifelog.global.response.SliceResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -37,10 +38,18 @@ public class JobPostingService {
 
     private final JobPostingRepository jobPostingRepository;
     private final JobPostingBookmarkRepository jobPostingBookmarkRepository;
+    private final MemberJobProfileReader memberJobProfileReader;
+
+    // 맞춤 공고에서 신입·경력무관 공고만 볼지 (기획 확인 전이라 기본 꺼짐)
+    @Value("${job-posting.personalized.new-or-any-only:false}")
+    private boolean newOrAnyOnly;
 
     /**
-     * 모집 중(OPEN)인 공고를 직무 그룹·지역으로 걸러 정렬·페이지네이션한다.
-     * @param memberId 로그인 회원 ID (저장 여부·저장 수 계산), null이면 저장하지 않은 것으로 처리
+     * 맞춤 공고 목록. 모집 중이고 마감일이 지나지 않은 공고 중
+     * 회원의 희망·목표 직무에 연결되고 공고 최소 학력이 회원 학력 이하인 공고를 보여준다.
+     * 희망·목표 직무가 없으면 맞춤 조건 없이 전체를 보여주고 personalized=false.
+     * 사용자가 고른 직무 그룹·지역은 맞춤 조건 위에 추가로 적용한다 (지역은 자동으로 거르지 않음).
+     * @param memberId 로그인 회원 ID, null이면 맞춤 조건·저장 여부 없이 조회
      */
     @Transactional(readOnly = true)
     public SliceResponse<JobPostingListResponse> search(Long memberId, JobGroup jobGroup, JobPostingRegion region,
@@ -53,10 +62,21 @@ public class JobPostingService {
         }
 
         LocalDate today = LocalDate.now(SEOUL);
+        MemberJobProfile profile = memberJobProfileReader.read(memberId);
+        boolean personalized = profile.isPersonalizable();
+        JobPostingSpecification.Condition.ConditionBuilder base = JobPostingSpecification.Condition.builder()
+                .status(JobPostingStatus.OPEN)
+                .today(today);
+        if (personalized) {
+            base.jobIds(profile.jobIds())
+                    .maxEducationLevel(profile.educationLevel())
+                    .newOrAnyOnly(newOrAnyOnly);
+        }
+
         // Spring Data 페이지는 0부터 시작
         PageRequest pageable = PageRequest.of(page - 1, size, sort.toSort());
         Page<JobPosting> result = jobPostingRepository.findAll(
-                JobPostingSpecification.search(JobPostingStatus.OPEN, today, jobGroup, region), pageable);
+                JobPostingSpecification.search(base.jobGroup(jobGroup).region(region).build()), pageable);
 
         Set<Long> bookmarkedIds = findBookmarkedIds(memberId, result.getContent());
         List<JobPostingCardResponse> cards = result.getContent().stream()
@@ -64,11 +84,11 @@ public class JobPostingService {
                 .toList();
 
         JobPostingTabCounts tabCounts = new JobPostingTabCounts(
-                // 필터 없는 목록과 같은 조건 (모집 중이고 마감일이 지나지 않은 공고)
-                jobPostingRepository.count(JobPostingSpecification.search(JobPostingStatus.OPEN, today, null, null)),
+                // 맞춤 조건까지만 적용 (직무 그룹·지역 필터 제외)
+                jobPostingRepository.count(JobPostingSpecification.search(base.jobGroup(null).region(null).build())),
                 memberId == null ? 0 : jobPostingBookmarkRepository.countByMember_Id(memberId));
 
-        return SliceResponse.of(result, new JobPostingListResponse(tabCounts, cards));
+        return SliceResponse.of(result, new JobPostingListResponse(personalized, tabCounts, cards));
     }
 
     /**

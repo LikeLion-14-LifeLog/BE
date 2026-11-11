@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public JobPostingController {
+public class JobPostingController {
 
     private final JobPostingSyncService jobPostingSyncService;
     private final JobPostingService jobPostingService;
@@ -41,9 +41,10 @@ public JobPostingController {
 
     @Operation(
             summary = "맞춤 공고 목록 조회",
-            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함)를 직무 그룹·지역으로 걸러 조회합니다. "
-                    + "jobGroup을 지정하지 않으면 그룹이 정해지지 않은 공고까지 모두 포함합니다. "
-                    + "tabCounts.recommended는 필터 적용 전 모집 중 공고 수, bookmarked는 내가 저장한 공고 수입니다."
+            description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망·목표 직무에 해당하고 "
+                    + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망·목표 직무가 없으면 전체 공고를 보여주고 personalized=false입니다. "
+                    + "jobGroup·region은 맞춤 조건 위에 추가로 적용하며, jobGroup을 지정하지 않으면 그룹이 정해지지 않은 공고까지 포함합니다. "
+                    + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(jobGroup·region 제외), bookmarked는 내가 저장한 공고 수입니다."
     )
     @GetMapping("/job-postings")
     public ApiResponse<SliceResponse<JobPostingListResponse>> getJobPostings(

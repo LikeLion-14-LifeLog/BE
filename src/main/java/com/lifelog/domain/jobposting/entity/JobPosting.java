@@ -1,6 +1,7 @@
 package com.lifelog.domain.jobposting.entity;
 
 import com.lifelog.domain.company.entity.Company;
+import com.lifelog.domain.job.entity.Job;
 import com.lifelog.global.entity.BaseTimeEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -106,6 +107,10 @@ public class JobPosting extends BaseTimeEntity {
     @Column(length = 50)
     private String educationRequirement;
 
+    // 최소 학력 단계: 0 학력무관, 1 초졸이하, 2 중졸, 3 고졸, 4 대졸(2~3년), 5 대졸(4년), 6 석사, 7 박사
+    @Column(nullable = false)
+    private short educationLevel;
+
     // 원본 모집직종코드 (서울 일자리포털 JOBS_CD, 고용24 6자리)
     @Column(length = 10)
     private String externalJobCode;
@@ -141,6 +146,10 @@ public class JobPosting extends BaseTimeEntity {
     @OneToMany(mappedBy = "jobPosting", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<JobPostingRequirement> requirements = new ArrayList<>();
 
+    @BatchSize(size = 1000)
+    @OneToMany(mappedBy = "jobPosting", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<JobPostingJob> jobs = new ArrayList<>();
+
     @Builder
     private JobPosting(String title, EmploymentType employmentType, CareerType careerType,
                        Short careerMinMonths, Short careerMaxMonths,
@@ -148,7 +157,8 @@ public class JobPosting extends BaseTimeEntity {
                        String responsibilities, String description,
                        LocalDateTime publishedAt, DeadlineType deadlineType, LocalDateTime closesAt,
                        JobPostingStatus status, String source, String externalId,
-                       String applyUrl, JobGroup jobGroup, String regionName, String educationRequirement,
+                       String applyUrl, JobGroup jobGroup, String regionName,
+                       String educationRequirement, short educationLevel,
                        String externalJobCode, String workSchedule,
                        String benefits, String applicationMethod,
                        Company company) {
@@ -171,6 +181,7 @@ public class JobPosting extends BaseTimeEntity {
         this.jobGroup = jobGroup;
         this.regionName = regionName;
         this.educationRequirement = educationRequirement;
+        this.educationLevel = educationLevel;
         this.externalJobCode = externalJobCode;
         this.workSchedule = workSchedule;
         this.benefits = benefits;
@@ -190,6 +201,25 @@ public class JobPosting extends BaseTimeEntity {
 
     public void assignCompany(Company company) {
         this.company = company;
+    }
+
+    // 연결된 직무가 정확히 이 직무 하나인지 (job이 null이면 연결이 없어야 같음)
+    public boolean hasOnlyJob(Job job) {
+        if (job == null) {
+            return jobs.isEmpty();
+        }
+        return jobs.size() == 1 && Objects.equals(jobs.getFirst().getJob().getId(), job.getId());
+    }
+
+    // 공고 하나에 직무 하나. null이면 연결 해제
+    public void replaceJob(Job job) {
+        if (hasOnlyJob(job)) {
+            return;
+        }
+        jobs.clear();
+        if (job != null) {
+            jobs.add(new JobPostingJob(this, job));
+        }
     }
 
     public boolean isOpen() {
@@ -220,6 +250,7 @@ public class JobPosting extends BaseTimeEntity {
                 && jobGroup == other.jobGroup
                 && Objects.equals(regionName, other.regionName)
                 && Objects.equals(educationRequirement, other.educationRequirement)
+                && educationLevel == other.educationLevel
                 && Objects.equals(externalJobCode, other.externalJobCode)
                 && Objects.equals(workSchedule, other.workSchedule)
                 && Objects.equals(benefits, other.benefits)
@@ -247,6 +278,7 @@ public class JobPosting extends BaseTimeEntity {
         this.jobGroup = source.jobGroup;
         this.regionName = source.regionName;
         this.educationRequirement = source.educationRequirement;
+        this.educationLevel = source.educationLevel;
         this.externalJobCode = source.externalJobCode;
         this.workSchedule = source.workSchedule;
         this.benefits = source.benefits;

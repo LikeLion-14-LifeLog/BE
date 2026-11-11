@@ -54,6 +54,28 @@ class SeoulJobPostingMapperTest {
     }
 
     @Test
+    void 직무그룹_8차직무코드_학력단계_지역명을_변환() {
+        JobPostingSyncItem item = mapper.toItem(row("Java 백엔드 개발자 채용")
+                .jobsCd("133200")
+                .minEdubg("대졸(4년)").minEdubgIcd("05")
+                .region("경기도 화성시 만세구")
+                .build(), TODAY);
+
+        assertThat(item.posting().getJobGroup()).isEqualTo(com.lifelog.domain.jobposting.entity.JobGroup.BACKEND);
+        assertThat(item.jobCode()).isEqualTo("1332");
+        assertThat(item.posting().getEducationLevel()).isEqualTo((short) 5);
+        assertThat(item.posting().getRegionName()).isEqualTo("경기 화성시 만세구");
+    }
+
+    @Test
+    void 예외_변환표_코드와_학력무관() {
+        JobPostingSyncItem item = mapper.toItem(row("정보보안 전문가 모집").jobsCd("134200").build(), TODAY);
+
+        assertThat(item.jobCode()).isEqualTo("1350");
+        assertThat(item.posting().getEducationLevel()).isZero();
+    }
+
+    @Test
     void 줄바꿈은_LF로_통일() {
         JobPosting posting = mapper.toItem(row("제목")
                 .jobCont("첫째 줄\r\n둘째 줄\r셋째 줄\n넷째 줄")

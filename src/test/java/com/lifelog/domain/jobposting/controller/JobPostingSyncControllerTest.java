@@ -53,6 +53,9 @@ class JobPostingSyncControllerTest {
     @Autowired
     private CompanyRepository companyRepository;
 
+    @Autowired
+    private com.lifelog.domain.job.repository.JobRepository jobRepository;
+
     @MockitoBean
     private SeoulJobPostingFetcher fetcher;
 
@@ -258,6 +261,37 @@ class JobPostingSyncControllerTest {
         assertThat(findByTitle("A").getDescription()).isEqualTo("업무 변경");
         assertThat(findByTitle("B").getStatus()).isEqualTo(JobPostingStatus.OPEN);
         assertThat(findByTitle("C").getStatus()).isEqualTo(JobPostingStatus.OPEN);
+    }
+
+    @Test
+    void 수집하면_8차_직무에_연결하고_직무_그룹을_판정() throws Exception {
+        com.lifelog.domain.job.entity.Job job = jobRepository.saveAndFlush(com.lifelog.domain.job.entity.Job.builder()
+                .mainCategoryCode("1").mainCategoryName("연구직 및 공학 기술직")
+                .middleCategoryCode("13").middleCategoryName("정보통신 연구개발직 및 공학기술직")
+                .subCategoryCode("133").subCategoryName("소프트웨어 개발자")
+                .code("1332").name("응용 소프트웨어 개발자")
+                .build());
+        given(fetcher.fetch()).willReturn(complete(row("Java 백엔드 개발자").jobsCd("133200").build()));
+
+        sync().andExpect(jsonPath("$.data.createdCount").value(1));
+
+        JobPosting saved = findByTitle("Java 백엔드 개발자");
+        assertThat(saved.getJobGroup()).isEqualTo(com.lifelog.domain.jobposting.entity.JobGroup.BACKEND);
+        assertThat(saved.getJobs()).singleElement()
+                .satisfies(link -> assertThat(link.getJob().getId()).isEqualTo(job.getId()));
+
+        // 같은 원본을 다시 수집하면 직무 연결도 그대로라 변경 없음
+        sync().andExpect(jsonPath("$.data.unchangedCount").value(1));
+    }
+
+    @Test
+    void 데이터_코드는_제목에_키워드가_있을_때만_수집() throws Exception {
+        given(fetcher.fetch()).willReturn(complete(
+                row("LLM 엔지니어").jobsCd("135101").build(),
+                row("금형 설계관리").jobsCd("135101").build()));
+
+        sync().andExpect(jsonPath("$.data.totalCount").value(1));
+        assertThat(jobPostingRepository.findAll()).extracting(JobPosting::getTitle).containsExactly("LLM 엔지니어");
     }
 
     @Test
