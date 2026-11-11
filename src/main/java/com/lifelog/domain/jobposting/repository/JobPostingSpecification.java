@@ -31,7 +31,7 @@ public final class JobPostingSpecification {
     /**
      * 목록 조회 조건. 직무 조건은 공고에 연결된 직무(job_posting_job → job)의 분류로 판단한다.
      * @param today              마감일이 지난 공고 제외 기준 (closes_at IS NULL OR closes_at >= 오늘 0시)
-     * @param jobCategory        중분류 코드 2자리 (예: "13"), null이면 전체
+     * @param jobCategory        소분류 코드 3자리 (예: "133"), null이면 전체
      * @param region             null이면 전체
      * @param subCategoryCodes   맞춤: 연결된 직무의 소분류(3자리)가 이 중 하나인 공고만 (null이면 조건 없음)
      * @param maxEducationLevel  맞춤: 공고 최소 학력이 이 단계 이하인 공고만 (null이면 조건 없음)
@@ -54,7 +54,7 @@ public final class JobPostingSpecification {
 
             if (condition.jobCategory() != null) {
                 predicates.add(linkedJobExists(root, query, cb,
-                        job -> cb.equal(job.get("middleCategoryCode"), condition.jobCategory())));
+                        job -> cb.equal(job.get("subCategoryCode"), condition.jobCategory())));
             }
             if (condition.region() != null) {
                 Expression<String> regionCode = root.get("regionCode");

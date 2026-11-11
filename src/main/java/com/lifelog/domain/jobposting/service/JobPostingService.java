@@ -47,9 +47,9 @@ public class JobPostingService {
      * 맞춤 공고 목록. 모집 중이고 마감일이 지나지 않은 공고 중
      * 회원의 희망·목표 직무와 소분류(앞 3자리)가 같은 직무에 연결되고, 공고 최소 학력이 회원 학력 이하인 공고를 보여준다.
      * 희망·목표 직무가 없으면 맞춤 조건 없이 전체를 보여주고 personalized=false.
-     * 사용자가 고른 직무 중분류(jobCategory)·지역은 맞춤 조건 위에 추가로 적용한다 (지역은 자동으로 거르지 않음).
+     * 사용자가 고른 직무 소분류(jobCategory)·지역은 맞춤 조건 위에 추가로 적용한다 (지역은 자동으로 거르지 않음).
      * @param memberId    로그인 회원 ID, null이면 맞춤 조건·저장 여부 없이 조회
-     * @param jobCategory 직무 중분류 코드 2자리 (예: "13"), null이면 전체
+     * @param jobCategory 직무 소분류 코드 3자리 (예: "133", GET /api/jobs/sub-categories의 code), null이면 전체
      */
     @Transactional(readOnly = true)
     public SliceResponse<JobPostingListResponse> search(Long memberId, String jobCategory, JobPostingRegion region,
@@ -60,7 +60,7 @@ public class JobPostingService {
         if (size < 1 || size > MAX_SIZE) {
             throw new CustomException(CommonErrorCode.INVALID_SIZE);
         }
-        if (jobCategory != null && !jobCategory.matches("\\d{2}")) {
+        if (jobCategory != null && !jobCategory.matches("\\d{3}")) {
             throw new CustomException(CommonErrorCode.INVALID_REQUEST);
         }
 
@@ -88,7 +88,7 @@ public class JobPostingService {
                 .toList();
 
         JobPostingTabCounts tabCounts = new JobPostingTabCounts(
-                // 맞춤 조건까지만 적용 (직무 중분류·지역 필터 제외)
+                // 맞춤 조건까지만 적용 (직무 소분류·지역 필터 제외)
                 jobPostingRepository.count(JobPostingSpecification.search(personalCondition)),
                 memberId == null ? 0 : jobPostingBookmarkRepository.countByMember_Id(memberId));
 

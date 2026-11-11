@@ -186,22 +186,24 @@ class JobPostingListControllerTest {
     }
 
     @Test
-    void 직무_중분류를_지정하면_연결된_직무의_중분류가_같은_공고만_없으면_전체() throws Exception {
-        saveFor("백엔드", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
+    void 직무_소분류를_지정하면_연결된_직무의_소분류가_같은_공고만_없으면_전체() throws Exception {
+        saveFor("응용SW", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
+        saveFor("웹", saveJob("1333", "웹 개발자"), 0, CareerType.ANY);
+        saveFor("네트워크", saveJob("1341", "네트워크 시스템 개발자"), 0, CareerType.ANY);
         saveFor("요양보호사", saveJob("5", "55", "550", "5501", "요양 보호사"), 0, CareerType.ANY);
         saveFor("직무 연결 없음", null, 0, CareerType.ANY);
 
-        mockMvc.perform(request(get(URL).param("jobCategory", "13")))
-                .andExpect(jsonPath("$.data.jobPostings[*].title", contains("백엔드")));
-        mockMvc.perform(request(get(URL).param("jobCategory", "55")))
+        mockMvc.perform(request(get(URL).param("jobCategory", "133")))
+                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW", "웹")));
+        mockMvc.perform(request(get(URL).param("jobCategory", "550")))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", contains("요양보호사")));
         mockMvc.perform(request(get(URL)))
-                .andExpect(jsonPath("$.data.totalElements").value(3));
+                .andExpect(jsonPath("$.data.totalElements").value(5));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"1", "133", "ab"})
-    void 직무_중분류가_2자리_숫자가_아니면_400(String jobCategory) throws Exception {
+    @ValueSource(strings = {"13", "1332", "ab1"})
+    void 직무_소분류가_3자리_숫자가_아니면_400(String jobCategory) throws Exception {
         mockMvc.perform(request(get(URL).param("jobCategory", jobCategory)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));

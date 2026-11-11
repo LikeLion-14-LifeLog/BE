@@ -86,6 +86,29 @@ class JobControllerTest {
     }
 
     @Test
+    void 소분류_검색_응답_형식() throws Exception {
+        mockMvc.perform(post("/api/admin/jobs/init").with(admin()));
+
+        mockMvc.perform(get("/api/jobs/sub-categories").param("keyword", "소프트웨어"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("COMMON_200"))
+                .andExpect(jsonPath("$.data.subCategories[0].code").value("133"))
+                .andExpect(jsonPath("$.data.subCategories[0].name").value("소프트웨어 개발자"))
+                .andExpect(jsonPath("$.data.subCategories[0].mainCategory.code").value("1"))
+                .andExpect(jsonPath("$.data.subCategories[0].middleCategory.code").value("13"))
+                .andExpect(jsonPath("$.data.subCategories[0].middleCategory.name").value("정보통신 연구개발직 및 공학기술직"))
+                .andExpect(jsonPath("$.data.subCategories[0].jobs[0].code").value("1331"))
+                .andExpect(jsonPath("$.data.subCategories[0].jobs[0].name").value("시스템 소프트웨어 개발자"));
+    }
+
+    @Test
+    void 소분류_검색어가_50자를_넘으면_400() throws Exception {
+        mockMvc.perform(get("/api/jobs/sub-categories").param("keyword", "가".repeat(51)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("JOB_400_1"));
+    }
+
+    @Test
     void 미분류_9999_응답은_대분류코드와_중소분류가_null() throws Exception {
         mockMvc.perform(post("/api/admin/jobs/init").with(admin()));
 
