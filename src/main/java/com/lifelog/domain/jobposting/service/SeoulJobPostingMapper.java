@@ -1,6 +1,6 @@
 package com.lifelog.domain.jobposting.service;
 
-import com.lifelog.domain.jobposting.client.SeoulJobRow;
+import com.lifelog.domain.jobposting.dto.SeoulJobRow;
 import com.lifelog.domain.jobposting.entity.CareerType;
 import com.lifelog.domain.jobposting.entity.DeadlineType;
 import com.lifelog.domain.jobposting.entity.EmploymentType;
@@ -86,9 +86,13 @@ public class SeoulJobPostingMapper {
 
     // 고유 ID가 없어 기업명·제목·등록일·근무지로 식별. 제목이 바뀌면 다른 공고로 취급 (MVP에서 감수)
     static String externalId(SeoulJobRow row) {
+        return externalId(row.company(), row.title(), row.regDt(), row.workRegion());
+    }
+
+    static String externalId(String company, String title, String regDt, String workRegion) {
         String key = String.join("\u001F",
-                nullToEmpty(row.company()).strip(), nullToEmpty(row.title()).strip(),
-                nullToEmpty(row.regDt()).strip(), nullToEmpty(row.workRegion()).strip());
+                nullToEmpty(company).strip(), nullToEmpty(title).strip(),
+                nullToEmpty(regDt).strip(), nullToEmpty(workRegion).strip());
         try {
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(key.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);

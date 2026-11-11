@@ -1,4 +1,4 @@
-package com.lifelog.domain.jobposting.client;
+package com.lifelog.domain.jobposting.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

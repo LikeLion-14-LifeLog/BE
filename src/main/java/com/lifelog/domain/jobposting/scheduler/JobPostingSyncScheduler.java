@@ -5,14 +5,12 @@ import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
-// 기본 비활성화. job-posting.sync.scheduler.enabled=true일 때만 스케줄링 자체를 켬
+// 기본 비활성화. job-posting.sync.scheduler.enabled=true일 때만 빈을 등록 (@EnableScheduling은 global/config)
 @Slf4j
-@Configuration(proxyBeanMethods = false)
-@EnableScheduling
+@Component
 @ConditionalOnProperty(name = "job-posting.sync.scheduler.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class JobPostingSyncScheduler {

@@ -1,8 +1,9 @@
 package com.lifelog.domain.jobposting.controller;
 
 import com.lifelog.domain.company.repository.CompanyRepository;
-import com.lifelog.domain.jobposting.client.SeoulJobApiClient;
-import com.lifelog.domain.jobposting.client.SeoulJobRow;
+import com.lifelog.domain.jobposting.service.SeoulJobFetchResult;
+import com.lifelog.domain.jobposting.service.SeoulJobPostingFetcher;
+import com.lifelog.domain.jobposting.dto.SeoulJobRow;
 import com.lifelog.domain.jobposting.entity.JobPosting;
 import com.lifelog.domain.jobposting.entity.JobPostingStatus;
 import com.lifelog.domain.jobposting.exception.JobPostingErrorCode;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 import static com.lifelog.domain.jobposting.JobPostingFixtures.row;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,7 +54,7 @@ class JobPostingSyncControllerTest {
     private CompanyRepository companyRepository;
 
     @MockitoBean
-    private SeoulJobApiClient seoulJobApiClient;
+    private SeoulJobPostingFetcher fetcher;
 
     @BeforeEach
     void setUp() {
@@ -62,7 +64,7 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 첫_수집_응답_형식() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
 
         mockMvc.perform(post(SYNC_URL).with(admin()))
                 .andExpect(status().isOk())
@@ -87,7 +89,7 @@ class JobPostingSyncControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
 
-        verify(seoulJobApiClient, never()).fetchAll();
+        verify(fetcher, never()).fetch();
     }
 
     @Test
@@ -96,13 +98,13 @@ class JobPostingSyncControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("AUTH_403"));
 
-        verify(seoulJobApiClient, never()).fetchAll();
+        verify(fetcher, never()).fetch();
         assertThat(jobPostingRepository.count()).isZero();
     }
 
     @Test
     void 같은_원본을_다시_수집하면_변경_없음() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
         sync();
 
         sync()
@@ -113,11 +115,11 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 내용이_바뀌면_수정하고_ID는_유지() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
         sync();
         Long id = findByTitle("A").getId();
 
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(
+        given(fetcher.fetch()).willReturn(complete(
                 row("A").jobCont("업무 변경").salTpNm("월급3,000,000원 이상,").build(),
                 row("B").build()));
 
@@ -134,10 +136,10 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 원본에서_사라진_공고는_마감() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
         sync();
 
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build()));
 
         sync()
                 .andExpect(jsonPath("$.data.totalCount").value(1))
@@ -149,11 +151,11 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 마감일이_지난_공고는_마감으로_저장하고_모집중이던_공고는_closed로_집계() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").closeDt("20-01-01").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").closeDt("20-01-01").build()));
         sync().andExpect(jsonPath("$.data.createdCount").value(2));
         assertThat(findByTitle("B").getStatus()).isEqualTo(JobPostingStatus.CLOSE);
 
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").closeDt("20-01-01").build(), row("B").closeDt("20-01-01").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").closeDt("20-01-01").build(), row("B").closeDt("20-01-01").build()));
         sync()
                 .andExpect(jsonPath("$.data.closedCount").value(1))
                 .andExpect(jsonPath("$.data.unchangedCount").value(1));
@@ -162,12 +164,12 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 마감됐던_공고가_다시_나오면_모집중으로_수정() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
         sync();
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build()));
         sync();
 
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
 
         sync().andExpect(jsonPath("$.data.updatedCount").value(1));
         assertThat(findByTitle("B").getStatus()).isEqualTo(JobPostingStatus.OPEN);
@@ -175,7 +177,7 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 원본에_중복_공고가_있으면_한_건만_저장() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("A").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("A").build()));
 
         sync()
                 .andExpect(jsonPath("$.data.totalCount").value(1))
@@ -184,11 +186,11 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 변환에_실패한_공고는_마감하지_않고_기존_데이터를_유지() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
         sync();
 
         // regionCd가 없으면 변환 실패. 해시 기준(기업명·제목·등록일·근무지)은 같음
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(
+        given(fetcher.fetch()).willReturn(complete(
                 row("A").build(),
                 row("B").regionCd(null).jobCont("바뀐 내용").build()));
 
@@ -205,18 +207,18 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 변환에_실패한_새_공고는_저장하지_않음() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").regionCd(null).build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").regionCd(null).build()));
 
         sync().andExpect(jsonPath("$.data.createdCount").value(1));
         assertThat(jobPostingRepository.count()).isEqualTo(1);
     }
 
     @Test
-    void 외부_API를_끝까지_받지_못하면_502이고_저장_마감_모두_하지_않음() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build(), row("B").build()));
+    void 외부_API_호출이_실패하면_502이고_저장_마감_모두_하지_않음() throws Exception {
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
         sync();
 
-        willThrow(new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED)).given(seoulJobApiClient).fetchAll();
+        willThrow(new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED)).given(fetcher).fetch();
 
         mockMvc.perform(post(SYNC_URL).with(admin()))
                 .andExpect(status().isBadGateway())
@@ -228,15 +230,54 @@ class JobPostingSyncControllerTest {
 
     @Test
     void 원본이_0건이면_마감하지_않고_모두_0() throws Exception {
-        given(seoulJobApiClient.fetchAll()).willReturn(List.of(row("A").build()));
+        given(fetcher.fetch()).willReturn(complete(row("A").build()));
         sync();
 
-        given(seoulJobApiClient.fetchAll()).willReturn(List.<SeoulJobRow>of());
+        given(fetcher.fetch()).willReturn(complete());
 
         sync()
                 .andExpect(jsonPath("$.data.totalCount").value(0))
-                .andExpect(jsonPath("$.data.closedCount").value(0));
+                .andExpect(jsonPath("$.data.closedCount").value(0))
+                .andExpect(jsonPath("$.data.complete").value(false));
         assertThat(findByTitle("A").getStatus()).isEqualTo(JobPostingStatus.OPEN);
+    }
+
+    @Test
+    void 전체보다_적게_받으면_받은_공고만_저장하고_마감은_건너뜀() throws Exception {
+        given(fetcher.fetch()).willReturn(complete(row("A").build(), row("B").build()));
+        sync().andExpect(jsonPath("$.data.complete").value(true));
+
+        given(fetcher.fetch()).willReturn(incomplete(
+                row("A").jobCont("업무 변경").build(), row("C").build()));
+
+        sync()
+                .andExpect(jsonPath("$.data.createdCount").value(1))
+                .andExpect(jsonPath("$.data.updatedCount").value(1))
+                .andExpect(jsonPath("$.data.closedCount").value(0))
+                .andExpect(jsonPath("$.data.complete").value(false));
+        assertThat(findByTitle("A").getDescription()).isEqualTo("업무 변경");
+        assertThat(findByTitle("B").getStatus()).isEqualTo(JobPostingStatus.OPEN);
+        assertThat(findByTitle("C").getStatus()).isEqualTo(JobPostingStatus.OPEN);
+    }
+
+    @Test
+    void 건너뛴_공고_수를_skippedCount로_반환() throws Exception {
+        String unreadable = "읽지 못한 공고의 externalId";
+        given(fetcher.fetch()).willReturn(new SeoulJobFetchResult(
+                List.of(row("A").build(), row("B").regionCd(null).build()), Set.of(unreadable), true));
+
+        sync()
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.skippedCount").value(2))
+                .andExpect(jsonPath("$.data.complete").value(true));
+    }
+
+    private static SeoulJobFetchResult complete(SeoulJobRow... rows) {
+        return new SeoulJobFetchResult(List.of(rows), Set.of(), true);
+    }
+
+    private static SeoulJobFetchResult incomplete(SeoulJobRow... rows) {
+        return new SeoulJobFetchResult(List.of(rows), Set.of(), false);
     }
 
     private ResultActions sync() throws Exception {

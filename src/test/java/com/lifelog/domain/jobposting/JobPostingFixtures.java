@@ -1,6 +1,6 @@
 package com.lifelog.domain.jobposting;
 
-import com.lifelog.domain.jobposting.client.SeoulJobRow;
+import com.lifelog.domain.jobposting.dto.SeoulJobRow;
 
 public final class JobPostingFixtures {
 

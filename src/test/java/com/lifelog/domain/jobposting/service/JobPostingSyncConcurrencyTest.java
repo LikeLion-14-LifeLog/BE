@@ -1,6 +1,5 @@
 package com.lifelog.domain.jobposting.service;
 
-import com.lifelog.domain.jobposting.client.SeoulJobApiClient;
 import com.lifelog.domain.jobposting.exception.JobPostingErrorCode;
 import com.lifelog.global.exception.CustomException;
 import org.junit.jupiter.api.Test;
@@ -29,12 +28,12 @@ class JobPostingSyncConcurrencyTest {
     private JobPostingSyncService jobPostingSyncService;
 
     @MockitoBean
-    private SeoulJobApiClient seoulJobApiClient;
+    private SeoulJobPostingFetcher fetcher;
 
     @Test
     void 외부_API_호출은_트랜잭션_밖에서_실행() {
         AtomicBoolean transactionActive = new AtomicBoolean(true);
-        given(seoulJobApiClient.fetchAll()).willAnswer(invocation -> {
+        given(fetcher.fetch()).willAnswer(invocation -> {
             transactionActive.set(TransactionSynchronizationManager.isActualTransactionActive());
             throw new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED);
         });
@@ -47,7 +46,7 @@ class JobPostingSyncConcurrencyTest {
     void 수집_중에_다시_호출하면_SYNC_IN_PROGRESS이고_끝나면_다시_실행_가능() throws Exception {
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
-        given(seoulJobApiClient.fetchAll()).willAnswer(invocation -> {
+        given(fetcher.fetch()).willAnswer(invocation -> {
             entered.countDown();
             release.await(5, TimeUnit.SECONDS);
             throw new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED);
@@ -68,8 +67,8 @@ class JobPostingSyncConcurrencyTest {
             executor.shutdownNow();
         }
 
-        // given(mock.fetchAll())로 다시 stub하면 기존 answer가 실행되므로 willThrow().given() 사용
-        willThrow(new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED)).given(seoulJobApiClient).fetchAll();
+        // given(mock.fetch())로 다시 stub하면 기존 answer가 실행되므로 willThrow().given() 사용
+        willThrow(new CustomException(JobPostingErrorCode.EXTERNAL_API_FAILED)).given(fetcher).fetch();
         assertThatThrownBy(jobPostingSyncService::sync)
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(JobPostingErrorCode.EXTERNAL_API_FAILED);

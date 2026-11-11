@@ -1,8 +1,7 @@
 package com.lifelog.domain.jobposting.service;
 
-import com.lifelog.domain.jobposting.client.SeoulJobApiClient;
-import com.lifelog.domain.jobposting.client.SeoulJobRow;
 import com.lifelog.domain.jobposting.dto.JobPostingSyncResponse;
+import com.lifelog.domain.jobposting.dto.SeoulJobRow;
 import com.lifelog.domain.jobposting.exception.JobPostingErrorCode;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,7 @@ public class JobPostingSyncService {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
-    private final SeoulJobApiClient seoulJobApiClient;
+    private final SeoulJobPostingFetcher fetcher;
     private final SeoulJobPostingMapper mapper;
     private final JobPostingSyncWriter writer;
 
@@ -36,7 +35,8 @@ public class JobPostingSyncService {
     /**
      * 서울 일자리포털 공고 전체를 받아 저장한다.
      * 외부 API 호출은 트랜잭션 밖에서 모두 끝내고, 저장은 1000건 단위 트랜잭션으로 나눠 수행한다.
-     * 중간에 실패해도 다시 실행하면 같은 결과로 수렴한다 (externalId 기준 upsert).
+     * 페이지 호출이 하나라도 실패하면 저장 없이 EXTERNAL_API_FAILED.
+     * 호출은 모두 성공했지만 전체 건수보다 적게 받았으면 받은 공고만 저장하고 마감 처리는 건너뛴다 (complete=false).
      */
     public JobPostingSyncResponse sync() {
         if (!running.compareAndSet(false, true)) {
@@ -51,20 +51,19 @@ public class JobPostingSyncService {
 
     private JobPostingSyncResponse doSync() {
         log.info("[JobPostingSyncService] 채용공고 수집 | sync() - START");
-        // 전 페이지를 받지 못하면 여기서 EXTERNAL_API_FAILED로 끝나 저장·마감 처리를 하지 않음
-        List<SeoulJobRow> rows = seoulJobApiClient.fetchAll();
+        SeoulJobFetchResult fetched = fetcher.fetch();
         // 빈 응답으로 기존 공고가 전부 마감 처리되는 것을 막음
-        if (rows.isEmpty()) {
+        if (fetched.isEmpty()) {
             log.warn("[JobPostingSyncService] 원본 공고가 0건이라 저장·마감 처리를 건너뜀");
-            return new JobPostingSyncResponse(0, 0, 0, 0, 0);
+            return JobPostingSyncResponse.empty();
         }
 
         LocalDate today = LocalDate.now(SEOUL);
         Map<String, JobPostingSyncItem> items = new LinkedHashMap<>();
-        // 변환 실패 행도 포함한 "이번에 본 공고". 마감 대상에서 제외
-        Set<String> seenExternalIds = new HashSet<>();
-        int skippedCount = 0;
-        for (SeoulJobRow row : rows) {
+        // 읽기·변환 실패 행도 포함한 "이번에 본 공고". 마감 대상에서 제외
+        Set<String> seenExternalIds = new HashSet<>(fetched.unreadableExternalIds());
+        int skippedCount = fetched.unreadableExternalIds().size();
+        for (SeoulJobRow row : fetched.rows()) {
             // 변환 실패와 관계없이 식별할 수 있도록 원본 문자열로 먼저 계산
             String externalId = SeoulJobPostingMapper.externalId(row);
             seenExternalIds.add(externalId);
@@ -94,12 +93,18 @@ public class JobPostingSyncService {
             unchanged += result.unchangedCount();
             closed += result.closedCount();
         }
-        closed += writer.closeMissing(seenExternalIds);
+
+        boolean complete = fetched.complete();
+        if (complete) {
+            closed += writer.closeMissing(seenExternalIds);
+        } else {
+            log.warn("[JobPostingSyncService] 원본 전체 건수보다 적게 받아 마감 처리를 건너뜀 | rows: {}",
+                    fetched.rows().size());
+        }
 
         JobPostingSyncResponse response = new JobPostingSyncResponse(
-                items.size(), created, updated, unchanged, closed);
-        log.info("[JobPostingSyncService] 채용공고 수집 | sync() - END | rows: {}, skipped: {}, result: {}",
-                rows.size(), skippedCount, response);
+                items.size(), created, updated, unchanged, closed, skippedCount, complete);
+        log.info("[JobPostingSyncService] 채용공고 수집 | sync() - END | result: {}", response);
         return response;
     }
 }
