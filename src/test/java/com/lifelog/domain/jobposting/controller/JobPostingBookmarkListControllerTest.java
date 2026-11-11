@@ -137,6 +137,7 @@ class JobPostingBookmarkListControllerTest {
         mockMvc.perform(as(member, get(URL)))
                 .andExpect(jsonPath("$.data.totalElements").value(2))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", contains("마감일 지남", "마감")))
+                .andExpect(jsonPath("$.data.jobPostings[*].status", contains("OPEN", "CLOSE")))
                 .andExpect(jsonPath("$.data.jobPostings[0].dDay").value(-1));
     }
 

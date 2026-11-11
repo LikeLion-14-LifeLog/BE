@@ -55,7 +55,7 @@ public class SeoulJobPostingMapper {
         LocalDate regDate = parseDate(row.regDt());
 
         JobPosting posting = JobPosting.builder()
-                .title(truncate(row.title().strip(), 200))
+                .title(truncate(required(trimToNull(row.title()), "TITLE"), 200))
                 .employmentType(employmentType(row.empTpCd()))
                 .careerType(careerType(row.enterTpCd()))
                 .regionCode(truncate(row.regionCd().strip(), 30))
@@ -83,8 +83,8 @@ public class SeoulJobPostingMapper {
         }
         addRequirements(posting, row);
 
-        return new JobPostingSyncItem(posting, truncate(row.company().strip(), 200),
-                truncate(trimToNull(row.industryName()), 100));
+        return new JobPostingSyncItem(posting, truncate(required(trimToNull(row.company()), "COMPANY"), 200),
+                truncate(SeoulTextCleaner.cleanIndustryName(row.industryName()), 100));
     }
 
     // 고유 ID가 없어 기업명·제목·등록일·근무지로 식별. 제목이 바뀌면 다른 공고로 취급 (MVP에서 감수)
@@ -225,11 +225,17 @@ public class SeoulJobPostingMapper {
         return joined.isEmpty() ? null : joined;
     }
 
+    // 정리 규칙은 SeoulTextCleaner에 모아 둠 (？ 치환, 줄바꿈 통일, 공백 정리)
     private static String trimToNull(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
+        return SeoulTextCleaner.clean(value);
+    }
+
+    // 필수 값이 비면 변환 실패로 처리 (해당 공고는 건너뛰고 기존 데이터 유지)
+    private static String required(String value, String field) {
+        if (value == null) {
+            throw new IllegalArgumentException(field + " 값이 비어 있습니다.");
         }
-        return value.strip();
+        return value;
     }
 
     private static String nullToEmpty(String value) {

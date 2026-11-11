@@ -91,6 +91,7 @@ class JobPostingListControllerTest {
                 .andExpect(jsonPath("$.data.tabCounts.offers").doesNotExist())
                 .andExpect(jsonPath("$.data.jobPostings[0].jobPostingId").value(posting.getId()))
                 .andExpect(jsonPath("$.data.jobPostings[0].title").value("주니어 백엔드 개발자"))
+                .andExpect(jsonPath("$.data.jobPostings[0].status").value("OPEN"))
                 .andExpect(jsonPath("$.data.jobPostings[0].companyName").value("(주)네오커머스"))
                 .andExpect(jsonPath("$.data.jobPostings[0].companySizeLabel").value(nullValue()))
                 .andExpect(jsonPath("$.data.jobPostings[0].industryLabel").value("이커머스"))

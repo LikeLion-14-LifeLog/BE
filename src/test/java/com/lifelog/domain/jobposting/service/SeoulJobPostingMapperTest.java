@@ -54,6 +54,34 @@ class SeoulJobPostingMapperTest {
     }
 
     @Test
+    void 줄바꿈은_LF로_통일() {
+        JobPosting posting = mapper.toItem(row("제목")
+                .jobCont("첫째 줄\r\n둘째 줄\r셋째 줄\n넷째 줄")
+                .workdayWorkhrCont("평일 : 09:30~18:30\r\n주 5일 근무")
+                .etcWelfare("교육비 지원\r\n야근 시 석식")
+                .build(), TODAY).posting();
+
+        assertThat(posting.getDescription()).isEqualTo("첫째 줄\n둘째 줄\n셋째 줄\n넷째 줄");
+        assertThat(posting.getWorkSchedule()).isEqualTo("평일 : 09:30~18:30\n주 5일 근무");
+        assertThat(posting.getBenefits()).isEqualTo("국민연금 고용보험 산재보험 의료보험\n퇴직금\n교육비 지원\n야근 시 석식");
+        assertThat(posting.getDescription()).doesNotContain("\r");
+    }
+
+    @Test
+    void 저장할_때_깨진_문자를_정리하고_외부ID는_원본_기준() {
+        JobPostingSyncItem item = mapper.toItem(row("？？ 백엔드？개발자")
+                .industryName("사업시설 유지？관리 서비스업")
+                .jobCont("담당 업무？\t서버 개발")
+                .build(), TODAY);
+
+        assertThat(item.posting().getTitle()).isEqualTo("백엔드 개발자");
+        assertThat(item.industryName()).isEqualTo("사업시설 유지·관리 서비스업");
+        assertThat(item.posting().getDescription()).isEqualTo("담당 업무 서버 개발");
+        assertThat(item.externalId())
+                .isEqualTo(SeoulJobPostingMapper.externalId(row("？？ 백엔드？개발자").build()));
+    }
+
+    @Test
     void 모든_값이_비어_있으면_null() {
         JobPosting posting = mapper.toItem(row("제목").fourIns("").retirepay("").etcWelfare("").build(), TODAY).posting();
 

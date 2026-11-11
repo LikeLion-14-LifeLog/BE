@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class JobPostingController {
+public JobPostingController {
 
     private final JobPostingSyncService jobPostingSyncService;
     private final JobPostingService jobPostingService;

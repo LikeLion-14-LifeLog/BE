@@ -3,6 +3,7 @@ package com.lifelog.domain.jobposting.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lifelog.domain.company.entity.Company;
 import com.lifelog.domain.jobposting.entity.JobPosting;
+import com.lifelog.domain.jobposting.entity.JobPostingStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -13,6 +14,8 @@ public record JobPostingCardResponse(
         long jobPostingId,
         @Schema(description = "공고 제목", example = "주니어 백엔드 웹 개발자 (신입 정규직)")
         String title,
+        @Schema(description = "모집 상태 (OPEN: 모집 중, CLOSE: 마감)", example = "OPEN")
+        JobPostingStatus status,
         @Schema(description = "기업명", example = "(주)네오커머스")
         String companyName,
         @Schema(description = "기업 규모 (원본에 없으면 null)", example = "중견기업", nullable = true)
@@ -41,6 +44,7 @@ public record JobPostingCardResponse(
         return new JobPostingCardResponse(
                 posting.getId(),
                 posting.getTitle(),
+                posting.getStatus(),
                 company.getName(),
                 // 원본에 기업 규모가 없어 현재 항상 null
                 company.getSizeType(),
