@@ -26,7 +26,7 @@ class CertificationMigrationIntegrationTest {
                 var flyway = Flyway.configure().dataSource(url,user,password).schemas(schema).load();
                 flyway.migrate();
                 // then
-                assertThat(flyway.info().current().getVersion().toString()).isEqualTo("20261110.4");
+                assertThat(flyway.info().current().getVersion().toString()).isEqualTo("20261112.6");
                 try (var result = sql.executeQuery("SELECT role FROM member WHERE member_id=1")) {
                     assertThat(result.next()).isTrue();
                     assertThat(result.getString(1)).isEqualTo("USER");
