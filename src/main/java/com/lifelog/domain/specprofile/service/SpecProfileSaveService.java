@@ -9,6 +9,7 @@ import com.lifelog.domain.specprofile.enums.SpecProfileType;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.repository.SpecProfileRepository;
 import com.lifelog.domain.specprofile.validation.SpecProfileSaveRequestValidator;
+import com.lifelog.domain.specprofile.validation.SpecProfileAnalyzationPolicy;
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.JobRepository;
 import com.lifelog.domain.job.service.DesiredJobService;
@@ -47,6 +48,7 @@ public class SpecProfileSaveService {
     private final LanguageExamScoreService languageExamScoreService;
     private final ExperienceService experienceService;
     private final SpecProfileSaveRequestValidator validator;
+    private final SpecProfileAnalyzationPolicy analyzationPolicy;
     private final EntityManager entityManager;
 
     /**
@@ -61,6 +63,7 @@ public class SpecProfileSaveService {
         List<SpecProfile> profiles = profileRepository.findForUpdate(memberId, SpecProfileType.CURRENT);
         validator.validateCurrentProfileExists(profiles);
         validator.validateSingleCurrentProfile(profiles);
+        analyzationPolicy.validateLatestRunNotRunning(profiles.getFirst().getId());
         validator.validateLanguageExamDataInitialized();
         /* (2) 입력과 참조 정보를 검증한다. 초기화 API는 호출하지 않는다. */
         validator.validateDatesAndDuplicateIdsAndConditionalFields(request);

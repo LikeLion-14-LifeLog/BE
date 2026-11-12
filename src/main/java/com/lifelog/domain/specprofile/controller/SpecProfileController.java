@@ -2,6 +2,7 @@ package com.lifelog.domain.specprofile.controller;
 
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,9 @@ public class SpecProfileController implements SpecProfileControllerDocs {
         service.saveTemporary(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("COMMON_201", "회원 스펙 임시 저장 성공", null));
     }
-}
 
+    @Override
+    public ApiResponse<SpecProfileAnalyzationRunResDto> requestRun(Long memberId) {
+        return ApiResponse.success("연봉 분석 요청이 접수되었습니다.", service.requestSpecProfileAnalyzationRun(memberId));
+    }
+}
