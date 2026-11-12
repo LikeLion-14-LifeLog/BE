@@ -22,7 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class JobServiceTest {
 
-    private static final int CSV_ROW_COUNT = 451;
+    // 한국고용직업분류 2025 세분류 495개 + 미분류(9999)
+    private static final int CSV_ROW_COUNT = 496;
 
     @Autowired
     private JobService jobService;
@@ -79,7 +80,7 @@ class JobServiceTest {
         assertThat(response.unchangedCount()).isEqualTo(CSV_ROW_COUNT - 1);
         Job updated = findByCode("0111");
         assertThat(updated.getId()).isEqualTo(jobId);
-        assertThat(updated.getName()).isEqualTo("의회의원·고위공무원 및 공공단체임원");
+        assertThat(updated.getName()).isEqualTo("의회 의원");
     }
 
     @Test
@@ -102,7 +103,7 @@ class JobServiceTest {
 
         SliceResponse<JobListResponse> response = jobService.search("임원", null, null, null, null, 1, 20);
 
-        assertThat(response.content().jobs()).extracting(JobResponse::code).contains("0111", "0112");
+        assertThat(response.content().jobs()).extracting(JobResponse::code).contains("0112", "0113");
     }
 
     @Test
@@ -142,14 +143,14 @@ class JobServiceTest {
         jobService.initFromCsv();
 
         SliceResponse<JobListResponse> first =jobService.search(null, null, null, null, null, 1, 20);
-        SliceResponse<JobListResponse> last =jobService.search(null, null, null, null, null, 23, 20);
+        SliceResponse<JobListResponse> last =jobService.search(null, null, null, null, null, 25, 20);
 
         assertThat(first.totalElements()).isEqualTo(CSV_ROW_COUNT);
-        assertThat(first.totalPages()).isEqualTo(23);
+        assertThat(first.totalPages()).isEqualTo(25);
         assertThat(first.hasNext()).isTrue();
         assertThat(first.content().jobs()).hasSize(20);
         assertThat(first.content().jobs()).extracting(JobResponse::code).isSorted();
-        assertThat(last.content().jobs()).hasSize(11);
+        assertThat(last.content().jobs()).hasSize(16);
         assertThat(last.hasNext()).isFalse();
     }
 
@@ -187,7 +188,7 @@ class JobServiceTest {
 
         assertThat(response.content().jobs()).isNotEmpty()
                 .extracting(JobResponse::code)
-                .contains("9050")
+                .contains("9051")
                 .doesNotContain("9999");
     }
 

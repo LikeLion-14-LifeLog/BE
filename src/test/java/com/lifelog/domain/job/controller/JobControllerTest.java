@@ -45,8 +45,8 @@ class JobControllerTest {
         mockMvc.perform(post("/api/admin/jobs/init").with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
-                .andExpect(jsonPath("$.data.totalCount").value(451))
-                .andExpect(jsonPath("$.data.createdCount").value(451));
+                .andExpect(jsonPath("$.data.totalCount").value(496))
+                .andExpect(jsonPath("$.data.createdCount").value(496));
     }
 
     @Test
@@ -107,7 +107,7 @@ class JobControllerTest {
                         .param("mainCategoryCode", "9")
                         .param("size", "100"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.jobs[*].code", hasItem("9050")))
+                .andExpect(jsonPath("$.data.jobs[*].code", hasItem("9051")))
                 .andExpect(jsonPath("$.data.jobs[*].code", not(hasItem("9999"))));
     }
 

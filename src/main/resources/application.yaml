@@ -23,3 +23,23 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000
+
+# 서울 열린데이터광장 (키가 없으면 수집 API가 502)
+seoul:
+  openapi:
+    key: ${SEOUL_OPENAPI_KEY:}
+    base-url: http://openapi.seoul.go.kr:8088
+
+# 직무 기준 데이터 (한국고용직업분류 2025). 2018은 data/job_2018.csv로 참고용 보관
+job:
+  csv-path: data/job_2025.csv
+
+job-posting:
+  sync:
+    scheduler:
+      # 매일 1회 자동 수집, 기본 비활성화
+      enabled: ${JOB_POSTING_SYNC_SCHEDULER_ENABLED:false}
+      cron: "0 0 4 * * *"
+  personalized:
+    # 맞춤 공고에서 신입·경력무관 공고만 볼지 (기획 확인 전이라 기본 꺼짐)
+    new-or-any-only: false

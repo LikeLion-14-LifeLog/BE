@@ -23,7 +23,7 @@ class CertificationMigrationIntegrationTest {
                 sql.execute("INSERT INTO spec_profile(spec_profile_id,member_id) VALUES (1,1)");
                 sql.execute("INSERT INTO spec_profile_certificate(spec_profile_id,certificate_id,acquired_at) VALUES (1,100,CURRENT_DATE)");
                 // when
-                var flyway = Flyway.configure().dataSource(url,user,password).schemas(schema).load();
+                var flyway =Flyway.configure().dataSource(url,user,password).schemas(schema).target("20261110.4").load();
                 flyway.migrate();
                 // then
                 assertThat(flyway.info().current().getVersion().toString()).isEqualTo("20261112.6");

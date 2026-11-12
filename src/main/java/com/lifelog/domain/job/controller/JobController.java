@@ -28,7 +28,7 @@ public class JobController {
 
     @Operation(
             summary = "[관리자] 직무 기준 데이터 일괄 등록/갱신",
-            description = "서버의 job.csv를 읽어 code 기준으로 등록/갱신합니다. 반복 호출해도 중복 생성되지 않으며 jobId는 유지됩니다. CSV에 없는 기존 직무는 삭제하지 않습니다. ADMIN 권한이 필요합니다."
+            description = "서버의 직무 기준 CSV(한국고용직업분류 2025, 설정 job.csv-path)를 읽어 code 기준으로 등록/갱신합니다. 반복 호출해도 중복 생성되지 않으며 jobId는 유지됩니다. CSV에 없는 기존 직무는 삭제하지 않습니다. ADMIN 권한이 필요합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "등록/갱신 성공"),

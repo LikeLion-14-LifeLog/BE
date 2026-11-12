@@ -3,6 +3,7 @@ package com.lifelog.domain.job.service;
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.exception.JobErrorCode;
 import com.lifelog.global.exception.CustomException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +19,21 @@ import java.util.Set;
 @Component
 public class JobCsvReader {
 
-    private static final String CSV_PATH = "data/job.csv";
+    // 직무 기준 CSV 경로 (classpath). 설정 job.csv-path로 관리, 기본값은 한국고용직업분류 2025
+    // 테스트 리소스의 application.yaml이 메인 설정을 가리므로 기본값을 함께 둠
+    // job_2025.csv 출처: 고용노동부 고시 제2024-63호(2024.12.12.) 한국고용직업분류 2025 개정 고시 첨부
+    //   "02.한국고용직업분류 2025 개정 항목표 및 신구연계표.xlsx" 첫 번째 시트(항목표), 세분류 495개
+    //   https://www.moel.go.kr/info/lawinfo/instruction/view.do?bbs_seq=20241200770
+    // 원본과 차이: 이름 끝 공백(전각 U+3000 포함) 제거, 미분류(9999) 행 추가, 합계 행 제외
+    // CSV에는 주석을 넣지 않음 (이 리더가 헤더 외 주석 줄을 읽지 못함)
+    static final String DEFAULT_CSV_PATH = "data/job_2025.csv";
+
+    private final String csvPath;
+
+    public JobCsvReader(@Value("${job.csv-path:" + DEFAULT_CSV_PATH + "}") String csvPath) {
+        this.csvPath = csvPath;
+    }
+
     private static final String HEADER = "main_category_code,main_category_name,middle_category_code,"
             + "middle_category_name,sub_category_code,sub_category_name,code,name";
     private static final String BOM = "﻿";
@@ -27,7 +42,7 @@ public class JobCsvReader {
 
     public List<Job> read() {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                new ClassPathResource(CSV_PATH).getInputStream(), StandardCharsets.UTF_8))) {
+                new ClassPathResource(csvPath).getInputStream(), StandardCharsets.UTF_8))) {
             return parse(reader.lines().toList());
         } catch (IOException e) {
             throw new CustomException(JobErrorCode.CSV_READ_FAILED);
