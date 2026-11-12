@@ -1,5 +1,8 @@
 package com.lifelog.domain.specprofile.service;
 
+import com.lifelog.domain.job.entity.Job;
+import com.lifelog.domain.job.entity.DesiredJob;
+import com.lifelog.domain.job.repository.JobRepository;
 import com.lifelog.domain.member.entity.Member;
 import com.lifelog.domain.member.repository.MemberRepository;
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
@@ -16,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.entity.AcademicAbility;
+import com.lifelog.domain.specprofile.entity.AcademicAbilityMajor;
 import com.lifelog.domain.specprofile.entity.Experience;
 import com.lifelog.domain.specprofile.entity.LanguageExamScore;
 import com.lifelog.domain.specprofile.entity.SpecProfileCertificate;
@@ -46,6 +50,7 @@ public class SpecProfileService {
     private final SpecProfileCertificateRepository certificateRepository;
     private final LanguageExamScoreRepository scoreRepository;
     private final ExperienceRepository experienceRepository;
+    private final JobRepository jobRepository;
 
     /**
      * 본인의 CURRENT와 모든 저장 항목을 동일한 스냅샷에서 조회한다.
@@ -56,7 +61,7 @@ public class SpecProfileService {
     public SpecProfileResDto getCurrentProfile(Long memberId) {
         log.info("[SpecProfileService] 회원 스펙 조회 시작 | getCurrentProfile() - START | memberId: {}", memberId);
         /* (1) 인증된 회원의 유일한 CURRENT만 선택한다. */
-        var profiles = profileRepository.findAllByMemberIdAndType(memberId, SpecProfileType.CURRENT);
+        List<SpecProfile> profiles = profileRepository.findAllByMemberIdAndType(memberId, SpecProfileType.CURRENT);
         if (profiles.isEmpty()) {
             throw new CustomException(SpecProfileErrorCode.CURRENT_NOT_FOUND);
         }
@@ -66,20 +71,21 @@ public class SpecProfileService {
         SpecProfile profile = profiles.getFirst();
 
         /* (2) 하위 목록과 표시용 참조를 일괄 조회하고 PK 순서를 고정한다. */
-        var desiredJob = desiredJobRepository.findByMemberId(memberId).orElse(null);
-        var academics = academicRepository.findAllBySpecProfileId(profile.getId()).stream()
+        DesiredJob desiredJob = desiredJobRepository.findByMemberId(memberId).orElse(null);
+        Job job = desiredJob.getJob();
+        List<AcademicAbility> academics = academicRepository.findAllBySpecProfileId(profile.getId()).stream()
                 .sorted(Comparator.comparing(AcademicAbility::getId)).toList();
         Map<Long, Major> majors = findAcademicMajors(academics);
-        var certificates = certificateRepository.findAllBySpecProfileId(profile.getId()).stream()
+        List<SpecProfileCertificate> certificates = certificateRepository.findAllBySpecProfileId(profile.getId()).stream()
                 .sorted(Comparator.comparing(SpecProfileCertificate::getId)).toList();
-        var scores = scoreRepository.findAllBySpecProfileId(profile.getId()).stream()
+        List<LanguageExamScore> scores = scoreRepository.findAllBySpecProfileId(profile.getId()).stream()
                 .sorted(Comparator.comparing(LanguageExamScore::getId)).toList();
-        var experiences = experienceRepository.findAllBySpecProfileId(profile.getId()).stream()
+        List<Experience> experiences = experienceRepository.findAllBySpecProfileId(profile.getId()).stream()
                 .sorted(Comparator.comparing(Experience::getId)).toList();
 
         /* (3) 트랜잭션 내에서 응답으로 변환하여 지연 로딩을 완료한다. */
         SpecProfileResDto result = mapper.toSpecProfileResDto(
-                profile, desiredJob, academics, majors, certificates, scores, experiences);
+                profile, desiredJob, job, academics, majors, certificates, scores, experiences);
         log.info("[SpecProfileService] 회원 스펙 조회 종료 | getCurrentProfile() - END | profileId: {}", profile.getId());
         return result;
     }
@@ -93,9 +99,9 @@ public class SpecProfileService {
         log.debug("[SpecProfileService] 전공 조회 시작 | findAcademicMajors() - START");
         Map<Long, Major> result = new HashMap<>();
         if (!academics.isEmpty()) {
-            var links = academicMajorRepository.findAllByAcademicAbilityIdIn(
+            List<AcademicAbilityMajor> links = academicMajorRepository.findAllByAcademicAbilityIdIn(
                     academics.stream().map(AcademicAbility::getId).toList());
-            for (var link : links) {
+            for (AcademicAbilityMajor link : links) {
                 if (result.putIfAbsent(link.getAcademicAbility().getId(), link.getMajor()) != null) {
                     throw new CustomException(SpecProfileErrorCode.INVALID_MAJOR_COUNT);
                 }
@@ -116,7 +122,7 @@ public class SpecProfileService {
         /* (1) 프로필이 없는 상태에서도 회원 잠금으로 동시 생성을 막는다. */
         Member locked = memberRepository.findByIdForUpdate(member.getId())
                 .orElseThrow(() -> new CustomException(SpecProfileErrorCode.REFERENCE_NOT_FOUND));
-        var profiles = profileRepository.findAllByMemberIdAndType(locked.getId(), SpecProfileType.CURRENT);
+        List<SpecProfile> profiles = profileRepository.findAllByMemberIdAndType(locked.getId(), SpecProfileType.CURRENT);
         if (profiles.size() > 1) {
             throw new CustomException(SpecProfileErrorCode.INVALID_PROFILE_COUNT);
         }
