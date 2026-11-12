@@ -18,6 +18,7 @@ public record SpecProfileResDto(
     ResidentialArea residenceRegion,
     @Schema(description = "DesiredJob PK. 저장 요청의 Job PK와 다름", nullable = true)
     Long desiredJobId,
+    Long jobId,
     String desiredJobName,
     List<AcademicAbilityResDto> academicAbilities,
     List<CertificateResDto> certificates,

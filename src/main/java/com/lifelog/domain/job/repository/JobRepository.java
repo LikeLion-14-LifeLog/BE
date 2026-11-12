@@ -10,4 +10,5 @@ import java.util.List;
 public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecutor<Job> {
 
     List<Job> findByCodeIn(Collection<String> codes);
+    Optional<Job> findById(Long id);
 }
