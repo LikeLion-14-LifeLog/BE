@@ -67,11 +67,15 @@ class SpecProfileQueryIntegrationTest {
     @Value("${jwt.secret}") String jwtSecret;
     Member member;
     SpecProfile profile;
+    Job job;
+    DesiredJob desiredJob;
 
     @BeforeEach
     void prepare() {
         member = members.saveAndFlush(new Member(UUID.randomUUID() + "@query.test"));
         profile = service.createCurrentProfile(member);
+        job = jobs.saveAndFlush(Job.builder().code("9000").name("기본 직무").mainCategoryName("개발").build());
+        desiredJob = desiredJobs.saveAndFlush(DesiredJob.builder().member(member).job(job).build());
     }
 
     @AfterEach
@@ -94,6 +98,7 @@ class SpecProfileQueryIntegrationTest {
     @DisplayName("미입력 CURRENT는 어학 초기화 없이 null과 빈 배열을 반환하며 DB를 수정하지 않는다")
     void 초기프로필조회_성공() throws Exception {
         // given
+        desiredJobs.delete(desiredJob);
         LocalDateTime updatedAt = profiles.findById(profile.getId()).orElseThrow().getUpdatedAt();
         // when / then
         query().andExpect(status().isOk())
@@ -127,6 +132,7 @@ class SpecProfileQueryIntegrationTest {
         jobs.saveAndFlush(Job.builder().code("1001").name("다른 직무").mainCategoryName("개발").build());
         Member other = members.saveAndFlush(new Member("other@query.test"));
         desiredJobs.saveAndFlush(DesiredJob.builder().member(other).job(job).build());
+        desiredJobs.delete(desiredJob);
         DesiredJob desired = desiredJobs.saveAndFlush(DesiredJob.builder().member(member).job(job).build());
         // DB 시퀀스 상태와 무관하게 서로 다른 PK인 fixture를 보장한다.
         if (desired.getId().equals(job.getId())) {
@@ -154,6 +160,7 @@ class SpecProfileQueryIntegrationTest {
                 .andExpect(jsonPath("$.data.birthYear").value(1999))
                 .andExpect(jsonPath("$.data.residenceRegion").value("DAEGU"))
                 .andExpect(jsonPath("$.data.desiredJobId").value(desired.getId()))
+                .andExpect(jsonPath("$.data.jobId").value(job.getId()))
                 .andExpect(jsonPath("$.data.desiredJobName").value("백엔드 개발자"))
                 .andExpect(jsonPath("$.data.academicAbilities[0].majorId").value(major.getId()))
                 .andExpect(jsonPath("$.data.academicAbilities[0].majorName").value("공학"))

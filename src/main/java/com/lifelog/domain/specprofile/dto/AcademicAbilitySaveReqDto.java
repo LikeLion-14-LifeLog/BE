@@ -21,7 +21,7 @@ public record AcademicAbilitySaveReqDto(
     @Schema(description = "학교 소재지", example = "SEOUL")
     @NotNull ResidentialArea location,
     @Schema(description = "대학 평점. 만점 기준과 함께 입력", example = "3.75")
-    @DecimalMin("0") @DecimalMax("4.5") @Digits(integer = 1, fraction = 2) BigDecimal universityGrade,
+    @Digits(integer = 1, fraction = 2) BigDecimal universityGrade,
     @Schema(description = "평점 만점 기준", example = "4.5")
     BigDecimal universityStandardGrade,
     @Schema(description = "졸업 또는 졸업예정 연월", type = "string", pattern = "^\\d{4}-(0[1-9]|1[0-2])$", example = "2025-02")

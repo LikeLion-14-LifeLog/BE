@@ -1,5 +1,6 @@
 package com.lifelog.domain.specprofile.mapper;
 
+import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.specprofile.dto.*;
 import com.lifelog.domain.specprofile.entity.*;
 import com.lifelog.domain.member.entity.Member;
@@ -29,7 +30,7 @@ public class SpecProfileMapper {
      * @param experiences 활동 경험 목록
      * @return 미입력 값과 빈 목록을 유지한 응답
      */
-    public SpecProfileResDto toSpecProfileResDto(SpecProfile profile, DesiredJob desiredJob,
+    public SpecProfileResDto toSpecProfileResDto(SpecProfile profile, DesiredJob desiredJob, Job job,
             List<AcademicAbility> academics, Map<Long, Major> majors,
             List<SpecProfileCertificate> certificates, List<LanguageExamScore> scores,
             List<Experience> experiences) {
@@ -38,6 +39,7 @@ public class SpecProfileMapper {
                 .birthYear(profile.getBirthYear() == null ? null : profile.getBirthYear().intValue())
                 .residenceRegion(profile.getResidenceRegion())
                 .desiredJobId(desiredJob == null ? null : desiredJob.getId())
+                .jobId(job == null ? null : job.getId())
                 .desiredJobName(desiredJob == null ? null : desiredJob.getJob().getName())
                 .academicAbilities(academics.stream()
                         .map(a -> toAcademicAbilityResDto(a, majors.get(a.getId()))).toList())
