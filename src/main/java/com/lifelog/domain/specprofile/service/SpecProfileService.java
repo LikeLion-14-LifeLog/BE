@@ -72,7 +72,7 @@ public class SpecProfileService {
 
         /* (2) 하위 목록과 표시용 참조를 일괄 조회하고 PK 순서를 고정한다. */
         DesiredJob desiredJob = desiredJobRepository.findByMemberId(memberId).orElse(null);
-        Job job = desiredJob.getJob();
+        Job job = desiredJob == null ? null : desiredJob.getJob();
         List<AcademicAbility> academics = academicRepository.findAllBySpecProfileId(profile.getId()).stream()
                 .sorted(Comparator.comparing(AcademicAbility::getId)).toList();
         Map<Long, Major> majors = findAcademicMajors(academics);
