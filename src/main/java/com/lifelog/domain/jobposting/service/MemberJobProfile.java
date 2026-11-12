@@ -5,7 +5,8 @@ import java.util.Set;
 /**
  * 맞춤 공고에 쓰는 회원 조건.
  * @param subCategoryCodes 희망 직무(desired_job, 회원당 1개)의 소분류 코드(3자리)
- * @param educationLevel   회원 학력 단계 (3 고졸, 4 전문대, 5 대학교, 6 석사, 7 박사), 학력 정보가 없으면 null
+ * @param educationLevel   회원 학력 단계 (3 고졸, 4 전문대, 5 대학교, 6 석사, 7 박사).
+ *                         학력 미입력이면 null(학력 조건 미적용), 입력했지만 인정되는 학력이 없으면 3
  */
 public record MemberJobProfile(Set<String> subCategoryCodes, Integer educationLevel) {
 

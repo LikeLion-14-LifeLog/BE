@@ -19,11 +19,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Transactional
 class MemberJobProfileReaderTest {
+
+    private static final LocalDate TODAY = LocalDate.now(ZoneId.of("Asia/Seoul"));
 
     @Autowired
     private MemberJobProfileReader reader;
@@ -55,8 +60,9 @@ class MemberJobProfileReaderTest {
         saveDesiredJob(member, saveJob("1", "13", "133", "1332"));
         SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
         saveAcademicAbility(current, AcademicAbilityType.HIGH_SCHOOL, AcademicAbilityStatus.GRADUATED);
-        // 재학 중이어도 그 단계로 인정
-        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING);
+        // 재학 중이어도 졸업예정이 12개월 이내면 그 단계로 인정
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusMonths(6));
 
         MemberJobProfile profile = reader.read(member.getId());
 
@@ -79,7 +85,8 @@ class MemberJobProfileReaderTest {
         saveAcademicAbility(current, AcademicAbilityType.GRADUATE_SCHOOL_MASTER, AcademicAbilityStatus.GRADUATED);
         assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(6);
 
-        saveAcademicAbility(current, AcademicAbilityType.GRADUATE_SCHOOL_DOCTORAL, AcademicAbilityStatus.ATTENDING);
+        saveAcademicAbility(current, AcademicAbilityType.GRADUATE_SCHOOL_DOCTORAL, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusMonths(6));
         assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(7);
     }
 
@@ -87,11 +94,108 @@ class MemberJobProfileReaderTest {
     void 목표_스펙의_학력과_ETC는_학력_판단에_쓰지_않음() {
         SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
         SpecProfile target = saveSpecProfile(member, SpecProfileType.TARGET);
-        saveAcademicAbility(current, AcademicAbilityType.COLLEGE, AcademicAbilityStatus.LEAVE_FROM_SCHOOL);
+        saveAcademicAbility(current, AcademicAbilityType.COLLEGE, AcademicAbilityStatus.LEAVE_FROM_SCHOOL,
+                TODAY.plusMonths(6));
         saveAcademicAbility(current, AcademicAbilityType.ETC, AcademicAbilityStatus.GRADUATED);
         saveAcademicAbility(target, AcademicAbilityType.GRADUATE_SCHOOL_DOCTORAL, AcademicAbilityStatus.GRADUATED);
 
         assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(4);
+    }
+
+    @Test
+    void 졸업이면_인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.GRADUATED,
+                TODAY.minusYears(1));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(5);
+    }
+
+    @Test
+    void 졸업유예면_졸업예정_연월과_관계없이_인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.GRADUATE_POSTPONED,
+                TODAY.plusYears(2));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(5);
+    }
+
+    @Test
+    void 재학이고_졸업예정이_6개월_뒤면_인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusMonths(6));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(5);
+    }
+
+    @Test
+    void 재학이고_졸업예정이_2년_뒤면_미인정이라_고졸_단계() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusYears(2));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(3);
+    }
+
+    @Test
+    void 휴학이고_졸업예정이_11개월_뒤면_인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.COLLEGE, AcademicAbilityStatus.LEAVE_FROM_SCHOOL,
+                TODAY.plusMonths(11));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(4);
+    }
+
+    @Test
+    void 재학이고_졸업예정이_12개월_뒤_달까지는_인정_13개월_뒤면_미인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.COLLEGE, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusMonths(12));
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(4);
+
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusMonths(13));
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(4);
+    }
+
+    @Test
+    void 재학이고_졸업예정이_이미_지났으면_인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING,
+                TODAY.minusMonths(3));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(5);
+    }
+
+    @Test
+    void 재학이고_졸업예정_연월이_없으면_미인정() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.ATTENDING);
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(3);
+    }
+
+    @Test
+    void 대학원_재학_2년_뒤_졸업과_대학교_졸업이면_대졸_단계() {
+        SpecProfile current = saveSpecProfile(member, SpecProfileType.CURRENT);
+        saveAcademicAbility(current, AcademicAbilityType.GRADUATE_SCHOOL_MASTER, AcademicAbilityStatus.ATTENDING,
+                TODAY.plusYears(2));
+        saveAcademicAbility(current, AcademicAbilityType.UNIVERSITY, AcademicAbilityStatus.GRADUATED,
+                TODAY.minusYears(1));
+
+        assertThat(reader.read(member.getId()).educationLevel()).isEqualTo(5);
+    }
+
+    @Test
+    void 학력_미입력이면_학력_조건을_적용하지_않도록_null() {
+        saveDesiredJob(member, saveJob("1", "13", "133", "1332"));
+        saveSpecProfile(member, SpecProfileType.CURRENT);
+
+        MemberJobProfile profile = reader.read(member.getId());
+
+        assertThat(profile.isPersonalizable()).isTrue();
+        assertThat(profile.educationLevel()).isNull();
     }
 
     @Test
@@ -136,8 +240,13 @@ class MemberJobProfileReaderTest {
     }
 
     private void saveAcademicAbility(SpecProfile profile, AcademicAbilityType type, AcademicAbilityStatus status) {
+        saveAcademicAbility(profile, type, status, null);
+    }
+
+    private void saveAcademicAbility(SpecProfile profile, AcademicAbilityType type, AcademicAbilityStatus status,
+                                     LocalDate graduatedAt) {
         academicAbilityRepository.saveAndFlush(AcademicAbility.builder()
-                .specProfile(profile).type(type).status(status)
+                .specProfile(profile).type(type).status(status).graduatedAt(graduatedAt)
                 .build());
     }
 }

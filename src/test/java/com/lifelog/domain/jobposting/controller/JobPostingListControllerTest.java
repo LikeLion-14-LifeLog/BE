@@ -276,6 +276,35 @@ class JobPostingListControllerTest {
     }
 
     @Test
+    void 학력_미입력이면_학력_필터_없이_전체_노출() throws Exception {
+        Job app = saveJob("1332", "응용 소프트웨어 개발자");
+        saveFor("학력무관", app, 0, CareerType.ANY);
+        saveFor("고졸", app, 3, CareerType.ANY);
+        saveFor("대졸", app, 5, CareerType.ANY);
+        saveFor("박사", app, 7, CareerType.ANY);
+        given(memberJobProfileReader.read(member.getId()))
+                .willReturn(new MemberJobProfile(Set.of("133"), null));
+
+        mockMvc.perform(request(get(URL)))
+                .andExpect(jsonPath("$.data.personalized").value(true))
+                .andExpect(jsonPath("$.data.jobPostings[*].title",
+                        containsInAnyOrder("학력무관", "고졸", "대졸", "박사")));
+    }
+
+    @Test
+    void 인정되는_학력이_없어_고졸_단계면_고졸_이하와_학력무관만_노출() throws Exception {
+        Job app = saveJob("1332", "응용 소프트웨어 개발자");
+        saveFor("학력무관", app, 0, CareerType.ANY);
+        saveFor("고졸", app, 3, CareerType.ANY);
+        saveFor("대졸", app, 5, CareerType.ANY);
+        given(memberJobProfileReader.read(member.getId()))
+                .willReturn(new MemberJobProfile(Set.of("133"), 3));
+
+        mockMvc.perform(request(get(URL)))
+                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("학력무관", "고졸")));
+    }
+
+    @Test
     void 경력_조건은_설정이_꺼져_있으면_적용하지_않음() throws Exception {
         saveFor("경력직", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.EXPERIENCED);
         given(memberJobProfileReader.read(member.getId()))
