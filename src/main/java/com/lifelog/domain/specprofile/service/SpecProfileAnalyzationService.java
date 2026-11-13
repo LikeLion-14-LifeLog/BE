@@ -7,6 +7,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.entity.SpecProfile;
 import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationRun;
 import com.lifelog.domain.specprofile.enums.SpecProfileType;
+import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileAnalyzationMapper;
@@ -17,6 +18,7 @@ import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -38,6 +40,7 @@ public class SpecProfileAnalyzationService {
     private final SpecProfileAnalyzationInputValidator inputValidator;
     private final SpecProfileAnalyzationMapper mapper;
     private final JsonMapper jsonMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * CURRENT 스펙의 스냅샷과 최초 실행 이벤트를 원자적으로 저장한다.
@@ -87,15 +90,15 @@ public class SpecProfileAnalyzationService {
         }
     }
 
-    /** 실행 저장의 커밋 후 호출할 콜백 틀을 등록한다. @param runId 저장된 실행 ID */
+    /** 실행 저장의 커밋 후 분석 요청 이벤트를 발행할 콜백을 등록한다. @param runId 저장된 실행 ID */
     private void registerAfterCommit(Long runId) {
         log.debug("[SpecProfileAnalyzationService] registerAfterCommit() - START | runId: {}", runId);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            /** 커밋 이후 비동기 요청의 구현 지점이며 현재는 로그만 기록한다. */
+            /** 실행과 최초 이벤트가 커밋된 후 비동기 분석 요청 이벤트를 발행한다. */
             @Override
             public void afterCommit() {
                 log.info("[SpecProfileAnalyzationService] afterCommit() - START | runId: {}", runId);
-                // TODO: 스펙 진단 실행자 Queue Class에 연봉 예측 작업을 비동기 요청한다.
+                eventPublisher.publishEvent(new SpecProfileAnuualSalaryAnalyzationRequestEvent(runId));
                 log.info("[SpecProfileAnalyzationService] afterCommit() - END | runId: {}", runId);
             }
         });
