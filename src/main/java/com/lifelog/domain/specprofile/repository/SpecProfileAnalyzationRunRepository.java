@@ -13,6 +13,15 @@ import java.util.Collection;
 
 public interface SpecProfileAnalyzationRunRepository extends JpaRepository<SpecProfileAnalyzationRun, Long> {
     /**
+     * 인증 회원 소유인 실행과 해당 프로필을 조회한다.
+     * @param runId 실행 ID
+     * @param memberId 인증 회원 ID
+     * @return 본인 실행 또는 빈 값
+     */
+    @Query("select r from SpecProfileAnalyzationRun r join fetch r.specProfile p where r.id = :runId and p.member.id = :memberId")
+    Optional<SpecProfileAnalyzationRun> findOwnedRun(@Param("runId") Long runId, @Param("memberId") Long memberId);
+
+    /**
      * 결과 저장·완료와 취소·실패 전환이 동시에 실행되지 않도록 실행 행을 잠근다.
      * @param runId 실행 ID
      * @return 잠금 상태의 실행 또는 빈 값

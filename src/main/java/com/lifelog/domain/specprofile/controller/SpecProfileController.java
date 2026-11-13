@@ -3,6 +3,7 @@ package com.lifelog.domain.specprofile.controller;
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileAnalyzationRunResultResDto> getAnalyzationRunResult(Long memberId, Long runId) {
+        return ApiResponse.success("연봉 분석 실행 상태 및 결과 조회 성공", service.getAnalyzationRunResult(memberId, runId));
+    }
 
     @Override
     public ApiResponse<SpecProfileResDto> getCurrentProfile(Long memberId) {

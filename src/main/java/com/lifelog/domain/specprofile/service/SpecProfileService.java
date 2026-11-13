@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import java.util.List;
 
 @Slf4j
@@ -28,6 +29,20 @@ public class SpecProfileService {
     private final SpecProfileSaveService specProfileSaveService;
     private final SpecProfileQueryService specProfileQueryService;
     private final SpecProfileAnalyzationService specProfileAnalyzationService;
+    private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
+
+    /**
+     * 본인 분석 실행의 상태와 저장 결과 조회를 전담 서비스에 위임한다.
+     * @param memberId 인증된 회원 ID
+     * @param runId 조회할 분석 실행 ID
+     * @return 실행 상태와 완료된 분석 결과
+     */
+    public SpecProfileAnalyzationRunResultResDto getAnalyzationRunResult(Long memberId, Long runId) {
+        log.info("[SpecProfileService] 분석 실행 결과 조회 | getAnalyzationRunResult() - START | memberId: {}, runId: {}", memberId, runId);
+        SpecProfileAnalyzationRunResultResDto result = specProfileAnalyzationResultQueryService.getRunResult(memberId, runId);
+        log.info("[SpecProfileService] 분석 실행 결과 조회 | getAnalyzationRunResult() - END | runId: {}, status: {}", runId, result.status());
+        return result;
+    }
 
     /**
      * 본인의 CURRENT와 모든 저장 항목을 동일한 스냅샷에서 조회한다.

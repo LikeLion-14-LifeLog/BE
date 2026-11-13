@@ -5,6 +5,7 @@ import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto.Salary
 import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSample;
 import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSampleStatistics;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto.AppliedSpecs;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto.ComparisonGroup;
@@ -45,13 +46,60 @@ public class SpecProfileAnnualSalaryAnalyzationMapper {
                 .jobSubCategoryName(conditions.jobSubCategoryName()).sampleCount(statistics.sampleCount())
                 .observationYears(samples.stream().map(KeepSalaryMatchedSample::selectedYear).distinct().sorted().toList())
                 .description(ai.comparisonGroupDescription()).build();
-        AppliedSpecs appliedSpecs = AppliedSpecs.builder().birthYear(snapshot.birthYear()).residenceRegion(snapshot.residenceRegion())
+        return SpecProfileAnnualSalaryAnalyzationResDto.builder().summary(ai.summary()).salaryResults(predictions)
+                .comparisonGroup(group).appliedSpecs(toAppliedSpecs(snapshot)).statistics(statistics)
+                .recommendation(ai.recommendation()).salaryNotice(SALARY_NOTICE).build();
+    }
+
+    /**
+     * 저장된 관측 통계·표시 문구와 요청 당시 스냅샷으로 보고서를 복원한다.
+     * @param results 검증된 연차 오름차순 결과
+     * @param snapshot 요청 당시 스냅샷
+     * @return 재분석 없이 복원한 보고서
+     */
+    public SpecProfileAnnualSalaryAnalyzationResDto toResDto(List<SpecProfileAnalyzationResult> results,
+                                                           SpecProfileAnalyzationSnapshot snapshot) {
+        SpecProfileAnalyzationResult common = results.getFirst();
+        List<SalaryResult> predictions = results.stream().map(result -> SalaryResult.builder()
+                .annual(result.getAnnual()).annualIncomeMin(result.getAnnualIncomeMin())
+                .annualIncomeExpected(result.getAnnualIncomeExpected()).annualIncomeMax(result.getAnnualIncomeMax())
+                .topPercent(result.getAnnual() == 0 ? result.getTopPercent() : null).build()).toList();
+        ComparisonGroup group = ComparisonGroup.builder().jobSubCategoryCode(common.getJobSubCategoryCode())
+                .jobSubCategoryName(common.getJobSubCategoryName()).sampleCount(common.getSampleCount())
+                .observationYears(copy(common.getObservationYears())).description(common.getComparisonGroupDescription()).build();
+        KeepSalaryMatchedSampleStatistics statistics = KeepSalaryMatchedSampleStatistics.builder()
+                .sampleCount(common.getSampleCount()).annualSalaryMinKrw(common.getAnnualSalaryMinKrw())
+                .annualSalaryMaxKrw(common.getAnnualSalaryMaxKrw()).annualSalaryMeanKrw(common.getAnnualSalaryMeanKrw())
+                .annualSalaryModesKrw(copy(common.getAnnualSalaryModesKrw())).modeFrequency(common.getModeFrequency())
+                .annualSalaryP25Krw(common.getAnnualSalaryP25Krw()).annualSalaryMedianKrw(common.getAnnualSalaryMedianKrw())
+                .annualSalaryP75Krw(common.getAnnualSalaryP75Krw()).build();
+        return SpecProfileAnnualSalaryAnalyzationResDto.builder().summary(common.getSummary()).salaryResults(predictions)
+                .comparisonGroup(group).appliedSpecs(toAppliedSpecs(snapshot)).statistics(statistics)
+                .recommendation(common.getRecommendation()).salaryNotice(common.getSalaryNotice()).build();
+    }
+
+    /**
+     * 실행 정보에 완료된 보고서 또는 null을 조합한다.
+     * @param run 조회한 실행
+     * @param report 완료된 보고서 또는 null
+     * @return 실행 상태 및 결과 응답
+     */
+    public SpecProfileAnalyzationRunResultResDto toRunResultResDto(SpecProfileAnalyzationRun run,
+                                                                 SpecProfileAnnualSalaryAnalyzationResDto report) {
+        return SpecProfileAnalyzationRunResultResDto.builder().runId(run.getId()).specProfileId(run.getSpecProfile().getId())
+                .status(run.getStatus()).result(report).build();
+    }
+
+    /**
+     * 요청 당시 스펙을 목록 누락 시 빈 목록으로 정규화해 복사한다.
+     * @param snapshot 요청 당시 스냅샷
+     * @return 분석에 반영한 스펙
+     */
+    private AppliedSpecs toAppliedSpecs(SpecProfileAnalyzationSnapshot snapshot) {
+        return AppliedSpecs.builder().birthYear(snapshot.birthYear()).residenceRegion(snapshot.residenceRegion())
                 .jobId(snapshot.jobId()).jobName(snapshot.jobName()).academicAbilities(copy(snapshot.academicAbilities()))
                 .certificates(copy(snapshot.certificates())).languageExamScores(copy(snapshot.languageExamScores()))
                 .experiences(copy(snapshot.experiences())).build();
-        return SpecProfileAnnualSalaryAnalyzationResDto.builder().summary(ai.summary()).salaryResults(predictions)
-                .comparisonGroup(group).appliedSpecs(appliedSpecs).statistics(statistics)
-                .recommendation(ai.recommendation()).salaryNotice(SALARY_NOTICE).build();
     }
 
     /**
