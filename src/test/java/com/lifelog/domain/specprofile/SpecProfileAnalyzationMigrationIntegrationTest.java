@@ -29,6 +29,11 @@ class SpecProfileAnalyzationMigrationIntegrationTest {
                 // when
                 flyway(schema, "latest").migrate();
                 // then
+                try (ResultSet columns = statement.executeQuery("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='"
+                        + schema + "' AND table_name='spec_profile_analyzation_result' AND column_name IN ('summary','comparison_group_description','recommendation') AND data_type='text'")) {
+                    assertThat(columns.next()).isTrue();
+                    assertThat(columns.getInt(1)).isEqualTo(3);
+                }
                 try (ResultSet columns = statement.executeQuery("SELECT column_name FROM information_schema.columns WHERE table_schema='"
                         + schema + "' AND column_name IN ('model_version','percentile')")) {
                     assertThat(columns.next()).isFalse();
