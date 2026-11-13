@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "salaryResults", "comparisonGroupDescription", "recommendation"],
+  "properties": {
+    "summary": {"type": "string"},
+    "salaryResults": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["annual", "annualIncomeMin", "annualIncomeExpected", "annualIncomeMax"],
+        "properties": {
+          "annual": {"type": "integer", "enum": [0, 3, 5]},
+          "annualIncomeMin": {"type": "integer"},
+          "annualIncomeExpected": {"type": "integer"},
+          "annualIncomeMax": {"type": "integer"}
+        }
+      }
+    },
+    "comparisonGroupDescription": {"type": "string"},
+    "recommendation": {"type": "string"}
+  }
+}
