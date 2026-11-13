@@ -105,7 +105,8 @@ public interface SpecProfileControllerDocs {
             - 회원 본인의 CURRENT 스펙 스냅샷, 실행 이력 및 최초 접수 이벤트를 저장합니다.
             - 출생연도, 거주지역, 희망직무 및 최소 1개의 유효한 학력이 필요합니다.
             - 해당 프로필의 최신 실행이 QUEUED 또는 IN_PROGRESS이면 접수와 임시 저장을 거절합니다.
-            - 현재 비동기 작업은 구현 전이며 접수된 실행은 QUEUED에 머무릅니다.
+            - 커밋 후 분석 요청 이벤트를 전용 실행 풀에서 비동기로 처리합니다.
+            - 비동기 실행은 IN_PROGRESS로 전환 후 누적 스펙 조건에 맞는 KEEP 표본을 패널당 한 연도씩 선택합니다. 실제 연봉 예측은 구현 예정입니다.
             ### 2. Request Header
             - Authorization: Bearer {accessToken}. 요청 Content-Type 지정은 필요하지 않습니다.
             ### 3. Path Variable
@@ -118,8 +119,10 @@ public interface SpecProfileControllerDocs {
             - Content-Type: application/json
             ### 7. Response Body
             - success: true, code: COMMON_200, message: 연봉 분석 요청이 접수되었습니다.
-            - data: runId, specProfileId, status(QUEUED), totalSteps(3), completedStepCount(0).
-            - steps: INPUT_PREPARATION, SALARY_PREDICTION, RESULT_SAVE의 코드, 순서, 표시명.
+            - data: runId, specProfileId, status(QUEUED), totalSteps(9), completedStepCount(0).
+            - steps: 실제 분석 처리 순서에 따른 9개 단계의 코드, 순서, 표시명.
+              RUN_START → SNAPSHOT_LOAD → CLASSIFICATION_DATA_LOAD → SCORE_BAND_CLASSIFICATION → SAMPLE_SELECTION
+              → STATISTICS_AND_PROMPT_BUILD → SALARY_PREDICTION → RESULT_COMPOSITION → RESULT_SAVE.
             - eventsUrl, resultUrl: 실행별 상대 경로. SSE와 결과 조회 API는 별도 구현 예정입니다.
             - requestedAt: 최초 요청 시각을 한국 시간 +09:00의 ISO 8601 문자열로 반환합니다.
             - 오류 코드: INVALID_REQUEST(400), AUTH_401(401), AUTH_403(403), NOT_FOUND(404),

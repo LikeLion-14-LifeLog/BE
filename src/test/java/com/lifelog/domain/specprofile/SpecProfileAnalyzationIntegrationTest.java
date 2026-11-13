@@ -20,8 +20,11 @@ import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.entity.*;
 import com.lifelog.domain.specprofile.enums.*;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
+import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.repository.*;
 import com.lifelog.domain.specprofile.service.SpecProfileAnalyzationService;
+import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryAnalyzationService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.lifelog.domain.specprofile.service.SpecProfileSaveService;
 import com.lifelog.global.exception.CustomException;
 import com.lifelog.global.security.JwtProvider;
@@ -36,6 +39,8 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -55,7 +60,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @ExtendWith(OutputCaptureExtension.class)
+@RecordApplicationEvents
 class SpecProfileAnalyzationIntegrationTest {
+    @MockitoBean SpecProfileAnnualSalaryAnalyzationService annualSalaryAnalyzationService;
+    @Autowired ApplicationEvents applicationEvents;
     @Autowired SpecProfileAnalyzationService service;
     @Autowired SpecProfileSaveService saveService;
     @Autowired SpecProfileAnalyzationRunRepository runs;
@@ -116,15 +124,23 @@ class SpecProfileAnalyzationIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value("COMMON_200"))
                 .andExpect(jsonPath("$.message").value("연봉 분석 요청이 접수되었습니다."))
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
-                .andExpect(jsonPath("$.data.totalSteps").value(3))
+                .andExpect(jsonPath("$.data.totalSteps").value(9))
                 .andExpect(jsonPath("$.data.completedStepCount").value(0))
-                .andExpect(jsonPath("$.data.steps[0].code").value("INPUT_PREPARATION"))
-                .andExpect(jsonPath("$.data.steps[1].code").value("SALARY_PREDICTION"))
-                .andExpect(jsonPath("$.data.steps[2].code").value("RESULT_SAVE"))
+                .andExpect(jsonPath("$.data.steps[0].name").value("분석 실행 시작 및 상태 변경"))
+                .andExpect(jsonPath("$.data.steps[8].name").value("분석 결과 저장 및 완료 처리"))
                 .andReturn().getResponse().getContentAsString();
         // then
         SpecProfileAnalyzationRun run = runs.findAll().getFirst();
         JsonNode response = jsonMapper.readTree(body).get("data");
+        List<String> expectedStepCodes = List.of("RUN_START", "SNAPSHOT_LOAD", "CLASSIFICATION_DATA_LOAD",
+                "SCORE_BAND_CLASSIFICATION", "SAMPLE_SELECTION", "STATISTICS_AND_PROMPT_BUILD",
+                "SALARY_PREDICTION", "RESULT_COMPOSITION", "RESULT_SAVE");
+        JsonNode steps = response.get("steps");
+        assertThat(steps.size()).isEqualTo(expectedStepCodes.size());
+        for (int index = 0; index < expectedStepCodes.size(); index++) {
+            assertThat(steps.get(index).get("code").asString()).isEqualTo(expectedStepCodes.get(index));
+            assertThat(steps.get(index).get("order").asInt()).isEqualTo(index + 1);
+        }
         assertThat(response.get("runId").asLong()).isEqualTo(run.getId());
         assertThat(response.get("specProfileId").asLong()).isEqualTo(profile.getId());
         assertThat(response.get("eventsUrl").asString()).isEqualTo("/api/spec-profile/analyzation/runs/" + run.getId() + "/events");
@@ -143,6 +159,8 @@ class SpecProfileAnalyzationIntegrationTest {
             assertThat(event.getCreatedAt()).isEqualTo(run.getCreatedAt());
         });
         assertThat(output).contains("afterCommit() - START", "afterCommit() - END");
+        assertThat(applicationEvents.stream(SpecProfileAnuualSalaryAnalyzationRequestEvent.class)
+                .map(SpecProfileAnuualSalaryAnalyzationRequestEvent::runId)).containsExactly(run.getId());
     }
 
     @ParameterizedTest
@@ -233,12 +251,14 @@ class SpecProfileAnalyzationIntegrationTest {
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
             service.requestRun(member.getId());
             assertThat(output).doesNotContain("afterCommit() - START");
+            assertThat(applicationEvents.stream(SpecProfileAnuualSalaryAnalyzationRequestEvent.class)).isEmpty();
             transaction.setRollbackOnly();
         });
         // then
         assertThat(runs.count()).isZero();
         assertThat(events.count()).isZero();
         assertThat(output).doesNotContain("afterCommit() - START");
+        assertThat(applicationEvents.stream(SpecProfileAnuualSalaryAnalyzationRequestEvent.class)).isEmpty();
     }
 
     @Test
