@@ -25,7 +25,6 @@ class SpecProfileAnalyzationMigrationIntegrationTest {
                 statement.execute("SET search_path TO " + schema);
                 statement.execute("INSERT INTO member(member_id,email) VALUES (1,'migration@example.com')");
                 statement.execute("INSERT INTO spec_profile(spec_profile_id,member_id) VALUES (1,1)");
-                statement.execute("INSERT INTO job(job_id,code,name,main_category_name) VALUES (1,'0001','개발','개발')");
                 // when
                 flyway(schema, "latest").migrate();
                 // then
@@ -38,6 +37,7 @@ class SpecProfileAnalyzationMigrationIntegrationTest {
                         + schema + "' AND column_name IN ('model_version','percentile')")) {
                     assertThat(columns.next()).isFalse();
                 }
+                statement.execute("INSERT INTO job(job_id,code,name,main_category_name) VALUES (1,'0001','개발','개발')");
                 long runId;
                 try (ResultSet run = statement.executeQuery("INSERT INTO spec_profile_analyzation_run(spec_profile_id,job_id,spec_profile_snapshot_json) VALUES (1,1,'{}') RETURNING run_id,delete_at")) {
                     assertThat(run.next()).isTrue();

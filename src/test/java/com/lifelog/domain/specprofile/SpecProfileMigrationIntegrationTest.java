@@ -32,7 +32,7 @@ class SpecProfileMigrationIntegrationTest {
                 var latest =Flyway.configure().dataSource(url, user, password).schemas(schema).target("20261110.4").load();
                 latest.migrate();
                 // then
-                assertThat(latest.info().current().getVersion().toString()).isEqualTo("20261112.6");
+                assertThat(latest.info().current().getVersion().toString()).isEqualTo("20261110.4");
                 try (var rows = sql.executeQuery("SELECT member_id,type,sort_order,birth_year FROM spec_profile ORDER BY member_id")) {
                     assertThat(rows.next()).isTrue();
                     assertThat(rows.getLong("member_id")).isEqualTo(1);
