@@ -34,6 +34,20 @@ seoul:
 job:
   csv-path: data/job_2025.csv
 
+# 일반 컬럼과 SPEC_HISTORY의 KECO는 2025 기준으로 전처리된 파일을 사용한다.
+keep:
+  salary:
+    csv-path: ${KEEP_SALARY_CSV_PATH:classpath:data/KEEP2_YEARLY_SPEC_SALARY.csv}
+
+openai:
+  api-key: ${OPEN_API_KEY:}
+  model: ${OPEN_API_MODEL:gpt-6.1-sol}
+  base-url: https://api.openai.com/v1
+  connect-timeout: 5s
+  read-timeout: 60s
+  max-attempts: 3
+  max-input-chars: ${OPEN_API_MAX_INPUT_CHARS:200000}
+
 job-posting:
   sync:
     scheduler:

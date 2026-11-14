@@ -2,6 +2,9 @@ package com.lifelog.domain.specprofile.controller;
 
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import com.lifelog.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,10 +17,56 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "회원 스펙 연봉 분석 실행 상태 및 결과 조회", description = """
+            ### 1. API 역할
+            - JWT 회원 본인의 특정 분석 실행 상태와 저장된 분석 결과를 조회합니다.
+            - runId에 해당하는 실행을 조회하며 최신 실행으로 대체하지 않습니다.
+            - COMPLETED에서만 결과를 반환하고 QUEUED, IN_PROGRESS, CANCELED, FAILED에서는 result가 null입니다.
+            - 요청 당시 스펙 스냅샷과 저장된 통계를 사용하며 CSV 필터링이나 AI 요청을 다시 수행하지 않습니다.
+            - 단계별 진행 정보와 SSE 이벤트 로그는 포함하지 않습니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. 요청 Content-Type 지정은 필요하지 않습니다.
+            ### 3. Path Variable
+            - runId: 분석 요청 API에서 반환받은 분석 실행 PK. 필수 정수(int64).
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: 연봉 분석 실행 상태 및 결과 조회 성공.
+            - data: runId, specProfileId, status, result. 실패·취소 실행도 조회 성공 시 success는 true입니다.
+            - result: summary, salaryResults, comparisonGroup, appliedSpecs, statistics, recommendation, salaryNotice.
+            - salaryResults: annual 0, 3, 5 순서의 원 단위 AI 예측 하한·예상·상한. careerLabel은 제외합니다.
+            - topPercent는 첫 취업(annual=0)의 저장된 비교 표본 내 상위 비율이며 3·5년 차는 null입니다.
+            - comparisonGroup: 직무 분류 코드·이름, 표본 수, 관측 연도, 비교 집단 설명.
+            - appliedSpecs: birthYear, residenceRegion, jobId, jobName 및 요청 당시 학력·자격증·어학·경험 목록.
+            - statistics: sampleCount, annualSalaryMinKrw, annualSalaryMaxKrw, annualSalaryMeanKrw,
+              annualSalaryModesKrw, modeFrequency, annualSalaryP25Krw, annualSalaryMedianKrw, annualSalaryP75Krw.
+            - 최빈값이 없으면 annualSalaryModesKrw는 빈 배열입니다. 미완료 result는 필드 생략 없이 null입니다.
+            - 타인 소유 실행과 미존재 실행은 RUN_NOT_FOUND(404)로 동일하게 처리합니다.
+            - 완료 실행에 연차 결과나 필수 통계가 누락되면 INCOMPLETE_SAVED_RESULT(500),
+              저장된 스냅샷을 읽을 수 없으면 INVALID_SNAPSHOT(500)을 반환합니다.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "실행 상태 및 결과 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "실행 ID 형식 오류"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 소유 실행 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "저장 결과 또는 스냅샷 불완전")
+    })
+    @GetMapping(value = "/api/spec-profile/analyzation/runs/{runId}", produces = "application/json")
+    ApiResponse<SpecProfileAnalyzationRunResultResDto> getAnalyzationRunResult(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "조회할 분석 실행 PK", required = true) @PathVariable("runId") Long runId);
+
     @Operation(summary = "회원 스펙 조회", description = """
             ### 1. API 역할
             - JWT 회원 본인의 CURRENT 프로필과 임시 저장된 최신 내용을 조회합니다.
@@ -59,6 +108,7 @@ public interface SpecProfileControllerDocs {
     @Operation(summary = "회원 스펙 임시 저장", description = """
             ### 1. API 역할
             - 본인 CURRENT 프로필과 회원의 희망 직무를 저장합니다. 연봉 진단은 실행하지 않습니다.
+            - 해당 프로필의 최신 분석 실행이 QUEUED 또는 IN_PROGRESS이면 ANALYSIS_ALREADY_RUNNING(409)으로 거절합니다.
             - 하위 목록은 PK가 있으면 덮어쓰기, 없으면 생성, 요청 PK에 없는 기존 행은 삭제합니다.
             ### 2. Request Header
             - Authorization: Bearer {accessToken}. Content-Type: application/json.
@@ -89,11 +139,52 @@ public interface SpecProfileControllerDocs {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청값 또는 점수유형 입력 규칙 위반"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "프로필, 참조 데이터 또는 본인 하위 항목 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "최신 분석 실행이 대기 또는 진행 중"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "어학 데이터 미초기화 또는 프로필 무결성 오류")
     })
     @PutMapping(value = "/api/spec-profiles/current/temporary", consumes = "application/json", produces = "application/json")
     ResponseEntity<ApiResponse<Void>> saveTemporary(
             @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
             @Valid @RequestBody SpecProfileTemporarySaveReqDto request);
-}
 
+    @Operation(summary = "회원 스펙 연봉 분석 실행 요청", description = """
+            ### 1. API 역할
+            - 회원 본인의 CURRENT 스펙 스냅샷, 실행 이력 및 최초 접수 이벤트를 저장합니다.
+            - 출생연도, 거주지역, 희망직무 및 최소 1개의 유효한 학력이 필요합니다.
+            - 해당 프로필의 최신 실행이 QUEUED 또는 IN_PROGRESS이면 접수와 임시 저장을 거절합니다.
+            - 커밋 후 분석 요청 이벤트를 전용 실행 풀에서 비동기로 처리합니다.
+            - 비동기 실행은 IN_PROGRESS로 전환 후 누적 스펙 조건에 맞는 KEEP 표본을 패널당 한 연도씩 선택합니다. 실제 연봉 예측은 구현 예정입니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. 요청 Content-Type 지정은 필요하지 않습니다.
+            ### 3. Path Variable
+            - 없음
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: 연봉 분석 요청이 접수되었습니다.
+            - data: runId, specProfileId, status(QUEUED), totalSteps(9), completedStepCount(0).
+            - steps: 실제 분석 처리 순서에 따른 9개 단계의 코드, 순서, 표시명.
+              RUN_START → SNAPSHOT_LOAD → CLASSIFICATION_DATA_LOAD → SCORE_BAND_CLASSIFICATION → SAMPLE_SELECTION
+              → STATISTICS_AND_PROMPT_BUILD → SALARY_PREDICTION → RESULT_COMPOSITION → RESULT_SAVE.
+            - eventsUrl, resultUrl: 실행별 상대 경로. resultUrl로 실행 상태와 결과를 조회하며 SSE는 별도 구현 예정입니다.
+            - requestedAt: 최초 요청 시각을 한국 시간 +09:00의 ISO 8601 문자열로 반환합니다.
+            - 오류 코드: INVALID_REQUEST(400), AUTH_401(401), AUTH_403(403), NOT_FOUND(404),
+              ANALYSIS_ALREADY_RUNNING(409), INTERNAL_SERVER_ERROR 또는 COMMON_500(500).
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "분석 요청 접수 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "분석 입력 누락 또는 유효하지 않은 스펙"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원 또는 CURRENT 프로필 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "최신 분석이 대기 또는 진행 중"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "분석 실행 저장 실패")
+    })
+    @PostMapping(value = "/api/spec-profile/analyzation/run", produces = "application/json")
+    ApiResponse<SpecProfileAnalyzationRunResDto> requestRun(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId);
+}
