@@ -53,7 +53,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/signup",
                                 "/api/auth/login",
-                                "/health"
+                                "/health",
+                                "/api/v1/statistics/exploratory-first-job-change"
                         ).permitAll()
 
                         // Swagger 허용 (개발용)
