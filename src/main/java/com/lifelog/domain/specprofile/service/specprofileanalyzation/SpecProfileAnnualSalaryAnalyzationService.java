@@ -1,5 +1,8 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 
+import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryResultSaveService;
+import com.lifelog.domain.specprofile.service.SpecProfileSalaryClassificationQueryService;
+import com.lifelog.domain.specprofile.service.SpecProfileSalaryScoreBandService;
 import com.lifelog.domain.specprofile.service.keep.KeepSalaryMatchedSampleStatisticsService;
 import com.lifelog.domain.specprofile.service.keep.KeepSalaryRecordSelectionService;
 import lombok.extern.slf4j.Slf4j;

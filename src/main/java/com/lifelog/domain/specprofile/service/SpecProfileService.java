@@ -8,6 +8,8 @@ import com.lifelog.domain.specprofile.enums.SpecProfileType;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
 import com.lifelog.domain.specprofile.repository.SpecProfileRepository;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationResultQueryService;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationService;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

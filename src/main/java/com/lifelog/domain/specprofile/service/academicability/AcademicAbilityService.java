@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.academicability;
 
 import com.lifelog.domain.specprofile.dto.AcademicAbilitySaveReqDto;
 import com.lifelog.domain.specprofile.entity.AcademicAbility;

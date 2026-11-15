@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;

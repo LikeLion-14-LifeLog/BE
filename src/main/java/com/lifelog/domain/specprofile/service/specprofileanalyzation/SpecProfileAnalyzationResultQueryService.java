@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;

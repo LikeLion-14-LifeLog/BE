@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.JobRepository;
@@ -12,6 +12,7 @@ import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileAnalyzationMapper;
 import com.lifelog.domain.specprofile.repository.*;
+import com.lifelog.domain.specprofile.service.SpecProfileQueryService;
 import com.lifelog.domain.specprofile.validation.SpecProfileAnalyzationInputValidator;
 import com.lifelog.domain.specprofile.validation.SpecProfileAnalyzationPolicy;
 import com.lifelog.global.exception.CustomException;

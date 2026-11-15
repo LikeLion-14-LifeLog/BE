@@ -2,7 +2,7 @@ package com.lifelog.domain.specprofile.service.openApi;
 
 import com.lifelog.domain.specprofile.dto.OpenApiRequest;
 import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
-import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryAnalyzationService;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnnualSalaryAnalyzationService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;

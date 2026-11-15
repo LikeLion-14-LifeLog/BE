@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.languageexam;
 
 import com.lifelog.domain.languageexam.entity.LanguageExam;
 import com.lifelog.domain.specprofile.dto.LanguageExamScoreSaveReqDto;

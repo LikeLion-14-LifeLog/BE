@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.certification;
 
 import com.lifelog.domain.certification.entity.Certification;
 import com.lifelog.domain.specprofile.dto.CertificateSaveReqDto;
