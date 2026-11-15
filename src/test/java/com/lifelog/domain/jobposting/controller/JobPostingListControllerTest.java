@@ -4,6 +4,7 @@ import com.lifelog.domain.company.entity.Company;
 import com.lifelog.domain.company.repository.CompanyRepository;
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.JobRepository;
+import com.lifelog.domain.jobposting.dto.JobPostingDesiredJobResponse;
 import com.lifelog.domain.jobposting.service.MemberJobProfile;
 import com.lifelog.domain.jobposting.service.MemberJobProfileReader;
 import com.lifelog.domain.jobposting.entity.CareerType;
@@ -105,6 +106,7 @@ class JobPostingListControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
                 .andExpect(jsonPath("$.data.personalized").value(false))
+                .andExpect(jsonPath("$.data.desiredJob").value(nullValue()))
                 .andExpect(jsonPath("$.data.tabCounts.recommended").value(2))
                 .andExpect(jsonPath("$.data.tabCounts.bookmarked").value(1))
                 .andExpect(jsonPath("$.data.tabCounts.offers").doesNotExist())
@@ -186,27 +188,50 @@ class JobPostingListControllerTest {
     }
 
     @Test
-    void 직무_소분류를_지정하면_연결된_직무의_소분류가_같은_공고만_없으면_전체() throws Exception {
+    void 희망_직무가_있으면_desiredJob에_코드와_이름을_담고_희망_직무_소분류_공고만() throws Exception {
         saveFor("응용SW", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
         saveFor("웹", saveJob("1333", "웹 개발자"), 0, CareerType.ANY);
         saveFor("네트워크", saveJob("1341", "네트워크 시스템 개발자"), 0, CareerType.ANY);
+        saveFor("직무 연결 없음", null, 0, CareerType.ANY);
+        given(memberJobProfileReader.read(member.getId()))
+                .willReturn(new MemberJobProfile(Set.of("133"), null,
+                        new JobPostingDesiredJobResponse("1332", "응용 소프트웨어 개발자")));
+
+        mockMvc.perform(request(get(URL)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.personalized").value(true))
+                .andExpect(jsonPath("$.data.desiredJob.code").value("1332"))
+                .andExpect(jsonPath("$.data.desiredJob.name").value("응용 소프트웨어 개발자"))
+                .andExpect(jsonPath("$.data.tabCounts.recommended").value(2))
+                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW", "웹")));
+    }
+
+    @Test
+    void 희망_직무가_없으면_desiredJob은_null이고_personalized_false로_전체_노출() throws Exception {
+        saveFor("응용SW", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
         saveFor("요양보호사", saveJob("5", "55", "550", "5501", "요양 보호사"), 0, CareerType.ANY);
         saveFor("직무 연결 없음", null, 0, CareerType.ANY);
 
-        mockMvc.perform(request(get(URL).param("jobCategory", "133")))
-                .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW", "웹")));
-        mockMvc.perform(request(get(URL).param("jobCategory", "550")))
-                .andExpect(jsonPath("$.data.jobPostings[*].title", contains("요양보호사")));
         mockMvc.perform(request(get(URL)))
-                .andExpect(jsonPath("$.data.totalElements").value(5));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.personalized").value(false))
+                .andExpect(jsonPath("$.data.desiredJob").value(nullValue()))
+                .andExpect(jsonPath("$.data.totalElements").value(3));
     }
 
+    // 직무 필터(jobCategory)는 제거됨: 보내도 무시하고 희망 직무 기준으로만 조회
     @ParameterizedTest
-    @ValueSource(strings = {"13", "1332", "ab1"})
-    void 직무_소분류가_3자리_숫자가_아니면_400(String jobCategory) throws Exception {
+    @ValueSource(strings = {"550", "ab1"})
+    void 제거된_jobCategory_파라미터는_무시(String jobCategory) throws Exception {
+        saveFor("응용SW", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.ANY);
+        saveFor("요양보호사", saveJob("5", "55", "550", "5501", "요양 보호사"), 0, CareerType.ANY);
+        given(memberJobProfileReader.read(member.getId()))
+                .willReturn(new MemberJobProfile(Set.of("133"), null,
+                        new JobPostingDesiredJobResponse("1332", "응용 소프트웨어 개발자")));
+
         mockMvc.perform(request(get(URL).param("jobCategory", jobCategory)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_400"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.jobPostings[*].title", contains("응용SW")));
     }
 
     @Test
@@ -315,7 +340,7 @@ class JobPostingListControllerTest {
     }
 
     @Test
-    void 직무_중분류_지역_필터는_맞춤_조건_위에_추가로_적용하고_recommended에는_반영하지_않음() throws Exception {
+    void 지역_필터는_맞춤_조건_위에_추가로_적용하고_recommended에는_반영하지_않음() throws Exception {
         Job backend = saveJob("1332", "응용 소프트웨어 개발자");
         saveFor("서울 백엔드", backend, 0, CareerType.ANY);
         JobPosting gyeonggi = save("경기 공고", "41117", null, backend, null);
