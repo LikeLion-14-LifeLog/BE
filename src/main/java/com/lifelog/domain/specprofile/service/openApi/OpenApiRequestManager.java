@@ -1,7 +1,7 @@
 package com.lifelog.domain.specprofile.service.openApi;
 
 import com.lifelog.domain.specprofile.dto.OpenApiRequest;
-import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
+import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +18,7 @@ public class OpenApiRequestManager {
      * 여러 비동기 이벤트 처리 스레드에서 동시에 호출할 수 있다.
      * @param request 큐에 적재할 OpenApiRequest 구현 객체
      */
-    public void putAnnualSalaryAnalyzationRequest(SpecProfileAnuualSalaryAnalyzationRequestEvent request) {
+    public void putAnnualSalaryAnalyzationRequest(SpecProfileAnnualSalaryAnalyzationRequestEvent request) {
         log.info("[OpenApiRequestManager] 연봉 분석 요청 큐 적재 | putAnnualSalaryAnalyzationRequest() - START | runId: {}", request.runId());
         queue.offer(request);
         log.info("[OpenApiRequestManager] 연봉 분석 요청 큐 적재 | putAnnualSalaryAnalyzationRequest() - END | runId: {}", request.runId());

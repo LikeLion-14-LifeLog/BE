@@ -1,7 +1,7 @@
 package com.lifelog.domain.specprofile.service.openApi;
 
 import com.lifelog.domain.specprofile.dto.OpenApiRequest;
-import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
+import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryAnalyzationService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -71,7 +71,7 @@ public class OpenApiRequestWorker {
      */
     private void execute(OpenApiRequest request) {
         log.debug("[OpenApiRequestWorker] 작업 전달 | execute() - START");
-        if (request instanceof SpecProfileAnuualSalaryAnalyzationRequestEvent event) {
+        if (request instanceof SpecProfileAnnualSalaryAnalyzationRequestEvent event) {
             annualSalaryAnalyzationService.analyze(event.runId());
         } else {
             log.error("[OpenApiRequestWorker] 지원하지 않는 요청 타입 | type: {}", request.getClass().getName());

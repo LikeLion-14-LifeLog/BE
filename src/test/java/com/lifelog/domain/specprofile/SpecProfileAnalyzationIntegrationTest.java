@@ -20,7 +20,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.entity.*;
 import com.lifelog.domain.specprofile.enums.*;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
-import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
+import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.repository.*;
 import com.lifelog.domain.specprofile.service.SpecProfileAnalyzationService;
 import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryAnalyzationService;
@@ -159,8 +159,8 @@ class SpecProfileAnalyzationIntegrationTest {
             assertThat(event.getCreatedAt()).isEqualTo(run.getCreatedAt());
         });
         assertThat(output).contains("afterCommit() - START", "afterCommit() - END");
-        assertThat(applicationEvents.stream(SpecProfileAnuualSalaryAnalyzationRequestEvent.class)
-                .map(SpecProfileAnuualSalaryAnalyzationRequestEvent::runId)).containsExactly(run.getId());
+        assertThat(applicationEvents.stream(SpecProfileAnnualSalaryAnalyzationRequestEvent.class)
+                .map(SpecProfileAnnualSalaryAnalyzationRequestEvent::runId)).containsExactly(run.getId());
     }
 
     @ParameterizedTest
@@ -251,14 +251,14 @@ class SpecProfileAnalyzationIntegrationTest {
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
             service.requestRun(member.getId());
             assertThat(output).doesNotContain("afterCommit() - START");
-            assertThat(applicationEvents.stream(SpecProfileAnuualSalaryAnalyzationRequestEvent.class)).isEmpty();
+            assertThat(applicationEvents.stream(SpecProfileAnnualSalaryAnalyzationRequestEvent.class)).isEmpty();
             transaction.setRollbackOnly();
         });
         // then
         assertThat(runs.count()).isZero();
         assertThat(events.count()).isZero();
         assertThat(output).doesNotContain("afterCommit() - START");
-        assertThat(applicationEvents.stream(SpecProfileAnuualSalaryAnalyzationRequestEvent.class)).isEmpty();
+        assertThat(applicationEvents.stream(SpecProfileAnnualSalaryAnalyzationRequestEvent.class)).isEmpty();
     }
 
     @Test

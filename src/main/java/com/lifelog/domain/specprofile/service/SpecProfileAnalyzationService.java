@@ -7,7 +7,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.entity.SpecProfile;
 import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationRun;
 import com.lifelog.domain.specprofile.enums.SpecProfileType;
-import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
+import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileAnalyzationMapper;
@@ -98,7 +98,7 @@ public class SpecProfileAnalyzationService {
             @Override
             public void afterCommit() {
                 log.info("[SpecProfileAnalyzationService] afterCommit() - START | runId: {}", runId);
-                eventPublisher.publishEvent(new SpecProfileAnuualSalaryAnalyzationRequestEvent(runId));
+                eventPublisher.publishEvent(new SpecProfileAnnualSalaryAnalyzationRequestEvent(runId));
                 log.info("[SpecProfileAnalyzationService] afterCommit() - END | runId: {}", runId);
             }
         });

@@ -5,7 +5,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import com.lifelog.domain.specprofile.config.SpecProfileAnalyzationExecutorConfig;
 import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationEventHandler;
-import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
+import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiRequestManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ class SpecProfileAnalyzationEventHandlerTest {
         logger.addAppender(appender);
         try {
             // when
-            publisher.publishEvent(new SpecProfileAnuualSalaryAnalyzationRequestEvent(101L));
+            publisher.publishEvent(new SpecProfileAnnualSalaryAnalyzationRequestEvent(101L));
             // then
             String workerThread = completedThreads.poll(5, TimeUnit.SECONDS);
             assertThat(workerThread).isNotNull().startsWith("spec-salary-analysis-")

@@ -20,7 +20,7 @@ public class SpecProfileAnnualSalaryAnalyzationEventHandler {
      */
     @Async(SpecProfileAnalyzationExecutorConfig.EXECUTOR_NAME)
     @EventListener
-    public void handle(SpecProfileAnuualSalaryAnalyzationRequestEvent event) {
+    public void handle(SpecProfileAnnualSalaryAnalyzationRequestEvent event) {
         log.info("[SpecProfileAnnualSalaryAnalyzationEventHandler] handle() - START | runId: {}", event.runId());
         openApiRequestManager.putAnnualSalaryAnalyzationRequest(event);
         log.info("[SpecProfileAnnualSalaryAnalyzationEventHandler] handle() - END | runId: {}", event.runId());

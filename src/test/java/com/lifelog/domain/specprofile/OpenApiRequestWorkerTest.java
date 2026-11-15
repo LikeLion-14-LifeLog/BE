@@ -1,6 +1,6 @@
 package com.lifelog.domain.specprofile;
 
-import com.lifelog.domain.specprofile.event.SpecProfileAnuualSalaryAnalyzationRequestEvent;
+import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiRequestManager;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiRequestWorker;
 import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryAnalyzationService;
@@ -41,7 +41,7 @@ class OpenApiRequestWorkerTest {
             return null;
         }).when(service).analyze(anyLong());
         for (long runId = 1; runId <= 3; runId++) {
-            manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnuualSalaryAnalyzationRequestEvent(runId));
+            manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnnualSalaryAnalyzationRequestEvent(runId));
         }
 
         // when
@@ -70,8 +70,8 @@ class OpenApiRequestWorkerTest {
         worker.start();
 
         // when
-        manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnuualSalaryAnalyzationRequestEvent(1L));
-        manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnuualSalaryAnalyzationRequestEvent(2L));
+        manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnnualSalaryAnalyzationRequestEvent(1L));
+        manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnnualSalaryAnalyzationRequestEvent(2L));
 
         // then
         assertThat(attempted.poll(5, TimeUnit.SECONDS)).isEqualTo(1L);
@@ -86,7 +86,7 @@ class OpenApiRequestWorkerTest {
 
         // when
         worker.stop();
-        manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnuualSalaryAnalyzationRequestEvent(3L));
+        manager.putAnnualSalaryAnalyzationRequest(new SpecProfileAnnualSalaryAnalyzationRequestEvent(3L));
 
         // then
         verify(service, never()).analyze(anyLong());
