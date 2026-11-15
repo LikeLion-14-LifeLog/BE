@@ -22,7 +22,8 @@ public enum ResidentialArea {
     JEONNAM("전남"),
     GYEONGBUK("경북"),
     GYEONGNAM("경남"),
-    JEJU("제주");
+    JEJU("제주"),
+    FOREIGN("외국");
 
     private final String displayName;
 }
