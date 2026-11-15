@@ -4,9 +4,9 @@ package com.lifelog.domain.careerpath.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.lifelog.global.response.ApiResponse;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/career-paths")
@@ -31,67 +33,60 @@ public class CareerPathController {
         }
     }
 
-    private String response(ObjectNode data) throws IOException {
-        ObjectNode result = objectMapper.createObjectNode();
-        result.put("success", true);
-        result.put("code", "COMMON_200");
-        result.put("message", "요청이 성공적으로 처리되었습니다.");
-        result.set("data", data);
-
-        return objectMapper.writeValueAsString(result);
+    private Object toJavaObject(ObjectNode node) {
+        return objectMapper.convertValue(node, Object.class);
     }
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> map() throws IOException {
-        ObjectNode root = dataset();
-        ObjectNode data = objectMapper.createObjectNode();
+    @GetMapping
+    public ResponseEntity<ApiResponse<Map<String, Object>>> map()
+            throws IOException {
 
+        ObjectNode root = dataset();
+
+        Map<String, Object> data = new LinkedHashMap<>();
         data.put("title", root.path("title").asText());
         data.put("dataStatus", root.path("dataStatus").asText());
         data.put("notice", root.path("notice").asText());
-        data.set("filters", root.path("filters").deepCopy());
-        data.set("paths", root.path("paths").deepCopy());
-        data.set("auditSummary", root.path("auditSummary").deepCopy());
+        data.put("filters",
+                objectMapper.convertValue(root.path("filters"), Object.class));
+        data.put("paths",
+                objectMapper.convertValue(root.path("paths"), Object.class));
+        data.put("auditSummary",
+                objectMapper.convertValue(root.path("auditSummary"), Object.class));
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(response(data));
+        return ResponseEntity.ok(ApiResponse.success(data));
     }
 
-    @GetMapping(
-            value = "/{pathId}",
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<String> detail(
-            @PathVariable String pathId
-    ) throws IOException {
+    @GetMapping("/{pathId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> detail(
+            @PathVariable String pathId) throws IOException {
 
         ObjectNode root = dataset();
         ArrayNode paths = (ArrayNode) root.path("paths");
 
         for (var path : paths) {
             if (pathId.equals(path.path("id").asText())) {
-                ObjectNode data = objectMapper.createObjectNode();
 
+                Map<String, Object> data = new LinkedHashMap<>();
                 data.put("dataStatus", root.path("dataStatus").asText());
                 data.put("notice", root.path("notice").asText());
-                data.set("path", path.deepCopy());
-                data.set("detail", root.path("detail").deepCopy());
+                data.put("path",
+                        objectMapper.convertValue(path, Object.class));
+                data.put("detail",
+                        objectMapper.convertValue(root.path("detail"), Object.class));
 
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(response(data));
+                return ResponseEntity.ok(ApiResponse.success(data));
             }
         }
 
-        ObjectNode error = objectMapper.createObjectNode();
-        error.put("success", false);
-        error.put("code", "CAREER_PATH_NOT_FOUND");
-        error.put("message", "해당 커리어 경로를 찾을 수 없습니다.");
-        error.putNull("data");
+        ApiResponse<Map<String, Object>> error =
+                new ApiResponse<>(
+                        false,
+                        "CAREER_PATH_NOT_FOUND",
+                        "해당 커리어 경로를 찾을 수 없습니다.",
+                        null
+                );
 
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(objectMapper.writeValueAsString(error));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 }
