@@ -20,8 +20,8 @@ import java.io.InputStream;
 public class CareerPathController {
     private final ObjectMapper objectMapper;
 
-    public CareerPathController(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public CareerPathController() {
+        this.objectMapper = new ObjectMapper();
     }
 
     private ObjectNode dataset() throws IOException {
@@ -35,7 +35,7 @@ public class CareerPathController {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("success", true);
         result.put("code", "COMMON_200");
-        result.put("message", "?붿껌???깃났?덉뒿?덈떎.");
+        result.put("message", "?遺욧퍕???源껊궗??됰뮸??덈뼄.");
         result.set("data", data);
         return result;
     }
@@ -69,7 +69,7 @@ public class CareerPathController {
         ObjectNode error = objectMapper.createObjectNode();
         error.put("success", false);
         error.put("code", "CAREER_PATH_NOT_FOUND");
-        error.put("message", "?대떦 而ㅻ━??寃쎈줈媛 ?놁뒿?덈떎.");
+        error.put("message", "?????뚣끇???野껋럥以덂첎? ??곷뮸??덈뼄.");
         error.putNull("data");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
