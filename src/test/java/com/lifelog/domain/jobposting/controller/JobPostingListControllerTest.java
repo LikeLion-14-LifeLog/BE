@@ -244,7 +244,7 @@ class JobPostingListControllerTest {
         saveFor("네트워크", network, 0, CareerType.ANY);
         saveFor("직무 없음", null, 0, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133"), 5));
+                .willReturn(new MemberJobProfile(Set.of("133"), 5, null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.personalized").value(true))
@@ -258,7 +258,7 @@ class JobPostingListControllerTest {
         saveFor("네트워크", saveJob("1341", "네트워크 시스템 개발자"), 0, CareerType.ANY);
         saveFor("요양보호사", saveJob("5", "55", "550", "5501", "요양 보호사"), 0, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133", "134"), 5));
+                .willReturn(new MemberJobProfile(Set.of("133", "134"), 5, null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("응용SW", "네트워크")));
@@ -268,7 +268,7 @@ class JobPostingListControllerTest {
     void 학력_정보가_없으면_학력_조건은_적용하지_않음() throws Exception {
         saveFor("석사 이상", saveJob("1332", "응용 소프트웨어 개발자"), 6, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133"), null));
+                .willReturn(new MemberJobProfile(Set.of("133"), null, null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.personalized").value(true))
@@ -283,7 +283,7 @@ class JobPostingListControllerTest {
         saveFor("대졸", app, 5, CareerType.ANY);
         saveFor("박사", app, 7, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133"), null));
+                .willReturn(new MemberJobProfile(Set.of("133"), null, null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.personalized").value(true))
@@ -298,7 +298,7 @@ class JobPostingListControllerTest {
         saveFor("고졸", app, 3, CareerType.ANY);
         saveFor("대졸", app, 5, CareerType.ANY);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133"), 3));
+                .willReturn(new MemberJobProfile(Set.of("133"), 3, null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", containsInAnyOrder("학력무관", "고졸")));
@@ -308,7 +308,7 @@ class JobPostingListControllerTest {
     void 경력_조건은_설정이_꺼져_있으면_적용하지_않음() throws Exception {
         saveFor("경력직", saveJob("1332", "응용 소프트웨어 개발자"), 0, CareerType.EXPERIENCED);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133"), 5));
+                .willReturn(new MemberJobProfile(Set.of("133"), 5, null));
 
         mockMvc.perform(request(get(URL)))
                 .andExpect(jsonPath("$.data.jobPostings[*].title", contains("경력직")));
@@ -320,7 +320,7 @@ class JobPostingListControllerTest {
         saveFor("서울 백엔드", backend, 0, CareerType.ANY);
         JobPosting gyeonggi = save("경기 공고", "41117", null, backend, null);
         given(memberJobProfileReader.read(member.getId()))
-                .willReturn(new MemberJobProfile(Set.of("133"), 5));
+                .willReturn(new MemberJobProfile(Set.of("133"), 5, null));
 
         mockMvc.perform(request(get(URL).param("region", "GYEONGGI")))
                 .andExpect(jsonPath("$.data.tabCounts.recommended").value(2))

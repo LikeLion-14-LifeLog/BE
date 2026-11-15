@@ -89,7 +89,7 @@ public class JobPostingService {
                 jobPostingRepository.count(JobPostingSpecification.search(personalCondition)),
                 memberId == null ? 0 : jobPostingBookmarkRepository.countByMember_Id(memberId));
 
-        return SliceResponse.of(result, new JobPostingListResponse(personalized, tabCounts, cards));
+        return SliceResponse.of(result, new JobPostingListResponse(personalized, profile.desiredJob(), tabCounts, cards));
     }
 
     /**
