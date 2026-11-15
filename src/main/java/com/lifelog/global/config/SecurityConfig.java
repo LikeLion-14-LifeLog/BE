@@ -61,7 +61,8 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/career-paths",
-                                        "/api/v1/career-paths/*"
+                                        "/api/v1/career-paths/*",
+                                        "/api/v1/career-paths/exploratory/*"
                                 ).permitAll()
 
                         // Swagger 허용 (개발용)
