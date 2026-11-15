@@ -1,3 +1,4 @@
+
 package com.lifelog.domain.careerpath.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,59 +19,79 @@ import java.io.InputStream;
 @RestController
 @RequestMapping("/api/v1/career-paths")
 public class CareerPathController {
-    private final ObjectMapper objectMapper;
 
-    public CareerPathController() {
-        this.objectMapper = new ObjectMapper();
-    }
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private ObjectNode dataset() throws IOException {
-        ClassPathResource resource = new ClassPathResource("data/career-paths.json");
+        ClassPathResource resource =
+                new ClassPathResource("data/career-paths.json");
+
         try (InputStream input = resource.getInputStream()) {
             return (ObjectNode) objectMapper.readTree(input);
         }
     }
 
-    private ObjectNode response(ObjectNode data) {
+    private String response(ObjectNode data) throws IOException {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("success", true);
         result.put("code", "COMMON_200");
-        result.put("message", "?遺욧퍕???源껊궗??됰뮸??덈뼄.");
+        result.put("message", "요청이 성공적으로 처리되었습니다.");
         result.set("data", data);
-        return result;
+
+        return objectMapper.writeValueAsString(result);
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ObjectNode map() throws IOException {
+    public ResponseEntity<String> map() throws IOException {
         ObjectNode root = dataset();
         ObjectNode data = objectMapper.createObjectNode();
+
         data.put("title", root.path("title").asText());
         data.put("dataStatus", root.path("dataStatus").asText());
         data.put("notice", root.path("notice").asText());
         data.set("filters", root.path("filters").deepCopy());
         data.set("paths", root.path("paths").deepCopy());
-        return response(data);
+        data.set("auditSummary", root.path("auditSummary").deepCopy());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response(data));
     }
 
-    @GetMapping(value = "/{pathId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ObjectNode> detail(@PathVariable String pathId) throws IOException {
+    @GetMapping(
+            value = "/{pathId}",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<String> detail(
+            @PathVariable String pathId
+    ) throws IOException {
+
         ObjectNode root = dataset();
         ArrayNode paths = (ArrayNode) root.path("paths");
+
         for (var path : paths) {
             if (pathId.equals(path.path("id").asText())) {
                 ObjectNode data = objectMapper.createObjectNode();
+
                 data.put("dataStatus", root.path("dataStatus").asText());
                 data.put("notice", root.path("notice").asText());
                 data.set("path", path.deepCopy());
                 data.set("detail", root.path("detail").deepCopy());
-                return ResponseEntity.ok(response(data));
+
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response(data));
             }
         }
+
         ObjectNode error = objectMapper.createObjectNode();
         error.put("success", false);
         error.put("code", "CAREER_PATH_NOT_FOUND");
-        error.put("message", "?????뚣끇???野껋럥以덂첎? ??곷뮸??덈뼄.");
+        error.put("message", "해당 커리어 경로를 찾을 수 없습니다.");
         error.putNull("data");
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(objectMapper.writeValueAsString(error));
     }
 }
