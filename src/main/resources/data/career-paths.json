@@ -1,0 +1,34 @@
+{
+  "title": "而ㅻ━???대룞 吏??,
+  "dataStatus": "NOT_VERIFIED",
+  "notice": "KEEP???먮낯 ?먮즺 湲곕컲???꾧났蹂?痍⑥뾽쨌?댁쭅 寃쎈줈 ?듦퀎媛 ?꾩쭅 寃利앸릺吏 ?딆븯?듬땲?? ?덉떆 ?섏튂瑜??ㅼ젣 ?듦퀎濡??쒖떆?섏? ?딆뒿?덈떎.",
+  "filters": {"major": null, "targetJob": null, "observationYears": null},
+  "paths": [
+    {
+      "id": "path-001",
+      "label": "泥?痍⑥뾽 ???댁쭅 寃쎈줈",
+      "status": "DATA_PENDING",
+      "sharePercent": null,
+      "sampleSize": null,
+      "stages": [
+        {"step": 1, "label": "?꾩옱 議곌굔", "jobCategory": null, "medianSalaryManWon": null},
+        {"step": 2, "label": "泥?痍⑥뾽", "jobCategory": null, "medianSalaryManWon": null},
+        {"step": 3, "label": "?댁쭅/?깆옣", "jobCategory": null, "medianSalaryManWon": null}
+      ]
+    }
+  ],
+  "detail": {
+    "averageYearsToFirstMove": null,
+    "firstMoveTimingDistribution": [],
+    "medianSalaryBeforeManWon": null,
+    "medianSalaryAfterManWon": null,
+    "medianSalaryChangePercent": null,
+    "salaryIncreaseDistribution": [],
+    "matchingRequirements": [],
+    "matchPercent": null,
+    "recommendedExperiences": [],
+    "source": "KEEP??,
+    "officialStatistics": false,
+    "notice": "寃쎈줈蹂??댁쭅 ?쒖젏쨌湲됱뿬쨌?붽굔 鍮꾧탳???먯옄猷?寃利????쒓났?⑸땲??"
+  }
+}
