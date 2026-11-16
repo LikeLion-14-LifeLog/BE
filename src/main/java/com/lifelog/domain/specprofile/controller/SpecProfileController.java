@@ -4,6 +4,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileAnalyzationRunStopResDto> stopAnalyzationRun(Long memberId, Long runId) {
+        return ApiResponse.success("요청이 성공적으로 처리되었습니다.", service.stopAnalyzationRun(memberId, runId));
+    }
 
     @Override
     public ResponseEntity<SseEmitter> subscribeAnalyzationEvents(Long memberId, Long runId, String lastEventId) {

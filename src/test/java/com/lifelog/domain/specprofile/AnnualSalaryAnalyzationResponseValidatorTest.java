@@ -2,7 +2,7 @@ package com.lifelog.domain.specprofile;
 
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto;
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto.SalaryPrediction;
-import com.lifelog.domain.specprofile.service.specprofileanalyzation.AnnualSalaryAnalyzationResponseValidator;
+import com.lifelog.domain.specprofile.validation.AnnualSalaryAnalyzationResponseValidator;
 import com.lifelog.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -4,6 +4,10 @@ import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
+import org.springframework.web.bind.annotation.PatchMapping;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import com.lifelog.global.response.ApiResponse;
@@ -24,6 +28,50 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "회원 스펙 연봉 분석 요청 중단", description = """
+            ### 1. API 역할
+            - JWT 회원 본인의 QUEUED 또는 IN_PROGRESS 실행을 CANCELED로 변경합니다.
+            - 이미 CANCELED이면 최초 중단 시각을 유지하고 성공 응답을 반환합니다.
+            - COMPLETED 또는 FAILED이면 RUN_NOT_STOPPABLE(409)을 반환합니다.
+            - 중단 상태와 단계·실행 취소 로그를 함께 저장한 뒤 SSE canceled를 전송하고 구독을 종료합니다.
+            - 완료 단계는 COMPLETED, 진행 단계는 CANCELED, 미시작 단계는 QUEUED를 유지합니다.
+            - 진행 중인 작업은 단계 경계에서 중단하며, 이미 전송된 AI 요청의 즉시 종료는 보장하지 않습니다.
+            - 완료·실패와 중단이 경합하면 먼저 확정된 종료 상태를 유지하고, 취소 후 결과를 저장하지 않습니다.
+            - 실행 이력과 요청 스냅샷은 삭제하지 않습니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. 요청 Content-Type 지정은 필요하지 않습니다.
+            ### 3. Path Variable
+            - runId: 중단할 분석 실행 PK. 필수 양의 정수(int64).
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음. 요청 본문을 전송하지 않습니다.
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: 요청이 성공적으로 처리되었습니다.
+            - data: runId, specProfileId, status(CANCELED), canceledAt.
+            - canceledAt은 최초 중단 시각이며 한국 시간 +09:00의 ISO 8601 문자열입니다. 재요청 시 변경하지 않습니다.
+            - INVALID_REQUEST(400): 1 미만의 실행 ID. COMMON_400(400): 경로 변수 형식 오류.
+            - AUTH_401(401): 인증 실패. AUTH_403(403): 접근 권한 없음.
+            - 타인 소유 실행과 미존재 실행은 RUN_NOT_FOUND(404)로 동일하게 처리합니다.
+            - RUN_NOT_STOPPABLE(409): 이미 완료 또는 실패한 실행. COMMON_500(500): 중단 저장 실패.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "중단 성공 또는 이미 중단된 실행",
+                content = @Content(schema = @Schema(implementation = SpecProfileAnalyzationRunStopResDto.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "실행 ID 오류"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 실행 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 완료 또는 실패한 실행"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "중단 저장 실패")
+    })
+    @PatchMapping(value = "/api/spec-profile/analyzation/runs/{runId}/stop", produces = "application/json")
+    ApiResponse<SpecProfileAnalyzationRunStopResDto> stopAnalyzationRun(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "중단할 분석 실행 PK", required = true) @PathVariable("runId") Long runId);
+
     @Operation(summary = "회원 스펙 연봉 분석 진행 상태 SSE 구독", description = """
             ### 1. API 역할
             - JWT 회원 본인의 특정 실행 상태와 9개 단계의 진행 상황을 구독합니다.

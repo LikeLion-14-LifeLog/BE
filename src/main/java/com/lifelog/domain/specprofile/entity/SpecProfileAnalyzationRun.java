@@ -44,6 +44,19 @@ public class SpecProfileAnalyzationRun {
     @JoinColumn(name = "job_id", nullable = false)
     private Job job;
 
+    /**
+     * 대기 또는 진행 중인 실행을 취소하고 최초 중단 시각을 보존한다.
+     * @param now 최초 중단 시각
+     */
+    public void cancelAnnualSalaryAnalyzation(LocalDateTime now) {
+        if (status == SpecProfileAnalyzationStatus.CANCELED) return;
+        if (!status.isRunning()) {
+            throw new CustomException(SpecProfileAnalyzationErrorCode.RUN_NOT_STOPPABLE);
+        }
+        status = SpecProfileAnalyzationStatus.CANCELED;
+        canceledAt = now;
+    }
+
     /** 대기 실행을 시작한다. 실행 행 잠금과 상태 검증을 마친 서비스에서 호출한다. */
     public void startAnnualSalaryAnalyzation() {
         status = SpecProfileAnalyzationStatus.IN_PROGRESS;

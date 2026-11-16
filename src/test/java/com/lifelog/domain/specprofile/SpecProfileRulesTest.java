@@ -5,7 +5,7 @@ import com.lifelog.domain.languageexam.service.LanguageExamScoreValidator;
 import com.lifelog.domain.residentialarea.enums.ResidentialArea;
 import com.lifelog.domain.specprofile.dto.*;
 import com.lifelog.domain.specprofile.enums.*;
-import com.lifelog.domain.specprofile.service.SpecProfileCreationPolicy;
+import com.lifelog.domain.specprofile.policy.SpecProfileCreationPolicy;
 import com.lifelog.domain.specprofile.validation.SpecProfileSaveRequestValidator;
 import com.lifelog.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;

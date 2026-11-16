@@ -13,6 +13,18 @@ import java.util.List;
 
 @Component
 public class SpecProfileAnalyzationMapper {
+    /**
+     * 중단된 실행을 한국 시간의 최초 중단 시각과 함께 응답으로 변환한다.
+     * @param run 중단된 실행
+     * @return 중단 응답
+     */
+    public SpecProfileAnalyzationRunStopResDto toRunStopResDto(SpecProfileAnalyzationRun run) {
+        return SpecProfileAnalyzationRunStopResDto.builder().runId(run.getId())
+                .specProfileId(run.getSpecProfile().getId()).status(run.getStatus())
+                .canceledAt(run.getCanceledAt().atZone(ZoneId.systemDefault())
+                        .withZoneSameInstant(ZoneId.of("Asia/Seoul")).toOffsetDateTime()).build();
+    }
+
     /** 저장된 전체 스펙을 분석 전용 스냅샷으로 복사한다. @param profile 저장된 스펙 @return 분석 입력 */
     public SpecProfileAnalyzationSnapshot toSnapshot(SpecProfileResDto profile) {
         return SpecProfileAnalyzationSnapshot.builder().specProfileId(profile.specProfileId())

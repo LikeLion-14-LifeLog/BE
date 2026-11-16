@@ -6,6 +6,7 @@ import com.lifelog.domain.specprofile.service.SpecProfileSalaryScoreBandService;
 import com.lifelog.domain.specprofile.service.keep.KeepSalaryMatchedSampleStatisticsService;
 import com.lifelog.domain.specprofile.service.keep.KeepSalaryRecordSelectionService;
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStep;
+import com.lifelog.domain.specprofile.validation.AnnualSalaryAnalyzationResponseValidator;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;

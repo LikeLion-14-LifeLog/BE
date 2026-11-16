@@ -3,6 +3,8 @@ package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStep;
 import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationRun;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
+import com.lifelog.domain.specprofile.mapper.SpecProfileAnalyzationMapper;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationRunRepository;
 import com.lifelog.global.exception.CustomException;
@@ -12,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Slf4j
 @Service
@@ -19,6 +23,30 @@ import java.util.Optional;
 public class SpecProfileAnalyzationRunStateService {
     private final SpecProfileAnalyzationRunRepository runRepository;
     private final SpecProfileAnalyzationEventLogService eventLogService;
+    private final SpecProfileAnalyzationMapper mapper;
+
+    /**
+     * 본인 실행의 중단 상태와 단계·실행 취소 로그를 함께 커밋한다.
+     * @param memberId 인증 회원 ID
+     * @param runId 중단할 실행 ID
+     * @return 최초 중단 시각을 포함한 중단 응답
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public SpecProfileAnalyzationRunStopResDto stopOwnedRun(Long memberId, Long runId) {
+        log.info("[SpecProfileAnalyzationRunStateService] 실행 중단 | stopOwnedRun() - START | memberId: {}, runId: {}", memberId, runId);
+        /* (1) 유효한 경로 변수와 소유권을 검증하고 실행 행만 잠근다. */
+        if (runId == null || runId <= 0) {
+            throw new CustomException(SpecProfileAnalyzationErrorCode.INVALID_REQUEST);
+        }
+        SpecProfileAnalyzationRun run = runRepository.findOwnedRunForUpdate(runId, memberId)
+                .orElseThrow(() -> new CustomException(SpecProfileAnalyzationErrorCode.RUN_NOT_FOUND));
+        /* (2) DB 정밀도에 맞춘 최초 중단 시각과 취소 이력을 같은 트랜잭션에 저장한다. */
+        run.cancelAnnualSalaryAnalyzation(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
+        eventLogService.appendTerminal(run, SpecProfileAnalyzationStatus.CANCELED);
+        SpecProfileAnalyzationRunStopResDto result = mapper.toRunStopResDto(run);
+        log.info("[SpecProfileAnalyzationRunStateService] 실행 중단 | stopOwnedRun() - END | runId: {}, canceledAt: {}", runId, result.canceledAt());
+        return result;
+    }
 
     /**
      * QUEUED 실행만 독립 트랜잭션에서 IN_PROGRESS로 전환한다.

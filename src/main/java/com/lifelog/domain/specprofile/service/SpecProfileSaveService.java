@@ -13,7 +13,7 @@ import com.lifelog.domain.specprofile.service.certification.SpecProfileCertifica
 import com.lifelog.domain.specprofile.service.experience.ExperienceService;
 import com.lifelog.domain.specprofile.service.languageexam.LanguageExamScoreService;
 import com.lifelog.domain.specprofile.validation.SpecProfileSaveRequestValidator;
-import com.lifelog.domain.specprofile.validation.SpecProfileAnalyzationPolicy;
+import com.lifelog.domain.specprofile.policy.SpecProfileAnalyzationPolicy;
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.JobRepository;
 import com.lifelog.domain.job.service.DesiredJobService;

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum SpecProfileAnalyzationErrorCode implements ErrorCode {
+    RUN_NOT_STOPPABLE("RUN_NOT_STOPPABLE", "이미 종료된 분석 실행은 중단할 수 없습니다.", HttpStatus.CONFLICT),
     INCOMPLETE_SAVED_RESULT("INCOMPLETE_SAVED_RESULT", "저장된 연봉 분석 결과가 불완전합니다. 재분석이 필요합니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     RESULT_SAVE_FAILED("RESULT_SAVE_FAILED", "연봉 분석 결과를 저장하지 못했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_SALARY_STATISTICS("INVALID_SALARY_STATISTICS", "연봉 통계 표본이 유효하지 않습니다.", HttpStatus.INTERNAL_SERVER_ERROR),

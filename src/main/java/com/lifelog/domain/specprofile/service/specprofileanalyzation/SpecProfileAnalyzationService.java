@@ -14,7 +14,7 @@ import com.lifelog.domain.specprofile.mapper.SpecProfileAnalyzationMapper;
 import com.lifelog.domain.specprofile.repository.*;
 import com.lifelog.domain.specprofile.service.SpecProfileQueryService;
 import com.lifelog.domain.specprofile.validation.SpecProfileAnalyzationInputValidator;
-import com.lifelog.domain.specprofile.validation.SpecProfileAnalyzationPolicy;
+import com.lifelog.domain.specprofile.policy.SpecProfileAnalyzationPolicy;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
