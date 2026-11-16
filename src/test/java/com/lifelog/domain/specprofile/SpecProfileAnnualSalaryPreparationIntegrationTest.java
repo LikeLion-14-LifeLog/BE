@@ -44,6 +44,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -219,17 +224,34 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
 
     @Test
     @DisplayName("API 응답을 기다리는 중 취소된 실행은 결과를 저장하거나 COMPLETED로 덮어쓰지 않는다")
-    void 저장전취소_완료생략_성공() {
+    void 저장전취소_완료생략_성공() throws Exception {
         // given
         Long runId = saveRun(snapshotJson());
+        CountDownLatch awaitingAi = new CountDownLatch(1);
+        CountDownLatch releaseAi = new CountDownLatch(1);
         doAnswer(invocation -> {
-            jdbc.update("UPDATE spec_profile_analyzation_run SET status = 'CANCELED', canceled_at = CURRENT_TIMESTAMP WHERE run_id = ?", runId);
+            awaitingAi.countDown();
+            assertThat(releaseAi.await(10, TimeUnit.SECONDS)).isTrue();
             return aiResponse();
         }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
-        // when
-        SpecProfileAnnualSalaryAnalyzationResDto result = service.analyze(runId);
-        // then
-        assertThat(result).isNull();
+        try (ExecutorService executor = Executors.newSingleThreadExecutor();
+             AnalyzationSseTestClient stream = new AnalyzationSseTestClient(port, runId, jwt.createAccessToken(memberId), null)) {
+            stream.nextData();
+            Future<SpecProfileAnnualSalaryAnalyzationResDto> analysis = executor.submit(() -> service.analyze(runId));
+            try {
+                assertThat(awaitingAi.await(10, TimeUnit.SECONDS)).isTrue();
+                for (int count = 1; count <= 6; count++) assertThat(stream.nextData().name()).isEqualTo("progress");
+                // when: AI 응답을 반환하기 전에 실제 중단 API와 SSE 종료를 확인한다.
+                stopRun(runId);
+                // then
+                assertThat(stream.nextData().name()).isEqualTo("canceled");
+                stream.awaitClosed();
+                assertThat(analysis.isDone()).isFalse();
+            } finally {
+                releaseAi.countDown();
+            }
+            assertThat(analysis.get(10, TimeUnit.SECONDS)).isNull();
+        }
         SpecProfileAnalyzationRun canceled = runs.findById(runId).orElseThrow();
         assertThat(canceled.getStatus()).isEqualTo(SpecProfileAnalyzationStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isNotNull();
@@ -289,7 +311,7 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
         Long runId = saveRun(snapshotJson());
         CustomException original = new CustomException(OpenApiErrorCode.OPEN_API_REQUEST_FAILED);
         doAnswer(invocation -> {
-            jdbc.update("UPDATE spec_profile_analyzation_run SET status='CANCELED', canceled_at=CURRENT_TIMESTAMP WHERE run_id=?", runId);
+            stopRun(runId);
             throw original;
         }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
         try (AnalyzationSseTestClient stream = new AnalyzationSseTestClient(port, runId, jwt.createAccessToken(memberId), null)) {
@@ -440,6 +462,18 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
                 assertThat(stored.getSalaryNotice()).isEqualTo(report.salaryNotice());
             }
         });
+    }
+
+    /** 실제 HTTP로 본인 실행의 중단을 요청하고 공통 성공 응답을 확인한다. @param runId 실행 ID */
+    private void stopRun(Long runId) throws Exception {
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            HttpResponse<String> response = client.send(HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:" + port + "/api/spec-profile/analyzation/runs/" + runId + "/stop"))
+                    .timeout(Duration.ofSeconds(5)).header("Authorization", "Bearer " + jwt.createAccessToken(memberId))
+                    .method("PATCH", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(jsonMapper.readTree(response.body()).get("data").get("status").asString()).isEqualTo("CANCELED");
+        }
     }
 
     private Long saveRun(String json) {

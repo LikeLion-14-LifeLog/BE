@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -168,8 +169,9 @@ class SpecProfileAnalyzationSseIntegrationTest {
         try (AnalyzationSseTestClient stream = connect(null)) {
             stream.nextData();
             // when
-            jdbc.update("UPDATE spec_profile_analyzation_run SET status='CANCELED', canceled_at=CURRENT_TIMESTAMP WHERE run_id=?", run.getId());
-            registry.canceled(run.getId());
+            mvc.perform(patch("/api/spec-profile/analyzation/runs/{runId}/stop", run.getId())
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk());
             // then
             AnalyzationSseTestClient.Event canceled = stream.nextData();
             JsonNode data = json.readTree(canceled.data());
@@ -177,6 +179,41 @@ class SpecProfileAnalyzationSseIntegrationTest {
             assertThat(data.get("completedStepCount").asInt()).isZero();
             for (JsonNode step : data.get("steps")) assertThat(step.get("status").asString()).isEqualTo("QUEUED");
             stream.awaitClosed();
+        }
+    }
+
+    @Test
+    @DisplayName("중단 API는 모든 구독에 취소를 전송하고 완료·미시작 단계를 보존하며 재접속도 종료한다")
+    void 중단API_다중구독및재접속_성공() throws Exception {
+        // given
+        state.startIfQueued(run.getId());
+        registry.progress(run.getId(), SpecProfileAnalyzationStep.RUN_START);
+        try (AnalyzationSseTestClient first = connect(null); AnalyzationSseTestClient second = connect(null)) {
+            first.nextData();
+            second.nextData();
+            // when
+            mvc.perform(patch("/api/spec-profile/analyzation/runs/{runId}/stop", run.getId())
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk());
+            // then
+            AnalyzationSseTestClient.Event canceled = first.nextData();
+            assertThat(canceled.name()).isEqualTo("canceled");
+            assertThat(second.nextData().data()).isEqualTo(canceled.data());
+            JsonNode data = json.readTree(canceled.data());
+            assertThat(data.get("status").asString()).isEqualTo("CANCELED");
+            assertThat(data.get("currentStepOrder").isNull()).isTrue();
+            assertThat(data.get("resultUrl").isNull()).isTrue();
+            assertThat(data.get("steps").get(0).get("status").asString()).isEqualTo("COMPLETED");
+            assertThat(data.get("steps").get(1).get("status").asString()).isEqualTo("CANCELED");
+            for (int index = 2; index < 9; index++) assertThat(data.get("steps").get(index).get("status").asString()).isEqualTo("QUEUED");
+            assertThat(events.findAllByRun_IdOrderBySortOrderAsc(run.getId()).getLast().getId().toString()).isEqualTo(canceled.id());
+            first.awaitClosed();
+            second.awaitClosed();
+            try (AnalyzationSseTestClient reconnected = connect(canceled.id())) {
+                assertThat(reconnected.nextData().name()).isEqualTo("snapshot");
+                assertThat(reconnected.nextData().name()).isEqualTo("canceled");
+                reconnected.awaitClosed();
+            }
         }
     }
 
