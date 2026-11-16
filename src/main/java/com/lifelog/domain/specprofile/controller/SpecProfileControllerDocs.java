@@ -18,10 +18,53 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "회원 스펙 연봉 분석 진행 상태 SSE 구독", description = """
+            ### 1. API 역할
+            - JWT 회원 본인의 특정 실행 상태와 9개 단계의 진행 상황을 구독합니다.
+            - 최초 연결과 재연결 모두 최신 snapshot으로 동기화하고 이후 progress를 전달합니다.
+            - completed, failed, canceled 전송 후 연결을 종료합니다. 연결 해제는 분석 취소가 아닙니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}, Accept: text/event-stream.
+            - Last-Event-ID: 마지막 이벤트 로그 PK인 양의 정수. 선택이며 동일 실행에 속해야 합니다.
+            ### 3. Path Variable
+            - runId: 구독할 분석 실행 PK. 필수 양의 정수(int64).
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음
+            ### 6. Response Header
+            - Content-Type: text/event-stream, Cache-Control: no-cache, X-Accel-Buffering: no.
+            ### 7. Response Body
+            - SSE 이벤트: snapshot, progress, completed, failed, canceled. heartbeat는 15초마다 주석으로 전송합니다.
+            - id는 eventLogId와 같습니다. data는 공통 JSON 응답으로 감싸지 않은 진행 상태입니다.
+            - runId, eventLogId, status, totalSteps, completedStepCount, currentStepOrder, steps, resultUrl, occurredAt.
+            - 실행과 단계 status는 QUEUED, IN_PROGRESS, CANCELED, COMPLETED, FAILED입니다.
+            - steps: order는 Step.order, code는 ENUM 이름, name은 Step.displayName, status는 단계 상태입니다.
+            - 완료된 단계 수를 반환하며 실행 종료 시 currentStepOrder는 null입니다.
+            - resultUrl은 COMPLETED에서만 존재합니다. occurredAt은 한국 시간 +09:00 ISO 8601입니다.
+            - 과거 단계 이력이 없으면 단계 status와 completedStepCount, occurredAt은 null입니다.
+            - 과거 이벤트가 없는 실행은 eventLogId가 null이며 SSE id를 생략합니다.
+            - 잘못된 ID 또는 커서는 INVALID_REQUEST(400), 타인 실행과 미존재 실행은 RUN_NOT_FOUND(404)입니다.
+            - 연결 제한 시간의 기본값은 30분이며 종료 이벤트 없이 끊기면 클라이언트가 재접속해야 합니다.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "SSE 구독 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "실행 ID 또는 커서 오류"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 실행 없음")
+    })
+    @GetMapping(value = "/api/spec-profile/analyzation/runs/{runId}/events", produces = "text/event-stream")
+    ResponseEntity<SseEmitter> subscribeAnalyzationEvents(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Parameter(description = "구독할 분석 실행 PK", required = true) @PathVariable("runId") Long runId,
+            @Parameter(description = "동일 실행의 마지막 이벤트 로그 PK") @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId);
+
     @Operation(summary = "회원 스펙 연봉 분석 실행 상태 및 결과 조회", description = """
             ### 1. API 역할
             - JWT 회원 본인의 특정 분석 실행 상태와 저장된 분석 결과를 조회합니다.
@@ -170,7 +213,7 @@ public interface SpecProfileControllerDocs {
             - steps: 실제 분석 처리 순서에 따른 9개 단계의 코드, 순서, 표시명.
               RUN_START → SNAPSHOT_LOAD → CLASSIFICATION_DATA_LOAD → SCORE_BAND_CLASSIFICATION → SAMPLE_SELECTION
               → STATISTICS_AND_PROMPT_BUILD → SALARY_PREDICTION → RESULT_COMPOSITION → RESULT_SAVE.
-            - eventsUrl, resultUrl: 실행별 상대 경로. resultUrl로 실행 상태와 결과를 조회하며 SSE는 별도 구현 예정입니다.
+            - eventsUrl, resultUrl: 실행별 상대 경로. eventsUrl로 SSE 진행 상태를 구독하고 resultUrl로 상태와 결과를 조회합니다.
             - requestedAt: 최초 요청 시각을 한국 시간 +09:00의 ISO 8601 문자열로 반환합니다.
             - 오류 코드: INVALID_REQUEST(400), AUTH_401(401), AUTH_403(403), NOT_FOUND(404),
               ANALYSIS_ALREADY_RUNNING(409), INTERNAL_SERVER_ERROR 또는 COMMON_500(500).

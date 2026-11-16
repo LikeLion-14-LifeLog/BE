@@ -4,6 +4,7 @@ package com.lifelog.global.config;
 import com.lifelog.global.security.JwtAuthenticationEntryPoint;
 import com.lifelog.global.security.JwtAuthenticationFilter;
 import com.lifelog.global.security.JwtAccessDeniedHandler;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,6 +47,9 @@ public class SecurityConfig {
 
                 // API 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers(request -> request.getDispatcherType() == DispatcherType.ASYNC
+                                && request.getRequestURI().matches("/api/spec-profile/analyzation/runs/[0-9]+/events")).permitAll()
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 

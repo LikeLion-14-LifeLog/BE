@@ -10,6 +10,8 @@ import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
 import com.lifelog.domain.specprofile.repository.SpecProfileRepository;
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationResultQueryService;
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationService;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationSseRegistry;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,15 @@ public class SpecProfileService {
     private final SpecProfileQueryService specProfileQueryService;
     private final SpecProfileAnalyzationService specProfileAnalyzationService;
     private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
+    private final SpecProfileAnalyzationSseRegistry specProfileAnalyzationSseRegistry;
+
+    /** 본인 분석 실행의 SSE 구독을 등록한다. @param memberId 인증 회원 @param runId 실행 ID @param lastEventId 마지막 이벤트 PK @return SSE 연결 */
+    public SseEmitter subscribeAnalyzationEvents(Long memberId, Long runId, String lastEventId) {
+        log.info("[SpecProfileService] 진행 상태 구독 | subscribeAnalyzationEvents() - START | memberId: {}, runId: {}", memberId, runId);
+        SseEmitter result = specProfileAnalyzationSseRegistry.subscribe(memberId, runId, lastEventId);
+        log.info("[SpecProfileService] 진행 상태 구독 | subscribeAnalyzationEvents() - END | runId: {}", runId);
+        return result;
+    }
 
     /**
      * 본인 분석 실행의 상태와 저장 결과 조회를 전담 서비스에 위임한다.
