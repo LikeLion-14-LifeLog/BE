@@ -15,6 +15,42 @@ import static org.assertj.core.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named = "SPEC_PROFILE_TEST_DB_URL", matches = ".+")
 class SpecProfileAnalyzationMigrationIntegrationTest {
     @Test
+    @DisplayName("nullable 단계 ENUM 컬럼을 추가하며 기존 실행 로그와 단계별 시작·완료 이력을 보존한다")
+    void 단계컬럼추가_기존이력보존_성공() throws Exception {
+        // given
+        String schema = newSchema();
+        try (Connection connection = connection(); Statement statement = connection.createStatement()) {
+            try {
+                flyway(schema, "20261113.2").migrate();
+                statement.execute("SET search_path TO " + schema);
+                statement.execute("INSERT INTO member(member_id,email) VALUES (1,'step-migration@example.com')");
+                statement.execute("INSERT INTO spec_profile(spec_profile_id,member_id) VALUES (1,1)");
+                statement.execute("INSERT INTO job(job_id,code,name,main_category_name) VALUES (1,'1332','개발','개발')");
+                statement.execute("INSERT INTO spec_profile_analyzation_run(run_id,spec_profile_id,job_id,spec_profile_snapshot_json) VALUES (1,1,1,'{}')");
+                statement.execute("INSERT INTO spec_profile_analyzation_event_log(event_log_id,spec_profile_analyzation_run_id,status) VALUES (100,1,'QUEUED')");
+                // when
+                flyway(schema, "latest").migrate();
+                // then
+                try (ResultSet rows = statement.executeQuery("SELECT status,step FROM spec_profile_analyzation_event_log WHERE event_log_id=100")) {
+                    assertThat(rows.next()).isTrue();
+                    assertThat(rows.getString("status")).isEqualTo("QUEUED");
+                    assertThat(rows.getString("step")).isNull();
+                }
+                statement.execute("INSERT INTO spec_profile_analyzation_event_log(spec_profile_analyzation_run_id,sort_order,status,step) VALUES (1,1,'IN_PROGRESS','SNAPSHOT_LOAD'),(1,2,'COMPLETED','SNAPSHOT_LOAD')");
+                assertThatThrownBy(() -> statement.execute("INSERT INTO spec_profile_analyzation_event_log(spec_profile_analyzation_run_id,sort_order,status,step) VALUES (1,3,'IN_PROGRESS','INVALID')"))
+                        .isInstanceOf(SQLException.class);
+                statement.execute("DELETE FROM spec_profile_analyzation_run WHERE run_id=1");
+                try (ResultSet rows = statement.executeQuery("SELECT COUNT(*) FROM spec_profile_analyzation_event_log")) {
+                    rows.next();
+                    assertThat(rows.getInt(1)).isZero();
+                }
+            } finally {
+                statement.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+            }
+        }
+    }
+
+    @Test
     @DisplayName("ERD 컬럼과 실행 PK 및 이벤트 FK, identity와 제약을 검증한다")
     void ERD이관_관계및제약_성공() throws Exception {
         // given

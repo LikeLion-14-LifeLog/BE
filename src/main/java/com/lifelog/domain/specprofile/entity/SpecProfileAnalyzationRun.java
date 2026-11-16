@@ -44,6 +44,16 @@ public class SpecProfileAnalyzationRun {
     @JoinColumn(name = "job_id", nullable = false)
     private Job job;
 
+    /** 대기 실행을 시작한다. 실행 행 잠금과 상태 검증을 마친 서비스에서 호출한다. */
+    public void startAnnualSalaryAnalyzation() {
+        status = SpecProfileAnalyzationStatus.IN_PROGRESS;
+    }
+
+    /** 실행 중 발생한 오류를 실패 상태로 반영한다. */
+    public void failAnnualSalaryAnalyzation() {
+        status = SpecProfileAnalyzationStatus.FAILED;
+    }
+
     /**
      * 결과 저장을 마친 진행 중 실행을 완료 상태로 변경한다.
      */

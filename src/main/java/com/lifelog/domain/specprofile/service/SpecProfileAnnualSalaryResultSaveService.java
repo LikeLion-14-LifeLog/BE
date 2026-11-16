@@ -3,6 +3,8 @@ package com.lifelog.domain.specprofile.service;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto;
 import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationRun;
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
+import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStep;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationEventLogService;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileAnnualSalaryAnalyzationMapper;
 import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationResultRepository;
@@ -21,6 +23,7 @@ public class SpecProfileAnnualSalaryResultSaveService {
     private final SpecProfileAnalyzationRunRepository runRepository;
     private final SpecProfileAnalyzationResultRepository resultRepository;
     private final SpecProfileAnnualSalaryAnalyzationMapper mapper;
+    private final SpecProfileAnalyzationEventLogService eventLogService;
 
     /**
      * 연차별 예측, AI 진단 문구와 완료 상태를 하나의 독립 트랜잭션으로 저장한다.
@@ -44,6 +47,8 @@ public class SpecProfileAnnualSalaryResultSaveService {
         /* (3) 결과와 COMPLETED를 함께 반영한다. 커밋 실패도 호출자에게 전파해 FAILED로 보상한다. */
         run.completeAnnualSalaryAnalyzation();
         runRepository.flush();
+        eventLogService.append(run, SpecProfileAnalyzationStep.RESULT_SAVE, SpecProfileAnalyzationStatus.COMPLETED);
+        eventLogService.append(run, null, SpecProfileAnalyzationStatus.COMPLETED);
         log.info("[SpecProfileAnnualSalaryResultSaveService] 결과 저장 | saveAndComplete() - END | runId: {}, count: {}",
                 runId, report.salaryResults().size());
         return true;

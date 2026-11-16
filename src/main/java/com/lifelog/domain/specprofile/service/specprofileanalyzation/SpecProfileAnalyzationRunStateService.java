@@ -1,6 +1,8 @@
 package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
+import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStep;
+import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationRun;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationRunRepository;
 import com.lifelog.global.exception.CustomException;
@@ -9,13 +11,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Set;
+import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SpecProfileAnalyzationRunStateService {
     private final SpecProfileAnalyzationRunRepository runRepository;
+    private final SpecProfileAnalyzationEventLogService eventLogService;
 
     /**
      * QUEUED 실행만 독립 트랜잭션에서 IN_PROGRESS로 전환한다.
@@ -25,13 +28,16 @@ public class SpecProfileAnalyzationRunStateService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean startIfQueued(Long runId) {
         log.info("[SpecProfileAnalyzationRunStateService] 실행 시작 | startIfQueued() - START | runId: {}", runId);
-        int updated = runRepository.transitionStatus(runId, SpecProfileAnalyzationStatus.QUEUED,
-                SpecProfileAnalyzationStatus.IN_PROGRESS);
-        if (updated == 0 && !runRepository.existsById(runId)) {
-            throw new CustomException(SpecProfileAnalyzationErrorCode.RUN_NOT_FOUND);
+        SpecProfileAnalyzationRun run = runRepository.findByIdForUpdate(runId)
+                .orElseThrow(() -> new CustomException(SpecProfileAnalyzationErrorCode.RUN_NOT_FOUND));
+        boolean started = run.getStatus() == SpecProfileAnalyzationStatus.QUEUED;
+        if (started) {
+            run.startAnnualSalaryAnalyzation();
+            eventLogService.append(run, null, SpecProfileAnalyzationStatus.IN_PROGRESS);
+            eventLogService.append(run, SpecProfileAnalyzationStep.RUN_START, SpecProfileAnalyzationStatus.IN_PROGRESS);
         }
-        log.info("[SpecProfileAnalyzationRunStateService] 실행 시작 | startIfQueued() - END | runId: {}, started: {}", runId, updated == 1);
-        return updated == 1;
+        log.info("[SpecProfileAnalyzationRunStateService] 실행 시작 | startIfQueued() - END | runId: {}, started: {}", runId, started);
+        return started;
     }
 
     /**
@@ -42,10 +48,23 @@ public class SpecProfileAnalyzationRunStateService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean failIfRunning(Long runId) {
         log.info("[SpecProfileAnalyzationRunStateService] 실행 실패 저장 | failIfRunning() - START | runId: {}", runId);
-        int updated = runRepository.transitionStatuses(runId,
-                Set.of(SpecProfileAnalyzationStatus.QUEUED, SpecProfileAnalyzationStatus.IN_PROGRESS),
-                SpecProfileAnalyzationStatus.FAILED);
-        log.info("[SpecProfileAnalyzationRunStateService] 실행 실패 저장 | failIfRunning() - END | runId: {}, updated: {}", runId, updated);
-        return updated == 1;
+        Optional<SpecProfileAnalyzationRun> found = runRepository.findByIdForUpdate(runId);
+        boolean changed = found.isPresent() && found.get().getStatus().isRunning();
+        if (changed) {
+            SpecProfileAnalyzationRun run = found.get();
+            run.failAnnualSalaryAnalyzation();
+            eventLogService.appendTerminal(run, SpecProfileAnalyzationStatus.FAILED);
+        }
+        log.info("[SpecProfileAnalyzationRunStateService] 실행 실패 저장 | failIfRunning() - END | runId: {}, changed: {}", runId, changed);
+        return changed;
+    }
+
+    /** 확정된 취소 상태를 관측한 뒤 단계 및 실행의 취소 이력을 보완한다. @param runId 실행 ID */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordCanceled(Long runId) {
+        log.info("[SpecProfileAnalyzationRunStateService] 취소 이력 저장 | recordCanceled() - START | runId: {}", runId);
+        runRepository.findByIdForUpdate(runId).filter(run -> run.getStatus() == SpecProfileAnalyzationStatus.CANCELED)
+                .ifPresent(run -> eventLogService.appendTerminal(run, SpecProfileAnalyzationStatus.CANCELED));
+        log.info("[SpecProfileAnalyzationRunStateService] 취소 이력 저장 | recordCanceled() - END | runId: {}", runId);
     }
 }
