@@ -65,7 +65,9 @@ public class SecurityConfig {
                                         "/api/v1/career-paths/*",
                                         "/api/v1/career-paths/exploratory/*",
                                         "/api/v1/career-paths/yearly",
-                                        "/api/v1/career-paths/yearly/graph"
+                                        "/api/v1/career-paths/yearly/graph",
+                                        "/api/v1/career-paths/yearly/routes",
+                                        "/api/v1/career-paths/yearly/routes/*/*"
                                 ).permitAll()
 
                                 // Swagger 허용 (개발용)
