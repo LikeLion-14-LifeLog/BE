@@ -73,6 +73,11 @@ public class SecurityConfig {
                                 "/api/admin/job-postings/sync/status"
                         ).hasRole("ADMIN")
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/career-paths/exploratory/graph"
+                        ).permitAll()
+
                         // 나머지 API는 인증 필요
                         .anyRequest().authenticated()
                 )
