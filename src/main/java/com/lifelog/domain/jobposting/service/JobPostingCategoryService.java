@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+// (사용 안함) 공고 목록 직무 필터(jobCategory)가 제거되어 현재 사용하지 않음
 // 공고 목록 직무 필터(jobCategory)에 쓸 소분류를 검색 (검색형 선택 UI용)
 @Service
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package com.lifelog.domain.jobposting.service;
 
+import com.lifelog.domain.jobposting.dto.JobPostingDesiredJobResponse;
+
 import java.util.Set;
 
 /**
@@ -7,11 +9,13 @@ import java.util.Set;
  * @param subCategoryCodes 희망 직무(desired_job, 회원당 1개)의 소분류 코드(3자리)
  * @param educationLevel   회원 학력 단계 (3 고졸, 4 전문대, 5 대학교, 6 석사, 7 박사).
  *                         학력 미입력이면 null(학력 조건 미적용), 입력했지만 인정되는 학력이 없으면 3
+ * @param desiredJob       희망 직무 코드·이름 (화면 표시용), 희망 직무가 없으면 null
  */
-public record MemberJobProfile(Set<String> subCategoryCodes, Integer educationLevel) {
+public record MemberJobProfile(Set<String> subCategoryCodes, Integer educationLevel,
+                               JobPostingDesiredJobResponse desiredJob) {
 
     public static MemberJobProfile empty() {
-        return new MemberJobProfile(Set.of(), null);
+        return new MemberJobProfile(Set.of(), null, null);
     }
 
     // 희망 직무가 없으면(미분류처럼 소분류가 없는 직무여도) 프로필 없음으로 보고 맞춤 조건을 적용하지 않음

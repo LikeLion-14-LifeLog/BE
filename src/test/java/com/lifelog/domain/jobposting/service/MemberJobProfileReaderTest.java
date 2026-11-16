@@ -4,6 +4,7 @@ import com.lifelog.domain.job.entity.DesiredJob;
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.DesiredJobRepository;
 import com.lifelog.domain.job.repository.JobRepository;
+import com.lifelog.domain.jobposting.dto.JobPostingDesiredJobResponse;
 import com.lifelog.domain.member.entity.Member;
 import com.lifelog.domain.member.repository.MemberRepository;
 import com.lifelog.domain.specprofile.entity.AcademicAbility;
@@ -69,6 +70,7 @@ class MemberJobProfileReaderTest {
         assertThat(profile.subCategoryCodes()).containsExactly("133");
         assertThat(profile.educationLevel()).isEqualTo(5);
         assertThat(profile.isPersonalizable()).isTrue();
+        assertThat(profile.desiredJob()).isEqualTo(new JobPostingDesiredJobResponse("1332", "직무 1332"));
     }
 
     @Test
@@ -76,7 +78,10 @@ class MemberJobProfileReaderTest {
         Member other = memberRepository.save(new Member("member-job-profile-other@test.com"));
         saveDesiredJob(other, saveJob("1", "13", "133", "1332"));
 
-        assertThat(reader.read(member.getId()).subCategoryCodes()).isEmpty();
+        MemberJobProfile profile = reader.read(member.getId());
+
+        assertThat(profile.subCategoryCodes()).isEmpty();
+        assertThat(profile.desiredJob()).isNull();
     }
 
     @Test
@@ -199,22 +204,24 @@ class MemberJobProfileReaderTest {
     }
 
     @Test
-    void 희망_직무가_미분류면_소분류가_없어_맞춤_불가() {
+    void 희망_직무가_미분류면_소분류가_없어_맞춤_불가지만_desiredJob은_채움() {
         saveDesiredJob(member, saveJob(null, null, null, "9999"));
 
         MemberJobProfile profile = reader.read(member.getId());
 
         assertThat(profile.subCategoryCodes()).isEmpty();
         assertThat(profile.isPersonalizable()).isFalse();
+        assertThat(profile.desiredJob()).isEqualTo(new JobPostingDesiredJobResponse("9999", "직무 9999"));
     }
 
     @Test
-    void 희망_직무와_학력이_없으면_맞춤_불가이고_학력은_null() {
+    void 희망_직무와_학력이_없으면_맞춤_불가이고_학력과_desiredJob은_null() {
         MemberJobProfile profile = reader.read(member.getId());
 
         assertThat(profile.subCategoryCodes()).isEmpty();
         assertThat(profile.educationLevel()).isNull();
         assertThat(profile.isPersonalizable()).isFalse();
+        assertThat(profile.desiredJob()).isNull();
     }
 
     @Test

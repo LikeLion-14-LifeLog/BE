@@ -1,6 +1,8 @@
 package com.lifelog.domain.jobposting.service;
 
+import com.lifelog.domain.job.entity.DesiredJob;
 import com.lifelog.domain.job.entity.Job;
+import com.lifelog.domain.jobposting.dto.JobPostingDesiredJobResponse;
 import com.lifelog.domain.job.repository.DesiredJobRepository;
 import com.lifelog.domain.specprofile.entity.AcademicAbility;
 import com.lifelog.domain.specprofile.entity.SpecProfile;
@@ -56,16 +58,19 @@ public class MemberJobProfileReader {
         if (memberId == null) {
             return MemberJobProfile.empty();
         }
-        return new MemberJobProfile(findSubCategoryCodes(memberId), findEducationLevel(memberId));
+        Job desiredJob = desiredJobRepository.findByMemberId(memberId)
+                .map(DesiredJob::getJob)
+                .orElse(null);
+        return new MemberJobProfile(subCategoryCodes(desiredJob), findEducationLevel(memberId),
+                desiredJob == null ? null : JobPostingDesiredJobResponse.from(desiredJob));
     }
 
-    // 희망 직무의 소분류 코드 (미분류처럼 소분류가 없으면 빈 집합)
-    private Set<String> findSubCategoryCodes(Long memberId) {
-        return desiredJobRepository.findByMemberId(memberId)
-                .map(desiredJob -> desiredJob.getJob())
-                .map(Job::getSubCategoryCode)
-                .map(Set::of)
-                .orElse(Set.of());
+    // 희망 직무의 소분류 코드 (희망 직무가 없거나 미분류처럼 소분류가 없으면 빈 집합)
+    private Set<String> subCategoryCodes(Job desiredJob) {
+        if (desiredJob == null || desiredJob.getSubCategoryCode() == null) {
+            return Set.of();
+        }
+        return Set.of(desiredJob.getSubCategoryCode());
     }
 
     // CURRENT 스펙의 학력 중 인정되는 가장 높은 단계
