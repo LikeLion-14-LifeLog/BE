@@ -14,6 +14,10 @@ import com.lifelog.domain.specprofile.enums.*;
 import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationRunRepository;
 import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationResultRepository;
 import com.lifelog.domain.specprofile.repository.SpecProfileRepository;
+import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationEventLogRepository;
+import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationEventLog;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import com.lifelog.global.security.JwtProvider;
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnnualSalaryAnalyzationService;
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationRunStateService;
 import com.lifelog.domain.specprofile.service.SpecProfileSalaryScoreBandService;
@@ -53,7 +57,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
-@SpringBootTest(properties = {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.datasource.url=jdbc:h2:mem:annual-preparation;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000",
         "keep.salary.csv-path=classpath:data/keep_salary_preparation.csv"
 })
@@ -68,12 +72,16 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
     @Autowired SpecProfileRepository profiles;
     @Autowired MemberRepository members;
     @Autowired JobRepository jobs;
+    @Autowired SpecProfileAnalyzationEventLogRepository events;
+    @Autowired JwtProvider jwt;
+    @LocalServerPort int port;
     @Autowired JsonMapper jsonMapper;
     @Autowired PlatformTransactionManager transactionManager;
     @MockitoSpyBean SpecProfileSalaryScoreBandService scoreBandService;
     @MockitoBean OpenApiUtil openApiUtil;
     SpecProfile profile;
     Job job;
+    Long memberId;
 
     @BeforeEach
     void 준비() {
@@ -82,6 +90,7 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
             return aiResponse();
         }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
         Member member = members.saveAndFlush(new Member(UUID.randomUUID() + "@test.example"));
+        memberId = member.getId();
         profile = profiles.saveAndFlush(SpecProfile.builder().member(member).build());
         job = jobs.findAll().stream().filter(value -> value.getCode().equals("1332")).findFirst()
                 .orElseGet(() -> jobs.saveAndFlush(Job.builder().code("1332").name("개발자")
@@ -124,6 +133,9 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
         assertThat(results.findAllByRun_IdOrderByAnnualAsc(runId)).hasSize(3);
         assertThat(stateService.failIfRunning(runId)).isFalse();
         assertThat(runs.findById(runId).orElseThrow().getStatus()).isEqualTo(SpecProfileAnalyzationStatus.COMPLETED);
+        assertThat(events.findAllByRun_IdOrderBySortOrderAsc(runId).stream()
+                .filter(event -> event.getStep() != null && event.getStatus() == SpecProfileAnalyzationStatus.COMPLETED)
+                .map(SpecProfileAnalyzationEventLog::getStep)).containsExactly(SpecProfileAnalyzationStep.values());
     }
 
     @ParameterizedTest
@@ -195,6 +207,9 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
             SpecProfileAnalyzationRun failed = runs.findById(runId).orElseThrow();
             assertThat(failed.getStatus()).isEqualTo(SpecProfileAnalyzationStatus.FAILED);
             assertThat(results.findAllByRun_IdOrderByAnnualAsc(runId)).isEmpty();
+            assertThat(events.findAllByRun_IdOrderBySortOrderAsc(runId))
+                    .noneMatch(event -> event.getStatus() == SpecProfileAnalyzationStatus.COMPLETED
+                            && (event.getStep() == null || event.getStep() == SpecProfileAnalyzationStep.RESULT_SAVE));
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spec_profile_analyzation_result_salary_mode m LEFT JOIN spec_profile_analyzation_result r ON r.result_id = m.result_id WHERE r.result_id IS NULL", Integer.class)).isZero();
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spec_profile_analyzation_result_observation_year y LEFT JOIN spec_profile_analyzation_result r ON r.result_id = y.result_id WHERE r.result_id IS NULL", Integer.class)).isZero();
         } finally {
@@ -219,6 +234,76 @@ class SpecProfileAnnualSalaryPreparationIntegrationTest {
         assertThat(canceled.getStatus()).isEqualTo(SpecProfileAnalyzationStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isNotNull();
         assertThat(results.findAllByRun_IdOrderByAnnualAsc(runId)).isEmpty();
+        assertThat(events.findAllByRun_IdOrderBySortOrderAsc(runId)).anyMatch(event ->
+                event.getStep() == SpecProfileAnalyzationStep.SALARY_PREDICTION && event.getStatus() == SpecProfileAnalyzationStatus.CANCELED);
+    }
+
+    @Test
+    @DisplayName("실제 HTTP 구독에 snapshot과 9번 progress를 전송하고 결과 커밋 후 completed로 종료한다")
+    void SSE_전체분석진행_성공() throws Exception {
+        // given
+        Long runId = saveRun(snapshotJson());
+        try (AnalyzationSseTestClient stream = new AnalyzationSseTestClient(port, runId, jwt.createAccessToken(memberId), null)) {
+            assertThat(stream.nextData().name()).isEqualTo("snapshot");
+            // when
+            assertThat(service.analyze(runId)).isNotNull();
+            // then
+            for (int count = 1; count <= SpecProfileAnalyzationStep.values().length; count++) {
+                AnalyzationSseTestClient.Event event = stream.nextData();
+                assertThat(event.name()).isEqualTo("progress");
+                assertThat(jsonMapper.readTree(event.data()).get("completedStepCount").asInt()).isEqualTo(count);
+                assertThat(jsonMapper.readTree(event.data()).get("status").asString()).isEqualTo("IN_PROGRESS");
+            }
+            AnalyzationSseTestClient.Event terminal = stream.nextData();
+            assertThat(terminal.name()).isEqualTo("completed");
+            assertThat(jsonMapper.readTree(terminal.data()).get("status").asString()).isEqualTo("COMPLETED");
+            assertThat(results.findAllByRun_IdOrderByAnnualAsc(runId)).hasSize(3);
+            stream.awaitClosed();
+        }
+    }
+
+    @Test
+    @DisplayName("AI 요청 중 오류가 발생하면 앞선 6개 progress 뒤 failed를 전달하고 연결을 종료한다")
+    void SSE_실제분석실패_종료() throws Exception {
+        // given
+        Long runId = saveRun(snapshotJson());
+        CustomException original = new CustomException(OpenApiErrorCode.OPEN_API_REQUEST_FAILED);
+        doThrow(original).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
+        try (AnalyzationSseTestClient stream = new AnalyzationSseTestClient(port, runId, jwt.createAccessToken(memberId), null)) {
+            stream.nextData();
+            // when
+            assertThatThrownBy(() -> service.analyze(runId)).isSameAs(original);
+            // then
+            for (int count = 1; count <= 6; count++) assertThat(stream.nextData().name()).isEqualTo("progress");
+            AnalyzationSseTestClient.Event failed = stream.nextData();
+            assertThat(failed.name()).isEqualTo("failed");
+            assertThat(jsonMapper.readTree(failed.data()).get("steps").get(6).get("status").asString()).isEqualTo("FAILED");
+            stream.awaitClosed();
+        }
+    }
+
+    @Test
+    @DisplayName("취소와 AI 오류가 경합하면 FAILED로 덮어쓰지 않고 canceled를 전달한다")
+    void SSE_취소와분석오류경합_취소유지() throws Exception {
+        // given
+        Long runId = saveRun(snapshotJson());
+        CustomException original = new CustomException(OpenApiErrorCode.OPEN_API_REQUEST_FAILED);
+        doAnswer(invocation -> {
+            jdbc.update("UPDATE spec_profile_analyzation_run SET status='CANCELED', canceled_at=CURRENT_TIMESTAMP WHERE run_id=?", runId);
+            throw original;
+        }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
+        try (AnalyzationSseTestClient stream = new AnalyzationSseTestClient(port, runId, jwt.createAccessToken(memberId), null)) {
+            stream.nextData();
+            // when
+            assertThatThrownBy(() -> service.analyze(runId)).isSameAs(original);
+            // then
+            for (int count = 1; count <= 6; count++) assertThat(stream.nextData().name()).isEqualTo("progress");
+            AnalyzationSseTestClient.Event canceled = stream.nextData();
+            assertThat(canceled.name()).isEqualTo("canceled");
+            assertThat(jsonMapper.readTree(canceled.data()).get("steps").get(6).get("status").asString()).isEqualTo("CANCELED");
+            assertThat(events.findAllByRun_IdOrderBySortOrderAsc(runId)).noneMatch(event -> event.getStatus() == SpecProfileAnalyzationStatus.FAILED);
+            stream.awaitClosed();
+        }
     }
 
     @Test
