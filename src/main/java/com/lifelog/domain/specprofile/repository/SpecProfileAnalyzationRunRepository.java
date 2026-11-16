@@ -22,6 +22,22 @@ public interface SpecProfileAnalyzationRunRepository extends JpaRepository<SpecP
     Optional<SpecProfileAnalyzationRun> findOwnedRun(@Param("runId") Long runId, @Param("memberId") Long memberId);
 
     /**
+     * 소유권 조건을 충족하는 실행 행만 잠가 종료 상태 전환을 직렬화한다.
+     * @param runId 실행 ID
+     * @param memberId 인증 회원 ID
+     * @return 잠금 상태의 본인 실행 또는 빈 값
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select r from SpecProfileAnalyzationRun r
+            where r.id = :runId and exists (
+                select p.id from SpecProfile p
+                where p.id = r.specProfile.id and p.member.id = :memberId
+            )
+            """)
+    Optional<SpecProfileAnalyzationRun> findOwnedRunForUpdate(@Param("runId") Long runId, @Param("memberId") Long memberId);
+
+    /**
      * 결과 저장·완료와 취소·실패 전환이 동시에 실행되지 않도록 실행 행을 잠근다.
      * @param runId 실행 ID
      * @return 잠금 상태의 실행 또는 빈 값

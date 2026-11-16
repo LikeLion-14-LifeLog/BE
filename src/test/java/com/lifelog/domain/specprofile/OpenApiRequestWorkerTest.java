@@ -3,7 +3,7 @@ package com.lifelog.domain.specprofile;
 import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiRequestManager;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiRequestWorker;
-import com.lifelog.domain.specprofile.service.SpecProfileAnnualSalaryAnalyzationService;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnnualSalaryAnalyzationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

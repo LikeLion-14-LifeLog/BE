@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.validation;
 
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto;
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto.SalaryPrediction;

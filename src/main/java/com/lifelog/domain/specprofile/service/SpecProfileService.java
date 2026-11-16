@@ -7,7 +7,14 @@ import com.lifelog.domain.specprofile.entity.SpecProfile;
 import com.lifelog.domain.specprofile.enums.SpecProfileType;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
+import com.lifelog.domain.specprofile.policy.SpecProfileCreationPolicy;
 import com.lifelog.domain.specprofile.repository.SpecProfileRepository;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationResultQueryService;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationService;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationSseRegistry;
+import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationRunStateService;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +37,36 @@ public class SpecProfileService {
     private final SpecProfileQueryService specProfileQueryService;
     private final SpecProfileAnalyzationService specProfileAnalyzationService;
     private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
+    private final SpecProfileAnalyzationSseRegistry specProfileAnalyzationSseRegistry;
+    private final SpecProfileAnalyzationRunStateService specProfileAnalyzationRunStateService;
+
+    /**
+     * 본인 실행의 중단을 커밋한 뒤 SSE 구독자에게 확정된 취소 상태를 전달한다.
+     * @param memberId 인증 회원 ID
+     * @param runId 중단할 실행 ID
+     * @return 중단 상태와 최초 중단 시각
+     */
+    public SpecProfileAnalyzationRunStopResDto stopAnalyzationRun(Long memberId, Long runId) {
+        log.info("[SpecProfileService] 분석 실행 중단 | stopAnalyzationRun() - START | memberId: {}, runId: {}", memberId, runId);
+        /* (1) 독립 트랜잭션의 커밋이 완료된 응답을 받는다. */
+        SpecProfileAnalyzationRunStopResDto result = specProfileAnalyzationRunStateService.stopOwnedRun(memberId, runId);
+        /* (2) 통지 실패가 이미 확정된 중단의 성공 응답을 바꾸지 않도록 한다. */
+        try {
+            specProfileAnalyzationSseRegistry.canceled(runId);
+        } catch (RuntimeException exception) {
+            log.warn("[SpecProfileService] 중단 확정 후 SSE 취소 통지 실패 | runId: {}", runId, exception);
+        }
+        log.info("[SpecProfileService] 분석 실행 중단 | stopAnalyzationRun() - END | runId: {}", runId);
+        return result;
+    }
+
+    /** 본인 분석 실행의 SSE 구독을 등록한다. @param memberId 인증 회원 @param runId 실행 ID @param lastEventId 마지막 이벤트 PK @return SSE 연결 */
+    public SseEmitter subscribeAnalyzationEvents(Long memberId, Long runId, String lastEventId) {
+        log.info("[SpecProfileService] 진행 상태 구독 | subscribeAnalyzationEvents() - START | memberId: {}, runId: {}", memberId, runId);
+        SseEmitter result = specProfileAnalyzationSseRegistry.subscribe(memberId, runId, lastEventId);
+        log.info("[SpecProfileService] 진행 상태 구독 | subscribeAnalyzationEvents() - END | runId: {}", runId);
+        return result;
+    }
 
     /**
      * 본인 분석 실행의 상태와 저장 결과 조회를 전담 서비스에 위임한다.

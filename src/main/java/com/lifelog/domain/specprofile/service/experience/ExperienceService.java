@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.service;
+package com.lifelog.domain.specprofile.service.experience;
 
 import com.lifelog.domain.specprofile.dto.ExperienceSaveReqDto;
 import com.lifelog.domain.specprofile.entity.Experience;

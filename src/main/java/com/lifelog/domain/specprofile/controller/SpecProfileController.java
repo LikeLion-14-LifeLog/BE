@@ -4,17 +4,33 @@ import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileAnalyzationRunStopResDto> stopAnalyzationRun(Long memberId, Long runId) {
+        return ApiResponse.success("요청이 성공적으로 처리되었습니다.", service.stopAnalyzationRun(memberId, runId));
+    }
+
+    @Override
+    public ResponseEntity<SseEmitter> subscribeAnalyzationEvents(Long memberId, Long runId, String lastEventId) {
+        SseEmitter emitter = service.subscribeAnalyzationEvents(memberId, runId, lastEventId);
+        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).cacheControl(CacheControl.noCache())
+                .header("X-Accel-Buffering", "no").body(emitter);
+    }
 
     @Override
     public ApiResponse<SpecProfileAnalyzationRunResultResDto> getAnalyzationRunResult(Long memberId, Long runId) {

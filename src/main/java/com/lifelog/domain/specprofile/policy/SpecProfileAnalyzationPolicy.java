@@ -1,4 +1,4 @@
-package com.lifelog.domain.specprofile.validation;
+package com.lifelog.domain.specprofile.policy;
 
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.repository.SpecProfileAnalyzationRunRepository;

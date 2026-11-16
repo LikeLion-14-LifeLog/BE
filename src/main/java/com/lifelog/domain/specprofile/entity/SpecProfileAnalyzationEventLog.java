@@ -1,8 +1,11 @@
 package com.lifelog.domain.specprofile.entity;
 
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
+import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStep;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,10 +28,15 @@ public class SpecProfileAnalyzationEventLog {
     @Column(name = "status", nullable = false, length = 20)
     private SpecProfileAnalyzationStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "step", nullable = true, length = 64)
+    private SpecProfileAnalyzationStep step;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "spec_profile_analyzation_run_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private SpecProfileAnalyzationRun run;
 }
