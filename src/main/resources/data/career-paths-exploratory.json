@@ -1,0 +1,966 @@
+{
+  "title": "직업코드 앞 두 자리 변화 관측 (탐색용)",
+  "dataStatus": "EXPLORATORY_NOT_VERIFIED",
+  "notice": "관측된 직업코드 앞 두 자리의 시간순 변화입니다. 서로 다른 회사로의 이직, 생애 첫 이직, 이직 확률이 아닙니다. 앞 두 자리 묶음은 공식 직업분류 명칭으로 검증되지 않았습니다.",
+  "minimumDistinctRespondents": 5,
+  "countUnit": "distinct_respondents_per_prefix_pair",
+  "filters": {
+    "major": null,
+    "targetJob": null,
+    "observationYears": "KEEPⅡ 3~8차 경험 일자리 관측"
+  },
+  "auditSummary": {
+    "rawJobObservations": 14460,
+    "distinctRespondents": 5925,
+    "orderedObservationPairs": 7504,
+    "changedOccupationCodePairs": 5706,
+    "nonoverlapChangedCodePairs": 4140,
+    "publishedPrefixPairs": 118
+  },
+  "paths": [
+    {
+      "id": "prefix-53-61",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "61",
+      "distinctRespondents": 331,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-53",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "53",
+      "distinctRespondents": 279,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-02",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "02",
+      "distinctRespondents": 151,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-02",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "02",
+      "distinctRespondents": 120,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-21",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "21",
+      "distinctRespondents": 114,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-53",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "53",
+      "distinctRespondents": 100,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-53",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "53",
+      "distinctRespondents": 82,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-52",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "52",
+      "distinctRespondents": 80,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-61",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "61",
+      "distinctRespondents": 70,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-53",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "53",
+      "distinctRespondents": 66,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-02",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "02",
+      "distinctRespondents": 51,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-21",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "21",
+      "distinctRespondents": 50,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-52",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "52",
+      "distinctRespondents": 50,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-61",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "61",
+      "distinctRespondents": 45,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-41",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "41",
+      "distinctRespondents": 39,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-61",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "61",
+      "distinctRespondents": 33,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-30",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "30",
+      "distinctRespondents": 30,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-62",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "62",
+      "distinctRespondents": 28,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-83-53",
+      "fromCodePrefix": "83",
+      "toCodePrefix": "53",
+      "distinctRespondents": 26,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-30",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "30",
+      "distinctRespondents": 25,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-02",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "02",
+      "distinctRespondents": 24,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-21",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "21",
+      "distinctRespondents": 23,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-30-53",
+      "fromCodePrefix": "30",
+      "toCodePrefix": "53",
+      "distinctRespondents": 23,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-62-53",
+      "fromCodePrefix": "62",
+      "toCodePrefix": "53",
+      "distinctRespondents": 22,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-56",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "56",
+      "distinctRespondents": 21,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-41",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "41",
+      "distinctRespondents": 20,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-21",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "21",
+      "distinctRespondents": 19,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-42",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "42",
+      "distinctRespondents": 18,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-83",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "83",
+      "distinctRespondents": 18,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-52",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "52",
+      "distinctRespondents": 17,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-41-61",
+      "fromCodePrefix": "41",
+      "toCodePrefix": "61",
+      "distinctRespondents": 17,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-70",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "70",
+      "distinctRespondents": 17,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-70-53",
+      "fromCodePrefix": "70",
+      "toCodePrefix": "53",
+      "distinctRespondents": 17,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-81",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "81",
+      "distinctRespondents": 16,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-83-61",
+      "fromCodePrefix": "83",
+      "toCodePrefix": "61",
+      "distinctRespondents": 16,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-88",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "88",
+      "distinctRespondents": 15,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-89",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "89",
+      "distinctRespondents": 15,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-56-53",
+      "fromCodePrefix": "56",
+      "toCodePrefix": "53",
+      "distinctRespondents": 15,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-62-02",
+      "fromCodePrefix": "62",
+      "toCodePrefix": "02",
+      "distinctRespondents": 15,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-81-53",
+      "fromCodePrefix": "81",
+      "toCodePrefix": "53",
+      "distinctRespondents": 15,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-30",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "30",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-41-02",
+      "fromCodePrefix": "41",
+      "toCodePrefix": "02",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-42-53",
+      "fromCodePrefix": "42",
+      "toCodePrefix": "53",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-70-61",
+      "fromCodePrefix": "70",
+      "toCodePrefix": "61",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-87-53",
+      "fromCodePrefix": "87",
+      "toCodePrefix": "53",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-88-53",
+      "fromCodePrefix": "88",
+      "toCodePrefix": "53",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-88-61",
+      "fromCodePrefix": "88",
+      "toCodePrefix": "61",
+      "distinctRespondents": 14,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-62",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "62",
+      "distinctRespondents": 13,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-41",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "41",
+      "distinctRespondents": 13,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-56",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "56",
+      "distinctRespondents": 13,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-41-53",
+      "fromCodePrefix": "41",
+      "toCodePrefix": "53",
+      "distinctRespondents": 12,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-87",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "87",
+      "distinctRespondents": 12,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-62",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "62",
+      "distinctRespondents": 12,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-41",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "41",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-30-61",
+      "fromCodePrefix": "30",
+      "toCodePrefix": "61",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-41-21",
+      "fromCodePrefix": "41",
+      "toCodePrefix": "21",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-51-53",
+      "fromCodePrefix": "51",
+      "toCodePrefix": "53",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-54",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "54",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-56-61",
+      "fromCodePrefix": "56",
+      "toCodePrefix": "61",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-42",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "42",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-88",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "88",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-62-61",
+      "fromCodePrefix": "62",
+      "toCodePrefix": "61",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-83-02",
+      "fromCodePrefix": "83",
+      "toCodePrefix": "02",
+      "distinctRespondents": 11,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-13",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "13",
+      "distinctRespondents": 10,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-52",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "52",
+      "distinctRespondents": 10,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-15",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "15",
+      "distinctRespondents": 10,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-81",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "81",
+      "distinctRespondents": 10,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-83",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "83",
+      "distinctRespondents": 10,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-83",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "83",
+      "distinctRespondents": 9,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-30",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "30",
+      "distinctRespondents": 9,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-56-02",
+      "fromCodePrefix": "56",
+      "toCodePrefix": "02",
+      "distinctRespondents": 9,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-70-02",
+      "fromCodePrefix": "70",
+      "toCodePrefix": "02",
+      "distinctRespondents": 9,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-81-61",
+      "fromCodePrefix": "81",
+      "toCodePrefix": "61",
+      "distinctRespondents": 9,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-56",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "56",
+      "distinctRespondents": 8,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-99",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "99",
+      "distinctRespondents": 8,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-70",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "70",
+      "distinctRespondents": 8,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-13-02",
+      "fromCodePrefix": "13",
+      "toCodePrefix": "02",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-56",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "56",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-30-02",
+      "fromCodePrefix": "30",
+      "toCodePrefix": "02",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-42-61",
+      "fromCodePrefix": "42",
+      "toCodePrefix": "61",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-42",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "42",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-52-83",
+      "fromCodePrefix": "52",
+      "toCodePrefix": "83",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-54-53",
+      "fromCodePrefix": "54",
+      "toCodePrefix": "53",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-15",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "15",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-51",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "51",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-89",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "89",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-83-81",
+      "fromCodePrefix": "83",
+      "toCodePrefix": "81",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-88-02",
+      "fromCodePrefix": "88",
+      "toCodePrefix": "02",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-99-61",
+      "fromCodePrefix": "99",
+      "toCodePrefix": "61",
+      "distinctRespondents": 7,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-03",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "03",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-13",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "13",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-30-21",
+      "fromCodePrefix": "30",
+      "toCodePrefix": "21",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-42-02",
+      "fromCodePrefix": "42",
+      "toCodePrefix": "02",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-42-21",
+      "fromCodePrefix": "42",
+      "toCodePrefix": "21",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-51-52",
+      "fromCodePrefix": "51",
+      "toCodePrefix": "52",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-51-61",
+      "fromCodePrefix": "51",
+      "toCodePrefix": "61",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-51",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "51",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-56-52",
+      "fromCodePrefix": "56",
+      "toCodePrefix": "52",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-13",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "13",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-54",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "54",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-87",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "87",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-83-89",
+      "fromCodePrefix": "83",
+      "toCodePrefix": "89",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-87-61",
+      "fromCodePrefix": "87",
+      "toCodePrefix": "61",
+      "distinctRespondents": 6,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-15",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "15",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-23",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "23",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-02-88",
+      "fromCodePrefix": "02",
+      "toCodePrefix": "88",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-15-02",
+      "fromCodePrefix": "15",
+      "toCodePrefix": "02",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-15-53",
+      "fromCodePrefix": "15",
+      "toCodePrefix": "53",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-21-30",
+      "fromCodePrefix": "21",
+      "toCodePrefix": "30",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-30-52",
+      "fromCodePrefix": "30",
+      "toCodePrefix": "52",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-53-13",
+      "fromCodePrefix": "53",
+      "toCodePrefix": "13",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-61-01",
+      "fromCodePrefix": "61",
+      "toCodePrefix": "01",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-62-21",
+      "fromCodePrefix": "62",
+      "toCodePrefix": "21",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-81-02",
+      "fromCodePrefix": "81",
+      "toCodePrefix": "02",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-85-53",
+      "fromCodePrefix": "85",
+      "toCodePrefix": "53",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-89-53",
+      "fromCodePrefix": "89",
+      "toCodePrefix": "53",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-99-02",
+      "fromCodePrefix": "99",
+      "toCodePrefix": "02",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    },
+    {
+      "id": "prefix-99-53",
+      "fromCodePrefix": "99",
+      "toCodePrefix": "53",
+      "distinctRespondents": 5,
+      "classification": "OCCUPATION_CODE_PREFIX_2_DIGITS",
+      "verifiedFirstJobChange": false
+    }
+  ]
+}

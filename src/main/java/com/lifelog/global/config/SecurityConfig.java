@@ -49,13 +49,21 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 회원가입 및 로그인은 인증 없이 접근 가능
-                        .requestMatchers(
-                                "/api/auth/signup",
-                                "/api/auth/login",
-                                "/health",
-                                "/api/v1/statistics/exploratory-first-job-change"
-                        ).permitAll()
+                                // 인증 없이 접근 가능한 API
+                                .requestMatchers(
+                                        "/api/auth/signup",
+                                        "/api/auth/login",
+                                        "/health",
+                                        "/api/v1/statistics/exploratory-first-job-change"
+                                ).permitAll()
+
+                                // 커리어 패스 조회 API는 인증 없이 접근 가능
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/career-paths",
+                                        "/api/v1/career-paths/*",
+                                        "/api/v1/career-paths/exploratory/*"
+                                ).permitAll()
 
                         // Swagger 허용 (개발용)
                         .requestMatchers(

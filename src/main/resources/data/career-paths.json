@@ -1,0 +1,35 @@
+{
+  "title": "관측된 직업코드 변화 후보 (첫 이직 통계 아님)",
+  "dataStatus": "EXPLORATORY_NOT_VERIFIED",
+  "notice": "탐색적 데이터 점검 결과입니다. 첫 취업·첫 이직 경로를 확정할 수 없어 paths는 비워 두었습니다. 통계 검증 전에는 공식 커리어 지도에 노출하지 마세요.",
+  "filters": {
+    "major": null,
+    "targetJob": null,
+    "observationYears": "3~8차 경험 일자리 관측"
+  },
+  "paths": [],
+  "detail": {
+    "averageYearsToFirstMove": null,
+    "firstMoveTimingDistribution": [],
+    "medianSalaryBeforeManWon": null,
+    "medianSalaryAfterManWon": null,
+    "medianSalaryChangePercent": null,
+    "salaryIncreaseDistribution": [],
+    "matchingRequirements": [],
+    "matchPercent": null,
+    "recommendedExperiences": [],
+    "source": "KEEPⅡ 3~8차 경험 일자리 추출 CSV",
+    "officialStatistics": false,
+    "notice": "관측된 직업코드 변화 후보이며 첫 이직, 기업 이동, 급여 변화는 확인되지 않았습니다."
+  },
+  "auditSummary": {
+    "source": "KEEPⅡ 3~8차 경험 일자리 추출자료",
+    "rawJobObservations": 14460,
+    "distinctRespondents": 5925,
+    "candidateObservationPairs": 425,
+    "distinctOccupationCodePairs": 398,
+    "publishedPathsAtMinCell5": 0,
+    "minimumCellSize": 5,
+    "interpretation": "탐색적 직업코드 변화 후보이며 실제 첫 이직 경로·확률이 아닙니다."
+  }
+}
