@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class CareerPathYearlyService {
@@ -25,6 +26,16 @@ public class CareerPathYearlyService {
             2016, 2017, 2019, 2020,
             2021, 2022, 2023, 2024
     };
+
+    // 서버 시작 시 한 번만 로딩하여 재사용하는 캐시
+    private List<String> cachedHistories;
+    private Map<String, String> cachedJobNames;
+
+    @PostConstruct
+    public void initializeCache() throws Exception {
+        cachedHistories = List.copyOf(loadYearlyCareerPaths());
+        cachedJobNames = Map.copyOf(loadJobNames());
+    }
 
     // CSV 파일을 헤더 기준으로 읽는 공통 메서드
     private CSVParser openCsv(String path) throws Exception {
@@ -45,7 +56,7 @@ public class CareerPathYearlyService {
     }
 
     // 1. 응답자별 연도별 직업코드 이력 추출
-    public List<String> getYearlyCareerPaths() throws Exception {
+    private List<String> loadYearlyCareerPaths() throws Exception {
 
         List<String> results = new ArrayList<>();
 
@@ -81,6 +92,10 @@ public class CareerPathYearlyService {
         }
 
         return results;
+    }
+
+    public List<String> getYearlyCareerPaths() {
+        return cachedHistories;
     }
 
     // 2. 2025년 기준 직업코드-직업명 매핑
@@ -123,8 +138,8 @@ public class CareerPathYearlyService {
             );
         }
 
-        List<String> histories = getYearlyCareerPaths();
-        Map<String, String> jobNames = loadJobNames();
+        List<String> histories = cachedHistories;
+        Map<String, String> jobNames = cachedJobNames;
 
         Map<String, Set<Integer>> edgeRespondents =
                 new LinkedHashMap<>();
