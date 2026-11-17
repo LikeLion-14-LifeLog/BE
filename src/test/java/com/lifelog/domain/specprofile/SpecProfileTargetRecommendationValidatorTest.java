@@ -8,6 +8,7 @@ import com.lifelog.domain.specprofile.enums.AcademicAbilityType;
 import com.lifelog.domain.specprofile.enums.ExperienceType;
 import com.lifelog.domain.specprofile.exception.SpecProfileTargetErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileTargetMapper;
+import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
 import com.lifelog.domain.specprofile.validation.SpecProfileTargetRecommendationValidator;
 import com.lifelog.global.exception.CustomException;
 import jakarta.validation.Validation;
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SpecProfileTargetRecommendationValidatorTest {
     private static final ValidatorFactory FACTORY = Validation.buildDefaultValidatorFactory();
-    private final SpecProfileTargetMapper mapper = new SpecProfileTargetMapper(JsonMapper.builder().findAndAddModules().build());
+    private final SpecProfileTargetMapper mapper = new SpecProfileTargetMapper(JsonMapper.builder().findAndAddModules().build(), new SpecProfileMapper());
     private final SpecProfileTargetRecommendationValidator validator = new SpecProfileTargetRecommendationValidator(FACTORY.getValidator(), mapper);
 
     @AfterAll

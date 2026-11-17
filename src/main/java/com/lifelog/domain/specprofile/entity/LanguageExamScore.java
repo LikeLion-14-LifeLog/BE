@@ -44,6 +44,14 @@ public class LanguageExamScore {
     @Column(name = "expires_at")
     private LocalDate expiresAt;
 
+    @Column(name = "target_additional", nullable = false)
+    private boolean targetAdditional;
+
+    /** CURRENT 복제 항목과 사용자가 추가한 목표 항목을 구분한다. */
+    public void markTargetAdditional(boolean targetAdditional) {
+        this.targetAdditional = targetAdditional;
+    }
+
     /** PK와 소유 프로필을 유지하고 시험 및 성적 입력값을 덮어쓴다. */
     public void update(LanguageExamScore source) {
         languageExam = source.languageExam;

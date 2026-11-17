@@ -10,6 +10,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationOutcome;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileTargetResDto> getSelectedTarget(Long memberId) {
+        return ApiResponse.success("요청 성공", service.getSelectedTarget(memberId));
+    }
 
     @Override
     public ApiResponse<SpecProfileTargetSaveResDto> saveTarget(Long memberId, SpecProfileTargetSaveReqDto request) {

@@ -7,7 +7,8 @@ import com.lifelog.domain.languageexam.repository.LanguageExamRepository;
 import com.lifelog.domain.major.entity.Major;
 import com.lifelog.domain.major.repository.MajorRepository;
 import com.lifelog.domain.specprofile.dto.*;
-import com.lifelog.domain.specprofile.entity.SpecProfile;
+import com.lifelog.domain.specprofile.entity.*;
+import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
 import com.lifelog.domain.specprofile.enums.SpecProfileType;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.exception.SpecProfileTargetErrorCode;
@@ -56,10 +57,12 @@ public class SpecProfileTargetSaveService {
      * @param memberId 인증 회원
      * @param capturedBase 분석 시점 CURRENT
      * @param changes 사용자 추가 목표
+     * @param companyGroupScale 목표 조건의 기업 규모. 미지정이면 null
      * @return 생성 또는 갱신한 1번 TARGET ID
      */
     @Transactional
-    public Long upsertUserTarget(Long memberId, SpecProfileAnalyzationSnapshot capturedBase, SpecProfileTargetChanges changes) {
+    public Long upsertUserTarget(Long memberId, SpecProfileAnalyzationSnapshot capturedBase, SpecProfileTargetChanges changes,
+            CompanyGroupScale companyGroupScale) {
         log.info("[SpecProfileTargetSaveService] 사용자 목표 저장 | upsertUserTarget() - START | memberId: {}", memberId);
         /* (1) CURRENT 잠금으로 동일 사용자의 목표 생성을 직렬화하고 분석 이후 변경을 검증한다. */
         List<SpecProfile> currentProfiles = profileRepository.findForUpdate(memberId, SpecProfileType.CURRENT);
@@ -95,10 +98,27 @@ public class SpecProfileTargetSaveService {
                 .map(CertificateSaveReqDto::certificateId).toList()).stream().collect(Collectors.toMap(Certification::getId, Function.identity()));
         Map<Long, LanguageExam> exams = examRepository.findAllById(scores.stream().map(LanguageExamScoreSaveReqDto::languageExamId).toList())
                 .stream().collect(Collectors.toMap(LanguageExam::getId, Function.identity()));
-        academicService.syncAcademicAbilities(target, academics, majors);
-        certificateService.syncCertificates(target, certificates, certificateReferences);
-        languageService.syncLanguageExamScores(target, scores, exams);
-        experienceService.syncExperiences(target, mapper.toExperienceRequests(capturedBase, changes));
+        List<AcademicAbility> savedAcademics = academicService.syncAcademicAbilities(target, academics, majors);
+        List<SpecProfileCertificate> savedCertificates = certificateService.syncCertificates(target, certificates, certificateReferences);
+        List<LanguageExamScore> savedScores = languageService.syncLanguageExamScores(target, scores, exams);
+        List<Experience> savedExperiences = experienceService.syncExperiences(target, mapper.toExperienceRequests(capturedBase, changes));
+        /* (4) 입력 순서에 대응하는 저장 엔티티에 추가 목표 구분을 기록한다. */
+        for (int index = 0; index < savedAcademics.size(); index++) {
+            savedAcademics.get(index).markTargetAdditional(index >= capturedBase.academicAbilities().size());
+        }
+        for (int index = 0; index < savedCertificates.size(); index++) {
+            savedCertificates.get(index).markTargetAdditional(index >= capturedBase.certificates().size());
+        }
+        for (int index = 0; index < savedScores.size(); index++) {
+            savedScores.get(index).markTargetAdditional(index >= capturedBase.languageExamScores().size());
+        }
+        for (int index = 0; index < savedExperiences.size(); index++) {
+            savedExperiences.get(index).markTargetAdditional(index >= capturedBase.experiences().size());
+        }
+        target.recordTargetConditions(companyGroupScale);
+        for (SpecProfile previous : targets) {
+            if (!previous.getId().equals(target.getId())) previous.deselectTarget();
+        }
         entityManager.flush();
         Long targetId = target.getId();
         profileRepository.updateModifiedAt(targetId, LocalDateTime.now());

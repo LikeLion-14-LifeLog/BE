@@ -9,6 +9,7 @@ import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
 import com.lifelog.domain.specprofile.repository.LanguageExamScoreRepository;
 import com.lifelog.global.exception.CustomException;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,9 +34,10 @@ public class LanguageExamScoreService {
      * @param profile 소유 프로필
      * @param requests 저장할 전체 어학 성적 목록
      * @param languageExamsById 조회 및 검증된 마스터 참조 Map
+     * @return 입력 순서에 대응하는 저장 어학 성적 목록
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void syncLanguageExamScores(SpecProfile profile, List<LanguageExamScoreSaveReqDto> requests, Map<Long, LanguageExam> languageExamsById) {
+    public List<LanguageExamScore> syncLanguageExamScores(SpecProfile profile, List<LanguageExamScoreSaveReqDto> requests, Map<Long, LanguageExam> languageExamsById) {
         log.info("[LanguageExamScoreService] syncLanguageExamScores() - START | profileId: {}", profile.getId());
         /* (1) 본인 프로필의 어학 성적을 조회하고 수정할 PK의 소유권을 확인한다. */
         List<LanguageExamScore> existingLanguageExamScores = scoreRepository.findAllBySpecProfileId(profile.getId());
@@ -58,6 +60,7 @@ public class LanguageExamScoreService {
         /* (3) 신규 항목은 생성하고 기존 항목은 PK와 소유 프로필을 유지한다.
          * 시험 참조, 숫자 점수, 등급, 취득월과 만료월을 덮어쓰며 null도 반영한다.
          */
+        List<LanguageExamScore> savedScores = new ArrayList<>();
         for (LanguageExamScoreSaveReqDto request : requests) {
             LanguageExam requestedLanguageExam = languageExamsById.get(request.languageExamId());
             if (requestedLanguageExam == null) {
@@ -65,12 +68,14 @@ public class LanguageExamScoreService {
             }
             LanguageExamScore mappedLanguageExamScore = mapper.toLanguageScore(request, profile, requestedLanguageExam);
             if (request.languageExamScoreId() == null) {
-                scoreRepository.save(mappedLanguageExamScore);
+                savedScores.add(scoreRepository.save(mappedLanguageExamScore));
             } else {
                 LanguageExamScore languageExamScore = existingLanguageExamScoreById.get(request.languageExamScoreId());
                 languageExamScore.update(mappedLanguageExamScore);
+                savedScores.add(languageExamScore);
             }
         }
         log.info("[LanguageExamScoreService] syncLanguageExamScores() - END | profileId: {}", profile.getId());
+        return List.copyOf(savedScores);
     }
 }

@@ -2,7 +2,7 @@ package com.lifelog.domain.specprofile.mapper;
 
 import com.lifelog.domain.specprofile.dto.*;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
-import com.lifelog.domain.specprofile.entity.SpecProfile;
+import com.lifelog.domain.specprofile.entity.*;
 import com.lifelog.domain.certification.entity.Certification;
 import com.lifelog.domain.languageexam.entity.LanguageExam;
 import com.lifelog.domain.major.entity.Major;
@@ -24,6 +24,29 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class SpecProfileTargetMapper {
     private final JsonMapper jsonMapper;
+    private final SpecProfileMapper specProfileMapper;
+
+    /** 선택된 TARGET의 추가 항목을 저장된 PK·참조 이름·연월과 함께 변환한다. */
+    public SpecProfileTargetResDto toSelectedTargetResDto(SpecProfile target, List<AcademicAbility> academics,
+            Map<Long, Major> majors, List<SpecProfileCertificate> certificates, List<LanguageExamScore> scores,
+            List<Experience> experiences) {
+        return SpecProfileTargetResDto.builder().targetSpecProfileId(target.getId())
+                .baseSpecProfileId(target.getBaseSpecProfile().getId()).companyGroupScale(target.getTargetCompanyGroupScale())
+                .changes(SpecProfileTargetResDto.Changes.builder()
+                        .academicAbilities(academics.stream().map(value -> specProfileMapper.toAcademicAbilityResDto(value, majors.get(value.getId()))).toList())
+                        .certificates(certificates.stream().map(specProfileMapper::toCertificateResDto).toList())
+                        .languageExamScores(scores.stream().map(specProfileMapper::toLanguageExamScoreResDto).toList())
+                        .experiences(experiences.stream().map(this::toTargetExperienceResDto).toList()).build()).build();
+    }
+
+    /** 미수상 경험은 수상 상세를 노출하지 않으며 저장된 날짜만 반환한다. */
+    private ExperienceResDto toTargetExperienceResDto(Experience experience) {
+        ExperienceResDto result = specProfileMapper.toExperienceResDto(experience);
+        if (result.awarded()) return result;
+        return ExperienceResDto.builder().experienceId(result.experienceId()).type(result.type()).title(result.title())
+                .startedYearMonth(result.startedYearMonth()).endedYearMonth(result.endedYearMonth())
+                .description(result.description()).awarded(false).organizerName(null).awardGrade(null).build();
+    }
 
     /** 본인 CURRENT에서 사용자 TARGET의 기본 정보를 복제한다. */
     public SpecProfile toUserTarget(SpecProfile base) {

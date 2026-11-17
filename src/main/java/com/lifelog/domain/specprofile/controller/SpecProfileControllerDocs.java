@@ -9,6 +9,8 @@ import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetResDto;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import org.springframework.web.bind.annotation.PatchMapping;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,10 +34,58 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "저장한 목표 스펙 조회", description = """
+            ### 1. API 역할
+            - 로그인 회원의 type=TARGET, targetSpecSelected=true인 목표의 추가 조건만 조회합니다.
+            - CURRENT 복제 항목은 제외하며 AI 분석·캐시 접근·DB 변경은 실행하지 않습니다.
+            - 선택된 목표가 없으면 HTTP 200과 data:null을 반환합니다. false·null은 미선택입니다.
+            - 기존 목표에 추가 항목 구분 정보가 없으면 TARGET_409_3으로 PUT 재저장을 안내합니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. Swagger Authorize에 로그인 토큰을 설정하세요.
+            ### 3. Path Variable
+            - 없음
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success:true, code:COMMON_200, message:요청 성공.
+            - data: targetSpecProfileId, baseSpecProfileId, companyGroupScale(SMALL·LARGE·null), changes.
+            - changes: academicAbilities, certificates, languageExamScores, experiences. 빈 목록은 항상 []입니다.
+            - 항목 PK는 TARGET 하위 항목 PK이며 전공·자격증·시험의 마스터 ID와 이름도 함께 반환합니다.
+            - 단일 미저장 값은 null, 날짜는 저장된 값만 yyyy-MM으로 반환합니다.
+            - awarded=false이면 organizerName과 awardGrade는 null입니다. 예측 결과는 반환하지 않습니다.
+            - 목표 재저장은 PUT /api/spec-profile/target을 사용합니다. 조회용 PK·이름을 제외하고 요청 필드를 제출하세요.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "선택한 목표 또는 미선택 상태", content = @Content(
+                schema = @Schema(implementation = SpecProfileTargetResDto.class), examples = {
+                    @ExampleObject(name = "선택된 목표", value = """
+                            {"success":true,"code":"COMMON_200","message":"요청 성공","data":{
+                              "targetSpecProfileId":11,"baseSpecProfileId":10,"companyGroupScale":"LARGE",
+                              "changes":{"academicAbilities":[],"certificates":[],"languageExamScores":[],"experiences":[{
+                                "experienceId":51,"type":"INTERNSHIP","title":"백엔드 개발 인턴","startedYearMonth":"2027-01",
+                                "endedYearMonth":null,"description":"API 개발 및 서비스 운영 경험","awarded":false,
+                                "organizerName":null,"awardGrade":null}]}}}
+                            """),
+                    @ExampleObject(name = "선택된 목표 없음", value = "{\"success\":true,\"code\":\"COMMON_200\",\"message\":\"요청 성공\",\"data\":null}")
+                })),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "SPEC_PROFILE_404_1: 기준 CURRENT 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "TARGET_409_2: 선택 상태 오류 / TARGET_409_3: 기존 목표 재저장 필요", content = @Content(
+                examples = @ExampleObject(value = "{\"success\":false,\"code\":\"TARGET_409_3\",\"message\":\"저장된 목표의 조회 정보가 없어요. 목표 스펙을 다시 저장해 주세요.\",\"data\":null}"))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "CURRENT 또는 전공 연결 무결성 오류")
+    })
+    @GetMapping(value = "/api/spec-profile/target", produces = "application/json")
+    ApiResponse<SpecProfileTargetResDto> getSelectedTarget(@Parameter(hidden = true) @AuthenticationPrincipal Long memberId);
+
     @Operation(summary = "목표 스펙 저장 & AI 추천 목표 스펙 생성", description = """
             ### 1. API 역할
             - 본인 CURRENT에 사용자 추가 조건을 적용하고 AI 대안 2개를 같은 기준으로 비교합니다.
             - DB에는 사용자 TARGET(type=TARGET, sort_order=1, 선택됨)과 해당 스펙만 저장·덮어씁니다.
+            - 목표 기업 규모와 추가 항목 구분도 함께 저장하여 GET /api/spec-profile/target으로 다시 조회할 수 있습니다.
             - 시뮬레이션 결과·준비 정보·AI 대안·분석 실행 이력은 저장하지 않고 동기로 반환합니다.
             - 동일 조건의 최근 메모리 캐시가 있으면 사용자 분석을 재사용하고, 없으면 재분석합니다.
             ### 2. Request Header

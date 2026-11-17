@@ -63,7 +63,7 @@ public class SpecProfileTargetService {
         List<SpecProfileTargetScenarioDto> alternatives = generateAlternatives(prepared.base(), simulation.base(), stored,
                 user, request.companyGroupScale(), references);
         /* (3) 모든 AI 처리 후 사용자 TARGET과 스펙만 짧은 독립 트랜잭션에서 저장한다. */
-        Long targetId = saveService.upsertUserTarget(memberId, prepared.base(), request.changes());
+        Long targetId = saveService.upsertUserTarget(memberId, prepared.base(), request.changes(), request.companyGroupScale());
         SpecProfileTargetSaveResDto response = mapper.toResponse(request, targetId, simulation.base(), user, alternatives);
         log.info("[SpecProfileTargetService] 목표 저장 및 대안 비교 | saveTarget() - END | targetId: {}", targetId);
         return response;

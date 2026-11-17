@@ -20,6 +20,8 @@ import com.lifelog.domain.specprofile.service.specprofilesimulation.SpecProfileS
 import com.lifelog.domain.specprofile.service.specprofiletarget.SpecProfileTargetService;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetResDto;
+import com.lifelog.domain.specprofile.service.specprofiletarget.SpecProfileTargetQueryService;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -42,11 +44,24 @@ public class SpecProfileService {
     private final SpecProfileSaveService specProfileSaveService;
     private final SpecProfileSimulationService specProfileSimulationService;
     private final SpecProfileTargetService specProfileTargetService;
+    private final SpecProfileTargetQueryService specProfileTargetQueryService;
     private final SpecProfileQueryService specProfileQueryService;
     private final SpecProfileAnalyzationService specProfileAnalyzationService;
     private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
     private final SpecProfileAnalyzationSseRegistry specProfileAnalyzationSseRegistry;
     private final SpecProfileAnalyzationRunStateService specProfileAnalyzationRunStateService;
+
+    /**
+     * 인증 회원이 선택한 목표의 저장된 추가 조건만 조회한다.
+     * @param memberId 인증 회원 ID
+     * @return 선택된 목표 또는 미선택 시 null
+     */
+    public SpecProfileTargetResDto getSelectedTarget(Long memberId) {
+        log.info("[SpecProfileService] 선택 목표 조회 | getSelectedTarget() - START | memberId: {}", memberId);
+        SpecProfileTargetResDto result = specProfileTargetQueryService.getSelectedTarget(memberId);
+        log.info("[SpecProfileService] 선택 목표 조회 | getSelectedTarget() - END | selected: {}", result != null);
+        return result;
+    }
 
     /**
      * 사용자 TARGET 저장 및 미저장 AI 대안 비교를 전담 서비스에 위임한다.

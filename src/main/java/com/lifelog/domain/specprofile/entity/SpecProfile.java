@@ -17,7 +17,8 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "spec_profile")
+@Table(name = "spec_profile", indexes = @Index(name = "idx_spec_profile_member_type_selected",
+        columnList = "member_id,type,target_spec_selected"))
 public class SpecProfile extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,6 +50,24 @@ public class SpecProfile extends BaseTimeEntity {
 
     @Column(name = "target_spec_selected")
     private Boolean targetSpecSelected;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_company_group_scale", length = 20)
+    private CompanyGroupScale targetCompanyGroupScale;
+
+    @Column(name = "target_conditions_recorded", nullable = false)
+    private boolean targetConditionsRecorded;
+
+    /** 추가 목표 구분이 모두 저장된 프로필의 조회 조건을 기록한다. */
+    public void recordTargetConditions(CompanyGroupScale companyGroupScale) {
+        this.targetCompanyGroupScale = companyGroupScale;
+        this.targetConditionsRecorded = true;
+    }
+
+    /** 다른 사용자 목표를 선택할 때 이전 선택을 해제한다. */
+    public void deselectTarget() {
+        this.targetSpecSelected = false;
+    }
 
     /** 기본 정보만 갱신하고 프로필 식별 정보는 유지한다. */
     public void updateTemporaryInfo(Integer birthYear, ResidentialArea residenceRegion) {
