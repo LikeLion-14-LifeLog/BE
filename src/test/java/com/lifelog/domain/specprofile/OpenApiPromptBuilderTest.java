@@ -8,6 +8,7 @@ import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSample;
 import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSampleStatistics;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
 import com.lifelog.domain.specprofile.dto.SpecProfileSalaryClassificationData;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
 import com.lifelog.domain.specprofile.enums.AcademicAbilityStatus;
 import com.lifelog.domain.specprofile.enums.AcademicAbilityType;
 import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
@@ -58,6 +59,14 @@ class OpenApiPromptBuilderTest {
             assertThat(simulation.responseSchema().path("required").toString()).contains("\"" + field + "\"");
             assertThat(analysis.responseSchema().path("properties").has(field)).isFalse();
         }
+        JsonNode displaySchema = simulation.responseSchema().path("properties");
+        assertThat(displaySchema.path("preparationPeriod").path("maxLength").asInt()).isEqualTo(30);
+        assertThat(displaySchema.path("estimatedCost").path("maxLength").asInt()).isEqualTo(40);
+        assertThat(displaySchema.path("decisionCriteria").path("maxLength").asInt()).isEqualTo(60);
+        assertThat(displaySchema.path("estimatedCost").path("pattern").asString())
+                .isEqualTo(SpecProfileSimulationAiResDto.SINGLE_LINE_PATTERN);
+        assertThat(displaySchema.path("decisionCriteria").path("pattern").asString())
+                .isEqualTo(SpecProfileSimulationAiResDto.POLITE_SENTENCE_PATTERN);
         assertThat(simulation.developerInstructions()).startsWith(analysis.developerInstructions())
                 .contains("companyGroupScale", "실제 KEEP 표본의 필터 조건이 아니다");
         assertThat(input.path("statistics")).isEqualTo(original.path("statistics"));
