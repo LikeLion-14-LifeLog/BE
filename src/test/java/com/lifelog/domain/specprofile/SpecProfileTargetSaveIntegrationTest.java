@@ -68,6 +68,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -245,6 +246,8 @@ class SpecProfileTargetSaveIntegrationTest {
         assertThat(target.getSortOrder()).isEqualTo((short) 1);
         assertThat(target.getType()).isEqualTo(SpecProfileType.TARGET);
         assertThat(target.getTargetSpecSelected()).isTrue();
+        assertThat(target.isTargetConditionsRecorded()).isTrue();
+        assertThat(target.getTargetCompanyGroupScale()).isEqualTo(CompanyGroupScale.LARGE);
         assertThat(target.getBaseSpecProfile().getId()).isEqualTo(profile.getId());
         assertThat(academics.findAllBySpecProfileId(targetId)).hasSize(2);
         assertThat(certificates.findAllBySpecProfileId(targetId)).hasSize(2);
@@ -254,6 +257,14 @@ class SpecProfileTargetSaveIntegrationTest {
             assertThat(value.getEndedAt()).isEqualTo(LocalDate.of(2027, 6, 1));
         });
         assertThat(queryService.getCurrentProfile(member.getId())).isEqualTo(currentBefore);
+        mvc.perform(get(URL).header("Authorization", "Bearer " + jwt.createAccessToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.companyGroupScale").value("LARGE"))
+                .andExpect(jsonPath("$.data.changes.academicAbilities.length()").value(1))
+                .andExpect(jsonPath("$.data.changes.certificates.length()").value(1))
+                .andExpect(jsonPath("$.data.changes.languageExamScores.length()").value(1))
+                .andExpect(jsonPath("$.data.changes.experiences.length()").value(1))
+                .andExpect(jsonPath("$.data.changes.experiences[0].endedYearMonth").value("2027-06"));
         assertThat(analysisState()).isEqualTo(analysisBefore);
         assertThat(simulationCalls.get()).isEqualTo(4);
         assertThat(cacheRegistry.find(member.getId())).isEmpty();
