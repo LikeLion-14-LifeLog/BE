@@ -51,14 +51,22 @@ class OpenApiPromptBuilderTest {
         // then
         assertThat(input.path("companyGroupScale").asString()).isEqualTo(scale.name());
         assertThat(simulation.schemaName()).isEqualTo("annual_salary_simulation_v1");
-        assertThat(simulation.responseSchema()).isEqualTo(analysis.responseSchema());
+        assertThat(simulation.responseSchema().path("properties").path("salaryResults"))
+                .isEqualTo(analysis.responseSchema().path("properties").path("salaryResults"));
+        for (String field : List.of("preparationPeriod", "estimatedCost", "decisionCriteria")) {
+            assertThat(simulation.responseSchema().path("properties").path(field).path("type").asString()).isEqualTo("string");
+            assertThat(simulation.responseSchema().path("required").toString()).contains("\"" + field + "\"");
+            assertThat(analysis.responseSchema().path("properties").has(field)).isFalse();
+        }
         assertThat(simulation.developerInstructions()).startsWith(analysis.developerInstructions())
                 .contains("companyGroupScale", "실제 KEEP 표본의 필터 조건이 아니다");
         assertThat(input.path("statistics")).isEqualTo(original.path("statistics"));
         assertThat(input.path("samples")).isEqualTo(original.path("samples"));
         assertThat(input.path("snapshot")).isEqualTo(original.path("snapshot"));
+        assertThat(input.path("baseSnapshot")).isEqualTo(original.path("snapshot"));
         assertThat(simulation.inputJson()).doesNotContain("panel-private-", "specProfileId", "certificateId");
         assertThat(original.has("companyGroupScale")).isFalse();
+        assertThat(original.has("baseSnapshot")).isFalse();
         assertThat(analysis.schemaName()).isEqualTo("annual_salary_analyzation_v1");
     }
 

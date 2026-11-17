@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ public class OpenApiPromptBuilder {
     private final String instructions;
     private final String simulationInstructions;
     private final JsonNode schema;
+    private final JsonNode simulationSchema;
 
     public OpenApiPromptBuilder(JsonMapper jsonMapper, @Value("${openai.max-input-chars:200000}") int maxInputChars) {
         this.jsonMapper = jsonMapper;
@@ -45,6 +47,13 @@ public class OpenApiPromptBuilder {
             this.instructions = new String(promptInput.readAllBytes(), StandardCharsets.UTF_8);
             this.simulationInstructions = new String(simulationInput.readAllBytes(), StandardCharsets.UTF_8);
             this.schema = jsonMapper.readTree(schemaInput.readAllBytes());
+            this.simulationSchema = schema.deepCopy();
+            ObjectNode properties = (ObjectNode) simulationSchema.path("properties");
+            ArrayNode required = (ArrayNode) simulationSchema.path("required");
+            for (String field : List.of("preparationPeriod", "estimatedCost", "decisionCriteria")) {
+                properties.putObject(field).put("type", "string");
+                required.add(field);
+            }
         } catch (IOException | JacksonException exception) {
             throw new CustomException(SpecProfileAnalyzationErrorCode.ANNUAL_SALARY_PROMPT_BUILD_FAILED);
         }
@@ -62,7 +71,7 @@ public class OpenApiPromptBuilder {
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
             KeepSalaryMatchedSampleStatistics statistics) {
         log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - START");
-        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, null, false);
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, null, false, null);
         log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - END");
         return result;
     }
@@ -74,31 +83,46 @@ public class OpenApiPromptBuilder {
      * @param samples 실제 비교 표본
      * @param statistics 서버가 계산한 관측 통계
      * @param companyGroupScale 기업 규모. null이면 규모를 지정하지 않음
-     * @return 기존 응답 스키마를 공유하는 시뮬레이션 전용 프롬프트
+     * @return 연봉 예측과 준비 정보를 반환하는 시뮬레이션 전용 프롬프트
      */
     public OpenApiPrompt buildAnnualSalarySimulationPrompt(SpecProfileAnalyzationSnapshot snapshot,
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
             KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale) {
         log.info("[OpenApiPromptBuilder] 시뮬레이션 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - START");
-        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true);
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, snapshot);
         log.info("[OpenApiPromptBuilder] 시뮬레이션 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - END");
+        return result;
+    }
+
+    /**
+     * 현재 스펙을 함께 전달하여 목표 조건의 추가 준비 기간·비용·활용도를 추정한다.
+     * @param snapshot 분석할 현재 또는 목표 스냅샷
+     * @param conditions 구간 계산을 마친 분류 조건
+     * @param samples 실제 비교 표본
+     * @param statistics 서버 계산 통계
+     * @param companyGroupScale 예측 기업 규모
+     * @param baseSnapshot 추가 목표를 구분할 기준 현재 스펙
+     * @return 기존 연봉 입력과 목표 준비 정보를 포함한 전용 프롬프트
+     */
+    public OpenApiPrompt buildAnnualSalarySimulationPrompt(SpecProfileAnalyzationSnapshot snapshot,
+            SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
+            KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale,
+            SpecProfileAnalyzationSnapshot baseSnapshot) {
+        log.info("[OpenApiPromptBuilder] 목표 준비 정보 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - START");
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, baseSnapshot);
+        log.info("[OpenApiPromptBuilder] 목표 준비 정보 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - END");
         return result;
     }
 
     /** 식별자 제거·표본 압축·입력 한도 검증을 두 프롬프트 생성 경로에서 공유한다. */
     private OpenApiPrompt buildPrompt(SpecProfileAnalyzationSnapshot snapshot,
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
-            KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale, boolean simulation) {
+            KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale, boolean simulation,
+            SpecProfileAnalyzationSnapshot baseSnapshot) {
         String developerInstructions = simulation ? instructions + "\n\n" + simulationInstructions : instructions;
         try {
             /* (1) DB 식별자를 제거하고 Enum 이름과 스냅샷의 상세 스펙을 보존한다. */
-            ObjectNode snapshotData = jsonMapper.valueToTree(snapshot);
-            snapshotData.remove("specProfileId");
-            snapshotData.remove("jobId");
-            removeIds(snapshotData, "academicAbilities", List.of("academicAbilityId", "majorId"));
-            removeIds(snapshotData, "certificates", List.of("specProfileCertificateId", "certificateId"));
-            removeIds(snapshotData, "languageExamScores", List.of("languageExamScoreId", "languageExamId"));
-            removeIds(snapshotData, "experiences", List.of("experienceId"));
+            ObjectNode snapshotData = toPromptSnapshot(snapshot);
             ObjectNode classificationData = jsonMapper.valueToTree(conditions);
             removeIds(classificationData, "languageExamScores", List.of("languageExamId"));
             /* (2) 사람 ID를 제외한 모든 값이 동일할 때만 빈도로 묶는다. 표본을 잘라내지 않는다. */
@@ -115,6 +139,7 @@ public class OpenApiPromptBuilder {
             if (simulation) {
                 if (companyGroupScale == null) input.putNull("companyGroupScale");
                 else input.put("companyGroupScale", companyGroupScale.name());
+                input.set("baseSnapshot", toPromptSnapshot(baseSnapshot == null ? snapshot : baseSnapshot));
             }
             String inputJson = jsonMapper.writeValueAsString(input);
             /* (3) 한도를 넘으면 일부 표본을 임의로 생략하지 않고 명시적으로 실패한다. */
@@ -124,10 +149,23 @@ public class OpenApiPromptBuilder {
             log.debug("[OpenApiPromptBuilder] 공통 입력 생성 | samples: {}, groups: {}, chars: {}",
                     samples.size(), groups.size(), inputJson.length());
             return new OpenApiPrompt(developerInstructions, inputJson,
-                    simulation ? "annual_salary_simulation_v1" : "annual_salary_analyzation_v1", schema.deepCopy());
+                    simulation ? "annual_salary_simulation_v1" : "annual_salary_analyzation_v1",
+                    (simulation ? simulationSchema : schema).deepCopy());
         } catch (JacksonException exception) {
             throw new CustomException(SpecProfileAnalyzationErrorCode.ANNUAL_SALARY_PROMPT_BUILD_FAILED);
         }
+    }
+
+    /** 현재·목표 스냅샷에서 DB 식별자를 제거하고 상세 스펙을 보존한다. */
+    private ObjectNode toPromptSnapshot(SpecProfileAnalyzationSnapshot snapshot) {
+        ObjectNode result = jsonMapper.valueToTree(snapshot);
+        result.remove("specProfileId");
+        result.remove("jobId");
+        removeIds(result, "academicAbilities", List.of("academicAbilityId", "majorId"));
+        removeIds(result, "certificates", List.of("specProfileCertificateId", "certificateId"));
+        removeIds(result, "languageExamScores", List.of("languageExamScoreId", "languageExamId"));
+        removeIds(result, "experiences", List.of("experienceId"));
+        return result;
     }
 
     /** 필수 필터와 유사도 평가를 구분해 AI가 점수 조건까지 모두 일치했다고 해석하지 않도록 한다. */

@@ -58,8 +58,12 @@ public interface SpecProfileControllerDocs {
             - success: true, code: COMMON_200, message: 연봉 시뮬레이션 성공.
             - 캐싱 실패 시에도 정상 결과를 반환하고 message에 다음 안내를 추가합니다.
               "응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다"
-            - data: baseSpecProfileId, companyGroupScale, base, simulated.
+            - data: baseSpecProfileId, companyGroupScale, base, simulated, preparationPeriod, estimatedCost, decisionCriteria.
             - base·simulated는 salaryResults만 포함하며 추가 조건이 없으면 simulated는 필드 생략 없이 null입니다.
+            - preparationPeriod: 추가 목표 조건을 달성하는 데 필요한 참고 준비 기간과 산정 가정입니다.
+            - estimatedCost: 추가 목표 조건 달성에 필요한 원 단위 참고 비용과 산정 가정입니다.
+            - decisionCriteria: 희망 직무에서 추가 목표 조건의 활용도와 선택 판단 기준입니다.
+            - 세 준비 정보는 현재 보유 스펙을 제외한 추가 목표 기준이며, 추가 조건이 없으면 모두 null입니다.
             - salaryResults: annual 0, 3, 5 순서와 원 단위 annualIncomeMin, annualIncomeExpected, annualIncomeMax.
             - topPercent는 기존 비교 표본 내 첫 취업 예상 연봉의 상위 비율이며 3·5년 차는 null입니다.
             - 어느 한쪽이라도 실패하면 전체 요청을 오류로 반환합니다. 타인·미존재 기준 스펙은 동일하게 404입니다.

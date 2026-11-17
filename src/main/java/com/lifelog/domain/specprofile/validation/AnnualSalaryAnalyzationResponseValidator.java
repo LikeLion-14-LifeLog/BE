@@ -2,6 +2,7 @@ package com.lifelog.domain.specprofile.validation;
 
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto;
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto.SalaryPrediction;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.global.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,19 @@ public class AnnualSalaryAnalyzationResponseValidator {
             throw new CustomException(SpecProfileAnalyzationErrorCode.INVALID_AI_RESPONSE);
         }
         log.info("[AnnualSalaryAnalyzationResponseValidator] 예측 검증 | validate() - END");
+    }
+
+    /**
+     * 시뮬레이션 목표의 준비 기간·예상 비용·판단 기준이 누락되지 않았는지 검증한다.
+     * @param response 시뮬레이션 AI 응답
+     */
+    public void validateSimulationDetails(SpecProfileSimulationAiResDto response) {
+        log.info("[AnnualSalaryAnalyzationResponseValidator] 목표 준비 정보 검증 | validateSimulationDetails() - START");
+        if (response == null || isBlank(response.preparationPeriod()) || isBlank(response.estimatedCost())
+                || isBlank(response.decisionCriteria())) {
+            throw new CustomException(SpecProfileAnalyzationErrorCode.INVALID_AI_RESPONSE);
+        }
+        log.info("[AnnualSalaryAnalyzationResponseValidator] 목표 준비 정보 검증 | validateSimulationDetails() - END");
     }
 
     /** 필수 설명이 누락됐는지 검사한다. */

@@ -8,10 +8,11 @@ public record SpecProfileSimulationContext(
         SpecProfileAnalyzationSnapshot simulated,
         CompanyGroupScale companyGroupScale,
         SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis,
-        SpecProfileAnnualSalaryAnalyzationResDto simulatedAnalysis
+        SpecProfileAnnualSalaryAnalyzationResDto simulatedAnalysis,
+        SpecProfileSimulationResDto response
 ) {
     public SpecProfileSimulationContext(SpecProfileAnalyzationSnapshot base,
                                         SpecProfileAnalyzationSnapshot simulated) {
-        this(base, simulated, null, null, null);
+        this(base, simulated, null, null, null, null);
     }
 }

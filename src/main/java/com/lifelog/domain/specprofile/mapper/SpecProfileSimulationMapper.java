@@ -4,12 +4,15 @@ import com.lifelog.domain.certification.entity.Certification;
 import com.lifelog.domain.languageexam.entity.LanguageExam;
 import com.lifelog.domain.major.entity.Major;
 import com.lifelog.domain.specprofile.dto.AcademicAbilityResDto;
+import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto;
 import com.lifelog.domain.specprofile.dto.CertificateResDto;
 import com.lifelog.domain.specprofile.dto.ExperienceResDto;
 import com.lifelog.domain.specprofile.dto.LanguageExamScoreResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAnalysis;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationContext;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
 import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
@@ -61,12 +64,36 @@ public class SpecProfileSimulationMapper {
                 .experiences(append(base.experiences(), experiences)).build();
     }
 
-    /** 현재·목표의 기존 분석 응답에서 연차별 예측만 추출한다. */
+    /** 현재·목표의 연차별 예측과 추가 목표의 준비 정보를 조합한다. */
     public SpecProfileSimulationResDto toResDto(Long profileId, CompanyGroupScale companyGroupScale,
-            SpecProfileAnnualSalaryAnalyzationResDto base, SpecProfileAnnualSalaryAnalyzationResDto simulated) {
+            SpecProfileSimulationAnalysis base, SpecProfileSimulationAnalysis simulated) {
         return SpecProfileSimulationResDto.create(profileId, companyGroupScale,
-                SpecProfileSimulationResDto.ScenarioResult.create(base.salaryResults()),
-                simulated == null ? null : SpecProfileSimulationResDto.ScenarioResult.create(simulated.salaryResults()));
+                SpecProfileSimulationResDto.ScenarioResult.create(base.analysis().salaryResults()),
+                simulated == null ? null : SpecProfileSimulationResDto.ScenarioResult.create(simulated.analysis().salaryResults()),
+                simulated == null ? null : simulated.preparationPeriod(),
+                simulated == null ? null : simulated.estimatedCost(),
+                simulated == null ? null : simulated.decisionCriteria());
+    }
+
+    /**
+     * 시뮬레이션 응답에서 기존 연봉 예측 계약을 추출한다.
+     * @param ai 시뮬레이션 AI 응답
+     * @return 기존 검증·연봉 매핑에 사용할 예측
+     */
+    public AnnualSalaryAnalyzationAiResDto toAnalyzationAiResDto(SpecProfileSimulationAiResDto ai) {
+        return AnnualSalaryAnalyzationAiResDto.builder().summary(ai.summary()).salaryResults(ai.salaryResults())
+                .comparisonGroupDescription(ai.comparisonGroupDescription()).recommendation(ai.recommendation()).build();
+    }
+
+    /**
+     * 서버 통계가 적용된 연봉 분석과 검증된 목표 준비 정보를 결합한다.
+     * @param analysis 기존 연봉 분석 응답
+     * @param ai 검증된 시뮬레이션 AI 응답
+     * @return 연봉 예측과 목표 준비 정보
+     */
+    public SpecProfileSimulationAnalysis toAnalysis(SpecProfileAnnualSalaryAnalyzationResDto analysis,
+            SpecProfileSimulationAiResDto ai) {
+        return new SpecProfileSimulationAnalysis(analysis, ai.preparationPeriod(), ai.estimatedCost(), ai.decisionCriteria());
     }
 
     /**
@@ -75,12 +102,14 @@ public class SpecProfileSimulationMapper {
      * @param companyGroupScale 예측 기업 규모
      * @param base 현재 분석 결과
      * @param simulated 목표 분석 결과
+     * @param response 목표 준비 정보를 포함한 클라이언트 응답
      * @return 재사용할 완료 시뮬레이션
      */
     public SpecProfileSimulationContext toCachedContext(SpecProfileSimulationContext context,
-            CompanyGroupScale companyGroupScale, SpecProfileAnnualSalaryAnalyzationResDto base,
-            SpecProfileAnnualSalaryAnalyzationResDto simulated) {
-        return new SpecProfileSimulationContext(context.base(), context.simulated(), companyGroupScale, base, simulated);
+            CompanyGroupScale companyGroupScale, SpecProfileSimulationAnalysis base,
+            SpecProfileSimulationAnalysis simulated, SpecProfileSimulationResDto response) {
+        return new SpecProfileSimulationContext(context.base(), context.simulated(), companyGroupScale,
+                base.analysis(), simulated == null ? null : simulated.analysis(), response);
     }
 
     /** 원본 목록을 수정하지 않고 현재·추가 항목 순서의 불변 목록을 반환한다. */

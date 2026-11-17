@@ -20,6 +20,7 @@ import com.lifelog.domain.member.entity.Member;
 import com.lifelog.domain.member.repository.MemberRepository;
 import com.lifelog.domain.residentialarea.enums.ResidentialArea;
 import com.lifelog.domain.specprofile.dto.AnnualSalaryAnalyzationAiResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
 import com.lifelog.domain.specprofile.entity.AcademicAbility;
 import com.lifelog.domain.specprofile.entity.AcademicAbilityMajor;
 import com.lifelog.domain.specprofile.entity.Experience;
@@ -154,7 +155,7 @@ class SpecProfileSimulationIntegrationTest {
             JsonNode input = jsonMapper.readTree(prompt.inputJson());
             inputs.add(input);
             return aiResponse(input.path("snapshot").path("certificates").size() > 1 ? 41000000L : 36000000L);
-        }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
+        }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(SpecProfileSimulationAiResDto.class));
     }
 
     @AfterEach
@@ -188,11 +189,15 @@ class SpecProfileSimulationIntegrationTest {
                 .andExpect(jsonPath("$.data.simulated.salaryResults[0].annualIncomeExpected").value(41000000))
                 .andExpect(jsonPath("$.data.base.salaryResults[0].topPercent").value(100.0))
                 .andExpect(jsonPath("$.data.simulated.salaryResults[0].topPercent").value(0.0))
+                .andExpect(jsonPath("$.data.preparationPeriod").value("약 6개월"))
+                .andExpect(jsonPath("$.data.estimatedCost").value("약 35만 원 (교육비·교재비 기준)"))
+                .andExpect(jsonPath("$.data.decisionCriteria").value("실무 수행 경험 중심 평가에 적합"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"topPercent\":null")))
                 .andExpect(jsonPath("$.data.base.summary").doesNotExist());
         assertThat(inputs).hasSize(2).allSatisfy(input -> assertThat(input.path("companyGroupScale").asString()).isEqualTo("LARGE"));
         JsonNode base = inputs.get(0).path("snapshot");
         JsonNode target = inputs.get(1).path("snapshot");
+        assertThat(inputs.get(1).path("baseSnapshot")).isEqualTo(base);
         for (String field : List.of("academicAbilities", "certificates", "languageExamScores", "experiences")) {
             assertThat(base.path(field).size()).isEqualTo(1);
             assertThat(target.path(field).size()).isEqualTo(2);
@@ -207,6 +212,11 @@ class SpecProfileSimulationIntegrationTest {
         assertThat(target.path("experiences").get(1).path("startedYearMonth").asString()).isEqualTo("2099-01");
         assertThat(databaseState()).isEqualTo(before);
         assertThat(cacheRegistry.find(member.getId()).orElseThrow().simulatedAnalysis().salaryResults().get(0).annualIncomeExpected()).isEqualTo(41000000L);
+        assertThat(cacheRegistry.find(member.getId()).orElseThrow().response()).satisfies(response -> {
+            assertThat(response.preparationPeriod()).isEqualTo("약 6개월");
+            assertThat(response.estimatedCost()).isEqualTo("약 35만 원 (교육비·교재비 기준)");
+            assertThat(response.decisionCriteria()).isEqualTo("실무 수행 경험 중심 평가에 적합");
+        });
     }
 
     @ParameterizedTest
@@ -220,7 +230,10 @@ class SpecProfileSimulationIntegrationTest {
         // when / then
         simulate(request).andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"simulated\":null")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"companyGroupScale\":null")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"companyGroupScale\":null")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"preparationPeriod\":null")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"estimatedCost\":null")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"decisionCriteria\":null")));
         assertThat(inputs).singleElement().satisfies(input -> assertThat(input.path("companyGroupScale").isNull()).isTrue());
         assertThat(databaseState()).isEqualTo(before);
     }
@@ -250,7 +263,7 @@ class SpecProfileSimulationIntegrationTest {
                 throw new CustomException(OpenApiErrorCode.OPEN_API_TIMEOUT);
             }
             return aiResponse(36000000L);
-        }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(AnnualSalaryAnalyzationAiResDto.class));
+        }).when(openApiUtil).request(any(OpenApiPrompt.class), eq(SpecProfileSimulationAiResDto.class));
         // when / then
         simulate(fullRequest()).andExpect(status().isGatewayTimeout()).andExpect(jsonPath("$.code").value("OPEN_API_TIMEOUT"));
         assertThat(databaseState()).isEqualTo(before);
@@ -270,6 +283,24 @@ class SpecProfileSimulationIntegrationTest {
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(fullRequest()))
                 .andExpect(status().isUnauthorized());
         assertThat(inputs).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"preparationPeriod", "estimatedCost", "decisionCriteria"})
+    @DisplayName("AI가 준비 기간·예상 비용·판단 기준을 누락하면 불완전한 결과를 반환하거나 캐싱하지 않는다")
+    void 준비정보누락_실패(String field) throws Exception {
+        // given
+        Map<String, List<Map<String, Object>>> before = databaseState();
+        ObjectNode response = jsonMapper.valueToTree(aiResponse(36000000L));
+        response.remove(field);
+        SpecProfileSimulationAiResDto invalid = jsonMapper.treeToValue(response, SpecProfileSimulationAiResDto.class);
+        doAnswer(invocation -> invalid).when(openApiUtil)
+                .request(any(OpenApiPrompt.class), eq(SpecProfileSimulationAiResDto.class));
+        // when / then
+        simulate(fullRequest()).andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("INVALID_AI_RESPONSE"));
+        assertThat(cacheRegistry.find(member.getId())).isEmpty();
+        assertThat(databaseState()).isEqualTo(before);
     }
 
     @Test
@@ -358,7 +389,10 @@ class SpecProfileSimulationIntegrationTest {
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString(
                         "응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다")))
-                .andExpect(jsonPath("$.data.simulated.salaryResults[0].annualIncomeExpected").value(41000000));
+                .andExpect(jsonPath("$.data.simulated.salaryResults[0].annualIncomeExpected").value(41000000))
+                .andExpect(jsonPath("$.data.preparationPeriod").value("약 6개월"))
+                .andExpect(jsonPath("$.data.estimatedCost").value("약 35만 원 (교육비·교재비 기준)"))
+                .andExpect(jsonPath("$.data.decisionCriteria").value("실무 수행 경험 중심 평가에 적합"));
         assertThat(cacheRegistry.find(member.getId())).isEmpty();
     }
 
@@ -393,11 +427,11 @@ class SpecProfileSimulationIntegrationTest {
         return result;
     }
 
-    private AnnualSalaryAnalyzationAiResDto aiResponse(long firstSalary) {
-        return new AnnualSalaryAnalyzationAiResDto("시뮬레이션 요약", List.of(
+    private SpecProfileSimulationAiResDto aiResponse(long firstSalary) {
+        return new SpecProfileSimulationAiResDto("시뮬레이션 요약", List.of(
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(5, firstSalary + 18000000, firstSalary + 20000000, firstSalary + 22000000),
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(0, firstSalary - 2000000, firstSalary, firstSalary + 2000000),
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(3, firstSalary + 8000000, firstSalary + 10000000, firstSalary + 12000000)),
-                "기존 KEEP 비교 표본", "경험 보완");
+                "기존 KEEP 비교 표본", "경험 보완", "약 6개월", "약 35만 원 (교육비·교재비 기준)", "실무 수행 경험 중심 평가에 적합");
     }
 }
