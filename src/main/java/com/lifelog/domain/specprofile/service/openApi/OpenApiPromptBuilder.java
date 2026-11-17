@@ -6,6 +6,7 @@ import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSampleStatistics;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
 import com.lifelog.domain.specprofile.dto.SpecProfileSalaryClassificationData;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
+import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
 import com.lifelog.global.exception.CustomException;
 import com.lifelog.global.infra.openai.OpenApiErrorCode;
 import com.lifelog.global.infra.openai.OpenApiPrompt;
@@ -32,14 +33,17 @@ public class OpenApiPromptBuilder {
     private final JsonMapper jsonMapper;
     private final int maxInputChars;
     private final String instructions;
+    private final String simulationInstructions;
     private final JsonNode schema;
 
     public OpenApiPromptBuilder(JsonMapper jsonMapper, @Value("${openai.max-input-chars:200000}") int maxInputChars) {
         this.jsonMapper = jsonMapper;
         this.maxInputChars = maxInputChars;
         try (InputStream promptInput = new ClassPathResource("prompts/annual-salary-analyzation.v1.txt").getInputStream();
+             InputStream simulationInput = new ClassPathResource("prompts/annual-salary-simulation.v1.txt").getInputStream();
              InputStream schemaInput = new ClassPathResource("prompts/annual-salary-analyzation.schema.json").getInputStream()) {
             this.instructions = new String(promptInput.readAllBytes(), StandardCharsets.UTF_8);
+            this.simulationInstructions = new String(simulationInput.readAllBytes(), StandardCharsets.UTF_8);
             this.schema = jsonMapper.readTree(schemaInput.readAllBytes());
         } catch (IOException | JacksonException exception) {
             throw new CustomException(SpecProfileAnalyzationErrorCode.ANNUAL_SALARY_PROMPT_BUILD_FAILED);
@@ -58,6 +62,34 @@ public class OpenApiPromptBuilder {
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
             KeepSalaryMatchedSampleStatistics statistics) {
         log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - START");
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, null, false);
+        log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - END");
+        return result;
+    }
+
+    /**
+     * 기존 분석 입력에 기업 규모 조건과 일회성 목표 예측 지침을 더한다.
+     * @param snapshot 현재 또는 목표 스냅샷
+     * @param conditions 구간 계산을 마친 분류 조건
+     * @param samples 실제 비교 표본
+     * @param statistics 서버가 계산한 관측 통계
+     * @param companyGroupScale 기업 규모. null이면 규모를 지정하지 않음
+     * @return 기존 응답 스키마를 공유하는 시뮬레이션 전용 프롬프트
+     */
+    public OpenApiPrompt buildAnnualSalarySimulationPrompt(SpecProfileAnalyzationSnapshot snapshot,
+            SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
+            KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale) {
+        log.info("[OpenApiPromptBuilder] 시뮬레이션 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - START");
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true);
+        log.info("[OpenApiPromptBuilder] 시뮬레이션 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - END");
+        return result;
+    }
+
+    /** 식별자 제거·표본 압축·입력 한도 검증을 두 프롬프트 생성 경로에서 공유한다. */
+    private OpenApiPrompt buildPrompt(SpecProfileAnalyzationSnapshot snapshot,
+            SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
+            KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale, boolean simulation) {
+        String developerInstructions = simulation ? instructions + "\n\n" + simulationInstructions : instructions;
         try {
             /* (1) DB 식별자를 제거하고 Enum 이름과 스냅샷의 상세 스펙을 보존한다. */
             ObjectNode snapshotData = jsonMapper.valueToTree(snapshot);
@@ -78,15 +110,21 @@ public class OpenApiPromptBuilder {
             }
             List<SampleGroup> groups = frequencies.entrySet().stream()
                     .map(entry -> new SampleGroup(entry.getKey(), entry.getValue())).toList();
-            String inputJson = jsonMapper.writeValueAsString(new PromptInput(snapshotData, classificationData,
+            ObjectNode input = jsonMapper.valueToTree(new PromptInput(snapshotData, classificationData,
                     matchingPolicy(), statistics, groups, List.of(0, 3, 5)));
+            if (simulation) {
+                if (companyGroupScale == null) input.putNull("companyGroupScale");
+                else input.put("companyGroupScale", companyGroupScale.name());
+            }
+            String inputJson = jsonMapper.writeValueAsString(input);
             /* (3) 한도를 넘으면 일부 표본을 임의로 생략하지 않고 명시적으로 실패한다. */
-            if (inputJson.length() + instructions.length() > maxInputChars) {
+            if (inputJson.length() + developerInstructions.length() > maxInputChars) {
                 throw new CustomException(OpenApiErrorCode.OPEN_API_INPUT_TOO_LARGE);
             }
-            log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - END | samples: {}, groups: {}, chars: {}",
+            log.debug("[OpenApiPromptBuilder] 공통 입력 생성 | samples: {}, groups: {}, chars: {}",
                     samples.size(), groups.size(), inputJson.length());
-            return new OpenApiPrompt(instructions, inputJson, "annual_salary_analyzation_v1", schema.deepCopy());
+            return new OpenApiPrompt(developerInstructions, inputJson,
+                    simulation ? "annual_salary_simulation_v1" : "annual_salary_analyzation_v1", schema.deepCopy());
         } catch (JacksonException exception) {
             throw new CustomException(SpecProfileAnalyzationErrorCode.ANNUAL_SALARY_PROMPT_BUILD_FAILED);
         }
