@@ -10,6 +10,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
 import com.lifelog.domain.specprofile.dto.SpecProfileSalaryClassificationData;
 import com.lifelog.domain.specprofile.enums.AcademicAbilityStatus;
 import com.lifelog.domain.specprofile.enums.AcademicAbilityType;
+import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
 import com.lifelog.domain.specprofile.service.keep.KeepSalaryMatchedSampleStatisticsService;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiPromptBuilder;
 import com.lifelog.global.exception.CustomException;
@@ -17,6 +18,8 @@ import com.lifelog.global.infra.openai.OpenApiErrorCode;
 import com.lifelog.global.infra.openai.OpenApiPrompt;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,6 +35,48 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class OpenApiPromptBuilderTest {
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private final SpecProfileSalaryClassificationData conditions = new SpecProfileSalaryClassificationData("133", "개발직", List.of(), List.of(), 1);
+
+    @ParameterizedTest
+    @EnumSource(CompanyGroupScale.class)
+    @DisplayName("시뮬레이션은 기업 규모와 전용 지침을 전달하고 기존 통계·표본·응답 계약을 보존한다")
+    void 기업규모_전용프롬프트빌드_성공(CompanyGroupScale scale) {
+        // given
+        List<KeepSalaryMatchedSample> samples = samples(false);
+        OpenApiPromptBuilder builder = new OpenApiPromptBuilder(jsonMapper, 200000);
+        OpenApiPrompt analysis = builder.buildAnnualSalaryAnalyzationPrompt(snapshot(), conditions, samples, statistics(samples));
+        // when
+        OpenApiPrompt simulation = builder.buildAnnualSalarySimulationPrompt(snapshot(), conditions, samples, statistics(samples), scale);
+        JsonNode input = jsonMapper.readTree(simulation.inputJson());
+        JsonNode original = jsonMapper.readTree(analysis.inputJson());
+        // then
+        assertThat(input.path("companyGroupScale").asString()).isEqualTo(scale.name());
+        assertThat(simulation.schemaName()).isEqualTo("annual_salary_simulation_v1");
+        assertThat(simulation.responseSchema()).isEqualTo(analysis.responseSchema());
+        assertThat(simulation.developerInstructions()).startsWith(analysis.developerInstructions())
+                .contains("companyGroupScale", "실제 KEEP 표본의 필터 조건이 아니다");
+        assertThat(input.path("statistics")).isEqualTo(original.path("statistics"));
+        assertThat(input.path("samples")).isEqualTo(original.path("samples"));
+        assertThat(input.path("snapshot")).isEqualTo(original.path("snapshot"));
+        assertThat(simulation.inputJson()).doesNotContain("panel-private-", "specProfileId", "certificateId");
+        assertThat(original.has("companyGroupScale")).isFalse();
+        assertThat(analysis.schemaName()).isEqualTo("annual_salary_analyzation_v1");
+    }
+
+    @Test
+    @DisplayName("추가된 시뮬레이션 지침까지 입력 크기 제한에 포함한다")
+    void 시뮬레이션지침포함_입력크기초과_실패() {
+        // given
+        List<KeepSalaryMatchedSample> samples = samples(false);
+        OpenApiPrompt analysis = new OpenApiPromptBuilder(jsonMapper, 200000)
+                .buildAnnualSalaryAnalyzationPrompt(snapshot(), conditions, samples, statistics(samples));
+        OpenApiPromptBuilder builder = new OpenApiPromptBuilder(jsonMapper,
+                analysis.inputJson().length() + analysis.developerInstructions().length());
+        // when / then
+        builder.buildAnnualSalaryAnalyzationPrompt(snapshot(), conditions, samples, statistics(samples));
+        assertThatThrownBy(() -> builder.buildAnnualSalarySimulationPrompt(snapshot(), conditions, samples, statistics(samples), null))
+                .isInstanceOfSatisfying(CustomException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(OpenApiErrorCode.OPEN_API_INPUT_TOO_LARGE));
+    }
 
     @Test
     @DisplayName("분류 조건에 없는 자격증 이름은 스냅샷에서 읽고 Enum 이름과 스펙 상세를 보존한다")
