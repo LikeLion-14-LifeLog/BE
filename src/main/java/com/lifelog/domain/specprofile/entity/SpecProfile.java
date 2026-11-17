@@ -47,6 +47,9 @@ public class SpecProfile extends BaseTimeEntity {
     @JoinColumn(name = "base_spec_profile_id")
     private SpecProfile baseSpecProfile;
 
+    @Column(name = "target_spec_selected")
+    private Boolean targetSpecSelected;
+
     /** 기본 정보만 갱신하고 프로필 식별 정보는 유지한다. */
     public void updateTemporaryInfo(Integer birthYear, ResidentialArea residenceRegion) {
         this.birthYear = birthYear.shortValue();
