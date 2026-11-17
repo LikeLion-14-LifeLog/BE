@@ -3,6 +3,8 @@ package com.lifelog.domain.specprofile.service;
 import com.lifelog.domain.member.entity.Member;
 import com.lifelog.domain.member.repository.MemberRepository;
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationOutcome;
 import com.lifelog.domain.specprofile.entity.SpecProfile;
 import com.lifelog.domain.specprofile.enums.SpecProfileType;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
@@ -14,6 +16,7 @@ import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfile
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationSseRegistry;
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationRunStateService;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
+import com.lifelog.domain.specprofile.service.specprofilesimulation.SpecProfileSimulationService;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -34,11 +37,25 @@ public class SpecProfileService {
     private final SpecProfileMapper mapper;
     private final SpecProfileCreationPolicy creationPolicy;
     private final SpecProfileSaveService specProfileSaveService;
+    private final SpecProfileSimulationService specProfileSimulationService;
     private final SpecProfileQueryService specProfileQueryService;
     private final SpecProfileAnalyzationService specProfileAnalyzationService;
     private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
     private final SpecProfileAnalyzationSseRegistry specProfileAnalyzationSseRegistry;
     private final SpecProfileAnalyzationRunStateService specProfileAnalyzationRunStateService;
+
+    /**
+     * 일회성 추가 조건의 연봉 계산을 시뮬레이션 서비스에 위임한다.
+     * @param memberId 인증 회원 ID
+     * @param request 목표 추가 조건
+     * @return 현재·목표의 연차별 연봉 예측
+     */
+    public SpecProfileSimulationOutcome simulateAnnualSalary(Long memberId, SpecProfileSimulationReqDto request) {
+        log.info("[SpecProfileService] 연봉 시뮬레이션 | simulateAnnualSalary() - START | memberId: {}", memberId);
+        SpecProfileSimulationOutcome result = specProfileSimulationService.simulate(memberId, request);
+        log.info("[SpecProfileService] 연봉 시뮬레이션 | simulateAnnualSalary() - END | profileId: {}", result.response().baseSpecProfileId());
+        return result;
+    }
 
     /**
      * 본인 실행의 중단을 커밋한 뒤 SSE 구독자에게 확정된 취소 상태를 전달한다.

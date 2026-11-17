@@ -5,6 +5,8 @@ import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
 import org.springframework.web.bind.annotation.PatchMapping;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,6 +30,56 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "연봉 시뮬레이션 결과 요청", description = """
+            ### 1. API 역할
+            - 본인 CURRENT 스펙과 목표 조건을 추가한 가상 스펙의 첫 취업·3년 차·5년 차 연봉을 계산합니다.
+            - 현재 항목은 유지하며 요청의 학력·자격증·어학·경험 목록을 각각 추가합니다.
+            - 프로필, 분석 실행 이력, 이벤트, 결과는 DB에 저장하지 않습니다. 완료 결과를 동기로 반환합니다.
+            - 전체 분석 성공 후 회원별 최신 스냅샷·기업 규모·현재/목표 분석을 메모리 캐시에 교체합니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. Content-Type: application/json.
+            ### 3. Path Variable
+            - 없음
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - baseSpecProfileId: 본인 CURRENT 프로필 PK. 필수 양의 정수(int64).
+            - companyGroupScale: SMALL 또는 LARGE. 선택값이며 생략·null이면 기업 규모를 지정하지 않습니다.
+            - changes: 추가할 academicAbilities, certificates, languageExamScores, experiences 배열.
+            - changes 또는 목록의 생략·null·빈 배열은 추가 조건 없음이며, 요청 간 조건을 누적하지 않습니다.
+            - 기존 항목 PK를 받지 않습니다. 전공·자격증·어학 시험 PK는 등록된 마스터 데이터를 참조합니다.
+            - 현재 스펙과 중복되는 자격증·시험 또는 요청 내 중복 자격증·시험은 거절합니다.
+            - graduatedYearMonth, acquiredYearMonth, expiresYearMonth, endedYearMonth는 무시하며 검증·예측에 사용하지 않습니다.
+            - 경험의 startedYearMonth는 yyyy-MM이며 미래 월을 허용합니다. 수상 시 기관명·수상 등급은 필수입니다.
+            - 기업 규모는 AI 예측 조건이며 기존 KEEP 표본의 필터 조건에 추가하지 않습니다.
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: 연봉 시뮬레이션 성공.
+            - 캐싱 실패 시에도 정상 결과를 반환하고 message에 다음 안내를 추가합니다.
+              "응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다"
+            - data: baseSpecProfileId, companyGroupScale, base, simulated.
+            - base·simulated는 salaryResults만 포함하며 추가 조건이 없으면 simulated는 필드 생략 없이 null입니다.
+            - salaryResults: annual 0, 3, 5 순서와 원 단위 annualIncomeMin, annualIncomeExpected, annualIncomeMax.
+            - topPercent는 기존 비교 표본 내 첫 취업 예상 연봉의 상위 비율이며 3·5년 차는 null입니다.
+            - 어느 한쪽이라도 실패하면 전체 요청을 오류로 반환합니다. 타인·미존재 기준 스펙은 동일하게 404입니다.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "시뮬레이션 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값·분류 조건 오류 또는 비교 표본 부족"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 현재 스펙 또는 참조 정보 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "AI 요청량 제한"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "분석 입력 준비 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "AI 요청·응답 오류"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "AI 사용 한도 초과 또는 요청 중단"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "504", description = "AI 응답 시간 초과")
+    })
+    @PostMapping(value = "/api/spec-profile/target", consumes = "application/json", produces = "application/json")
+    ApiResponse<SpecProfileSimulationResDto> simulateAnnualSalary(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Valid @RequestBody SpecProfileSimulationReqDto request);
+
     @Operation(summary = "회원 스펙 연봉 분석 요청 중단", description = """
             ### 1. API 역할
             - JWT 회원 본인의 QUEUED 또는 IN_PROGRESS 실행을 CANCELED로 변경합니다.

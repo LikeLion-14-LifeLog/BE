@@ -5,6 +5,9 @@ import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationOutcome;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,15 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileSimulationResDto> simulateAnnualSalary(Long memberId, SpecProfileSimulationReqDto request) {
+        SpecProfileSimulationOutcome result = service.simulateAnnualSalary(memberId, request);
+        String message = result.cached()
+                ? "연봉 시뮬레이션 성공"
+                : "연봉 시뮬레이션 성공. 응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다";
+        return ApiResponse.success(message, result.response());
+    }
 
     @Override
     public ApiResponse<SpecProfileAnalyzationRunStopResDto> stopAnalyzationRun(Long memberId, Long runId) {
