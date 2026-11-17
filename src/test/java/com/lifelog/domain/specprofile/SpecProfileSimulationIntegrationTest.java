@@ -190,8 +190,8 @@ class SpecProfileSimulationIntegrationTest {
                 .andExpect(jsonPath("$.data.base.salaryResults[0].topPercent").value(100.0))
                 .andExpect(jsonPath("$.data.simulated.salaryResults[0].topPercent").value(0.0))
                 .andExpect(jsonPath("$.data.preparationPeriod").value("약 6개월"))
-                .andExpect(jsonPath("$.data.estimatedCost").value("약 35만 원 (교육비·교재비 기준)"))
-                .andExpect(jsonPath("$.data.decisionCriteria").value("실무 수행 경험 중심 평가에 적합"))
+                .andExpect(jsonPath("$.data.estimatedCost").value("약 35만 원"))
+                .andExpect(jsonPath("$.data.decisionCriteria").value("실무 경험을 중시하는 채용에 적합해요."))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"topPercent\":null")))
                 .andExpect(jsonPath("$.data.base.summary").doesNotExist());
         assertThat(inputs).hasSize(2).allSatisfy(input -> assertThat(input.path("companyGroupScale").asString()).isEqualTo("LARGE"));
@@ -214,8 +214,8 @@ class SpecProfileSimulationIntegrationTest {
         assertThat(cacheRegistry.find(member.getId()).orElseThrow().simulatedAnalysis().salaryResults().get(0).annualIncomeExpected()).isEqualTo(41000000L);
         assertThat(cacheRegistry.find(member.getId()).orElseThrow().response()).satisfies(response -> {
             assertThat(response.preparationPeriod()).isEqualTo("약 6개월");
-            assertThat(response.estimatedCost()).isEqualTo("약 35만 원 (교육비·교재비 기준)");
-            assertThat(response.decisionCriteria()).isEqualTo("실무 수행 경험 중심 평가에 적합");
+            assertThat(response.estimatedCost()).isEqualTo("약 35만 원");
+            assertThat(response.decisionCriteria()).isEqualTo("실무 경험을 중시하는 채용에 적합해요.");
         });
     }
 
@@ -391,8 +391,8 @@ class SpecProfileSimulationIntegrationTest {
                         "응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다")))
                 .andExpect(jsonPath("$.data.simulated.salaryResults[0].annualIncomeExpected").value(41000000))
                 .andExpect(jsonPath("$.data.preparationPeriod").value("약 6개월"))
-                .andExpect(jsonPath("$.data.estimatedCost").value("약 35만 원 (교육비·교재비 기준)"))
-                .andExpect(jsonPath("$.data.decisionCriteria").value("실무 수행 경험 중심 평가에 적합"));
+                .andExpect(jsonPath("$.data.estimatedCost").value("약 35만 원"))
+                .andExpect(jsonPath("$.data.decisionCriteria").value("실무 경험을 중시하는 채용에 적합해요."));
         assertThat(cacheRegistry.find(member.getId())).isEmpty();
     }
 
@@ -432,6 +432,6 @@ class SpecProfileSimulationIntegrationTest {
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(5, firstSalary + 18000000, firstSalary + 20000000, firstSalary + 22000000),
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(0, firstSalary - 2000000, firstSalary, firstSalary + 2000000),
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(3, firstSalary + 8000000, firstSalary + 10000000, firstSalary + 12000000)),
-                "기존 KEEP 비교 표본", "경험 보완", "약 6개월", "약 35만 원 (교육비·교재비 기준)", "실무 수행 경험 중심 평가에 적합");
+                "기존 KEEP 비교 표본", "경험을 보완해 보세요.", "약 6개월", "약 35만 원", "실무 경험을 중시하는 채용에 적합해요.");
     }
 }

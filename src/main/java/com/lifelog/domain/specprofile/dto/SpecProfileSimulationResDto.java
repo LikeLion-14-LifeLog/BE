@@ -14,11 +14,11 @@ public record SpecProfileSimulationResDto(
         CompanyGroupScale companyGroupScale,
         ScenarioResult base,
         ScenarioResult simulated,
-        @Schema(description = "추가 목표 조건 달성에 필요한 참고 준비 기간. 추가 조건이 없으면 null", example = "약 2~3개월", nullable = true)
+        @Schema(description = "추가 목표 달성에 필요한 기간만 한 줄로 표시. 추가 조건이 없으면 null", example = "약 2~3개월", maxLength = SpecProfileSimulationAiResDto.PREPARATION_PERIOD_MAX_LENGTH, nullable = true)
         String preparationPeriod,
-        @Schema(description = "추가 목표 조건 달성에 필요한 참고 비용과 산정 가정. 추가 조건이 없으면 null", example = "약 35만 원 (응시료·교재비 기준)", nullable = true)
+        @Schema(description = "추가 목표의 원화 비용·범위 또는 비용 상태만 표시. 산정 가정·제외 항목 미포함. 추가 조건이 없으면 null", example = "약 0~15만 원", maxLength = SpecProfileSimulationAiResDto.ESTIMATED_COST_MAX_LENGTH, nullable = true)
         String estimatedCost,
-        @Schema(description = "희망 직무에서 목표 조건의 활용도와 선택 판단 기준. 추가 조건이 없으면 null", example = "기본 직무 요건 보완에 적합", nullable = true)
+        @Schema(description = "목표의 직무 활용도만 해요체 한 문장으로 표시. AI 판단 과정 미포함. 추가 조건이 없으면 null", example = "기본 직무 요건을 보완하는 데 적합해요.", maxLength = SpecProfileSimulationAiResDto.DECISION_CRITERIA_MAX_LENGTH, nullable = true)
         String decisionCriteria
 ) {
     /** 현재·목표 분석을 시뮬레이션 응답으로 조합한다. */

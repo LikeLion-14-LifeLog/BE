@@ -14,4 +14,10 @@ public record SpecProfileSimulationAiResDto(
         String preparationPeriod,
         String estimatedCost,
         String decisionCriteria
-) {}
+) {
+    public static final int PREPARATION_PERIOD_MAX_LENGTH = 30;
+    public static final int ESTIMATED_COST_MAX_LENGTH = 40;
+    public static final int DECISION_CRITERIA_MAX_LENGTH = 60;
+    public static final String SINGLE_LINE_PATTERN = "^[^\\r\\n]+$";
+    public static final String POLITE_SENTENCE_PATTERN = "^[^\\r\\n]*요[.!?]?$";
+}
