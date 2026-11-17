@@ -26,9 +26,9 @@ public record AcademicAbilitySaveReqDto(
     BigDecimal universityStandardGrade,
     @Schema(description = "졸업 또는 졸업예정 연월", type = "string", pattern = "^\\d{4}-(0[1-9]|1[0-2])$", example = "2025-02")
     @NotNull YearMonth graduatedYearMonth,
-    @Schema(description = "전공계열. 참조 전공의 계열과 일치해야 함", example = "SOCIAL_SCIENCES")
+    @Schema(description = "전공계열. 참조 전공의 계열과 일치해야 함", example = "ENGINEERING")
     @NotNull MajorMainField majorAffiliation,
-    @Schema(description = "등록된 전공 PK", example = "10")
+    @Schema(description = "등록된 전공 PK", example = "17398")
     @NotNull @Positive Long majorId
 ) {
 }

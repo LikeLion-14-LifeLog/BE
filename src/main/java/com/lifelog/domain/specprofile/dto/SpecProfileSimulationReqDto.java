@@ -33,7 +33,7 @@ import java.util.List;
                 "universityGrade": 4.1,
                 "universityStandardGrade": 4.3,
                 "majorAffiliation": "ENGINEERING",
-                "majorId": 17399
+                "majorId": 32592
               }
             ],
             "certificates": [
