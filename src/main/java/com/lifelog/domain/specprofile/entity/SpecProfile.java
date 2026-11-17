@@ -56,5 +56,15 @@ public class SpecProfile extends BaseTimeEntity {
         this.residenceRegion = residenceRegion;
     }
 
+    /** 사용자 입력 목표를 1번 TARGET 슬롯에 적용한다. */
+    public void applyUserTarget(SpecProfile base) {
+        this.type = SpecProfileType.TARGET;
+        this.baseSpecProfile = base;
+        this.sortOrder = 1;
+        this.targetSpecSelected = true;
+        this.birthYear = base.birthYear;
+        this.residenceRegion = base.residenceRegion;
+    }
+
 }
 

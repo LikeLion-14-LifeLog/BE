@@ -61,7 +61,22 @@ public class SpecProfileSimulationPreparationService {
             log.info("[SpecProfileSimulationPreparationService] 현재 입력 준비 | prepare() - END | profileId: {}", base.specProfileId());
             return new SpecProfileSimulationContext(base, null);
         }
-        /* (2) 목표 조건의 참조 데이터만 일괄 조회하고 검증한다. */
+        /* (2) 목표 조건을 동일 CURRENT 스냅샷에 추가한다. */
+        SpecProfileAnalyzationSnapshot simulated = prepareChanges(base, changes);
+        log.info("[SpecProfileSimulationPreparationService] 입력 준비 | prepare() - END | profileId: {}", base.specProfileId());
+        return new SpecProfileSimulationContext(base, simulated);
+    }
+
+    /**
+     * 이미 확보한 CURRENT를 다시 읽지 않고 동일 스냅샷에 대안 조건을 추가한다.
+     * @param base 요청 시점 CURRENT
+     * @param changes 추가할 목표 조건
+     * @return 검증된 가상 목표 스냅샷
+     */
+    @Transactional(readOnly = true)
+    public SpecProfileAnalyzationSnapshot prepareChanges(SpecProfileAnalyzationSnapshot base, SpecProfileSimulationReqDto.Changes changes) {
+        log.info("[SpecProfileSimulationPreparationService] 대안 준비 | prepareChanges() - START | profileId: {}", base.specProfileId());
+        /* (1) 목표 조건의 참조 데이터만 일괄 조회하고 검증한다. */
         Map<Long, Major> majors = majorRepository.findAllById(changes.academicAbilities().stream()
                 .map(SpecProfileSimulationReqDto.AcademicAbilityChange::majorId).toList()).stream()
                 .collect(Collectors.toMap(Major::getId, Function.identity()));
@@ -71,10 +86,10 @@ public class SpecProfileSimulationPreparationService {
         Map<Long, LanguageExam> exams = languageExamRepository.findAllById(changes.languageExamScores().stream()
                 .map(SpecProfileSimulationReqDto.LanguageExamScoreChange::languageExamId).toList()).stream()
                 .collect(Collectors.toMap(LanguageExam::getId, Function.identity()));
-        simulationValidator.validate(profile, changes, majors, certificates, exams);
-        /* (3) 엔티티 수정 없이 현재 스펙에 목표 항목을 추가한 새 스냅샷을 만든다. */
+        simulationValidator.validate(base, changes, majors, certificates, exams);
+        /* (2) 엔티티 수정 없이 현재 스펙에 목표 항목을 추가한 새 스냅샷을 만든다. */
         SpecProfileAnalyzationSnapshot simulated = simulationMapper.toSimulatedSnapshot(base, changes, majors, certificates, exams);
-        log.info("[SpecProfileSimulationPreparationService] 입력 준비 | prepare() - END | profileId: {}", base.specProfileId());
-        return new SpecProfileSimulationContext(base, simulated);
+        log.info("[SpecProfileSimulationPreparationService] 대안 준비 | prepareChanges() - END | profileId: {}", base.specProfileId());
+        return simulated;
     }
 }

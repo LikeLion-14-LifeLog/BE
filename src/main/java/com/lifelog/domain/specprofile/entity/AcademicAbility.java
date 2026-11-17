@@ -40,7 +40,7 @@ public class AcademicAbility extends BaseTimeEntity {
     @Column(name = "location", length = 20)
     private ResidentialArea location;
 
-    @Column(name = "university_grade", precision = 3, scale = 2)
+    @Column(name = "university_grade", precision = 5, scale = 2)
     private BigDecimal universityGrade;
 
     @Column(name = "university_standard_grade", precision = 5, scale = 1)

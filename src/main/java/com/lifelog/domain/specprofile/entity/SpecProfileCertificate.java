@@ -32,7 +32,7 @@ public class SpecProfileCertificate {
     @JoinColumn(name = "certificate_id", nullable = false)
     private Certification certificate;
 
-    @Column(name = "acquired_at", nullable = false)
+    @Column(name = "acquired_at")
     private LocalDate acquiredAt;
 
     /** PK와 소유 프로필을 유지하고 자격증 및 취득월을 덮어쓴다. */

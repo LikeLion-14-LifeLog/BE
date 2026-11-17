@@ -7,6 +7,8 @@ import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveResDto;
 import org.springframework.web.bind.annotation.PatchMapping;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,6 +32,63 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "목표 스펙 저장 & AI 추천 목표 스펙 생성", description = """
+            ### 1. API 역할
+            - 본인 CURRENT에 사용자 추가 조건을 적용하고 AI 대안 2개를 같은 기준으로 비교합니다.
+            - DB에는 사용자 TARGET(type=TARGET, sort_order=1, 선택됨)과 해당 스펙만 저장·덮어씁니다.
+            - 시뮬레이션 결과·준비 정보·AI 대안·분석 실행 이력은 저장하지 않고 동기로 반환합니다.
+            - 동일 조건의 최근 메모리 캐시가 있으면 사용자 분석을 재사용하고, 없으면 재분석합니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. Content-Type: application/json.
+            - Swagger에서는 Authorize에 로그인 토큰을 설정한 뒤 GET /api/spec-profile로 본인의 data.specProfileId를 확인하세요.
+            ### 3. Path Variable
+            - 없음
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - baseSpecProfileId: 본인 CURRENT PK. 필수 양의 정수(int64).
+            - Swagger 기본 예시는 인턴 경험 추가입니다. baseSpecProfileId의 10만 본인 CURRENT ID로 바꾸면 별도 마스터 ID 없이 요청할 수 있습니다.
+            - CURRENT의 출생연도·거주지·희망 직무·학력 등 분석 필수 스펙이 먼저 입력되어 있어야 합니다.
+            - companyGroupScale: SMALL, LARGE 또는 null. 세 선택지에 동일하게 적용합니다.
+            - changes: academicAbilities, certificates, languageExamScores, experiences 배열. 생략·null은 빈 목록입니다.
+            - 추가 항목의 전공·자격증·시험은 실제 마스터 ID를 사용하며 현재 자격증·시험과 중복할 수 없습니다.
+            - 날짜는 yyyy-MM이며 미래 월을 허용합니다. 졸업·취득·만료·종료월은 미정이면 null입니다.
+            - 종료월은 시작월 이전일 수 없고, 만료월은 취득월 이전일 수 없습니다.
+            - 졸업·취득·만료·종료월은 목표 스펙에 보존하지만 기존 시뮬레이션과 동일하게 분석에서는 제외합니다.
+            - 수상 시 organizerName과 awardGrade가 필수이고 미수상 시 두 값은 null입니다.
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: 목표 스펙이 저장되고 AI 추천 대안이 생성되었습니다.
+            - data: baseSpecProfileId, companyGroupScale, currency(KRW), baseExpectedStartingSalary,
+              selectedTargetSpecProfileId, options, salaryNotice, preparationNotice.
+            - options는 slotNumber 1, 2, 3 순서입니다. 1은 USER_INPUT/selected=true, 2·3은 AI_RECOMMENDATION/selected=false입니다.
+            - targetSpecProfileId: 사용자 슬롯만 실제 저장 ID이며 AI 대안은 필드 생략 없이 null입니다.
+            - title, changes: 준비안 이름과 다시 제출할 수 있는 추가 스펙. 대안 선택 시 changes를 이 PUT에 제출합니다.
+            - expectedStartingSalary: 각 선택지를 기존 시뮬레이터로 분석한 첫 취업 예상 연봉(원).
+            - salaryIncreaseAmount: 각 예상 초봉에서 공통 CURRENT 예상 초봉을 뺀 값. 음수일 수 있습니다.
+            - preparationPeriod, estimatedCost, decisionCriteria: 각 목표의 준비 기간·원화 비용·직무 활용도를 한 줄로 반환합니다.
+              문장형 설명은 해요체이며 AI의 판단 과정·산정 가정·포함/제외 항목은 표시하지 않습니다.
+            - AI 대안은 재분석 후 기간·비용·활용도·연봉을 종합 평가하며 연봉 상승만을 필수 조건으로 삼지 않습니다.
+            - 생성·검증·분석에 실패하면 TARGET을 변경하지 않습니다. 분석 중 CURRENT 변경 시 409로 재요청을 안내합니다.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "사용자 목표 저장 및 비교 결과 생성", content = @Content(schema = @Schema(implementation = SpecProfileTargetSaveResDto.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력 조건·날짜·점수 오류 또는 사용자 목표 비교 표본 부족"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 CURRENT 또는 참조 정보 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "분석 중 CURRENT 변경 또는 목표 슬롯 충돌"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "AI 요청량 제한"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "프롬프트 준비 또는 목표 저장 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "유효한 대안 생성·종합 평가 또는 AI 응답 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "AI 서비스 이용 불가"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "504", description = "AI 응답 시간 초과")
+    })
+    @PutMapping(value = "/api/spec-profile/target", consumes = "application/json", produces = "application/json")
+    ApiResponse<SpecProfileTargetSaveResDto> saveTarget(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
+            @Valid @RequestBody SpecProfileTargetSaveReqDto request);
+
     @Operation(summary = "연봉 시뮬레이션 결과 요청", description = """
             ### 1. API 역할
             - 본인 CURRENT 스펙과 목표 조건을 추가한 가상 스펙의 첫 취업·3년 차·5년 차 연봉을 계산합니다.
@@ -60,9 +119,10 @@ public interface SpecProfileControllerDocs {
               "응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다"
             - data: baseSpecProfileId, companyGroupScale, base, simulated, preparationPeriod, estimatedCost, decisionCriteria.
             - base·simulated는 salaryResults만 포함하며 추가 조건이 없으면 simulated는 필드 생략 없이 null입니다.
-            - preparationPeriod: 추가 목표 조건을 달성하는 데 필요한 참고 준비 기간과 산정 가정입니다.
-            - estimatedCost: 추가 목표 조건 달성에 필요한 원 단위 참고 비용과 산정 가정입니다.
-            - decisionCriteria: 희망 직무에서 추가 목표 조건의 활용도와 선택 판단 기준입니다.
+            - preparationPeriod: 추가 목표 조건을 달성하는 데 필요한 준비 기간만 한 줄로 반환합니다.
+            - estimatedCost: 추가 목표 조건의 원화 비용·범위 또는 비용 상태만 간단히 반환합니다.
+            - decisionCriteria: 희망 직무에서 목표 조건의 활용도만 해요체 한 문장으로 반환합니다.
+            - 준비 정보에는 AI의 판단 과정·산정 가정·포함/제외 항목을 표시하지 않습니다.
             - 세 준비 정보는 현재 보유 스펙을 제외한 추가 목표 기준이며, 추가 조건이 없으면 모두 null입니다.
             - salaryResults: annual 0, 3, 5 순서와 원 단위 annualIncomeMin, annualIncomeExpected, annualIncomeMax.
             - topPercent는 기존 비교 표본 내 첫 취업 예상 연봉의 상위 비율이며 3·5년 차는 null입니다.

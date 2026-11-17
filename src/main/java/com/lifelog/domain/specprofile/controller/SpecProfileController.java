@@ -8,6 +8,8 @@ import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationOutcome;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveResDto;
 import com.lifelog.domain.specprofile.service.SpecProfileService;
 import com.lifelog.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileTargetSaveResDto> saveTarget(Long memberId, SpecProfileTargetSaveReqDto request) {
+        return ApiResponse.success("목표 스펙이 저장되고 AI 추천 대안이 생성되었습니다.", service.saveTarget(memberId, request));
+    }
 
     @Override
     public ApiResponse<SpecProfileSimulationResDto> simulateAnnualSalary(Long memberId, SpecProfileSimulationReqDto request) {

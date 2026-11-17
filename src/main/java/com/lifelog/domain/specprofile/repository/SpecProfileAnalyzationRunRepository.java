@@ -84,4 +84,13 @@ public interface SpecProfileAnalyzationRunRepository extends JpaRepository<SpecP
      * @return 최신 실행 또는 빈 값
      */
     Optional<SpecProfileAnalyzationRun> findFirstBySpecProfileIdOrderByCreatedAtDescIdDesc(Long specProfileId);
+
+    /**
+     * 가장 최근에 완료한 CURRENT 분석을 조회한다. 추천 처리에서는 기존 결과를 읽기만 한다.
+     * @param specProfileId 본인 CURRENT ID
+     * @param status 완료 상태
+     * @return 최신 완료 실행
+     */
+    Optional<SpecProfileAnalyzationRun> findFirstBySpecProfileIdAndStatusOrderByCreatedAtDescIdDesc(
+            Long specProfileId, SpecProfileAnalyzationStatus status);
 }

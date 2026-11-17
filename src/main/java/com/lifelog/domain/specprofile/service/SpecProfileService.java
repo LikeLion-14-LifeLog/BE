@@ -17,6 +17,9 @@ import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfile
 import com.lifelog.domain.specprofile.service.specprofileanalyzation.SpecProfileAnalyzationRunStateService;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.service.specprofilesimulation.SpecProfileSimulationService;
+import com.lifelog.domain.specprofile.service.specprofiletarget.SpecProfileTargetService;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveReqDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileTargetSaveResDto;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.lifelog.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -38,11 +41,25 @@ public class SpecProfileService {
     private final SpecProfileCreationPolicy creationPolicy;
     private final SpecProfileSaveService specProfileSaveService;
     private final SpecProfileSimulationService specProfileSimulationService;
+    private final SpecProfileTargetService specProfileTargetService;
     private final SpecProfileQueryService specProfileQueryService;
     private final SpecProfileAnalyzationService specProfileAnalyzationService;
     private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
     private final SpecProfileAnalyzationSseRegistry specProfileAnalyzationSseRegistry;
     private final SpecProfileAnalyzationRunStateService specProfileAnalyzationRunStateService;
+
+    /**
+     * 사용자 TARGET 저장 및 미저장 AI 대안 비교를 전담 서비스에 위임한다.
+     * @param memberId 인증 회원
+     * @param request 사용자 목표
+     * @return 화면의 선택지 세 개
+     */
+    public SpecProfileTargetSaveResDto saveTarget(Long memberId, SpecProfileTargetSaveReqDto request) {
+        log.info("[SpecProfileService] 목표 저장 및 AI 비교 | saveTarget() - START | memberId: {}", memberId);
+        SpecProfileTargetSaveResDto result = specProfileTargetService.saveTarget(memberId, request);
+        log.info("[SpecProfileService] 목표 저장 및 AI 비교 | saveTarget() - END | targetId: {}", result.selectedTargetSpecProfileId());
+        return result;
+    }
 
     /**
      * 일회성 추가 조건의 연봉 계산을 시뮬레이션 서비스에 위임한다.

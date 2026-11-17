@@ -38,7 +38,7 @@ public class LanguageExamScore {
     @Column(name = "score_grade", length = 20)
     private String scoreGrade;
 
-    @Column(name = "acquired_at", nullable = false)
+    @Column(name = "acquired_at")
     private LocalDate acquiredAt;
 
     @Column(name = "expires_at")

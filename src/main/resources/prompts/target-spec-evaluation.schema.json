@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evaluations"],
+  "properties": {
+    "evaluations": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["slotNumber", "betterOverall", "reason"],
+        "properties": {
+          "slotNumber": {"type": "integer", "enum": [2, 3]},
+          "betterOverall": {"type": "boolean"},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ import com.lifelog.domain.languageexam.entity.LanguageExam;
 import com.lifelog.domain.languageexam.service.LanguageExamScoreValidator;
 import com.lifelog.domain.major.entity.Major;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.service.SpecProfileSalaryScoreBandService;
@@ -36,7 +37,23 @@ public class SpecProfileSimulationInputValidator {
         base.certificates().forEach(value -> certificateIds.add(value.certificateId()));
         Set<Long> examIds = new HashSet<>();
         base.languageExamScores().forEach(value -> examIds.add(value.languageExamId()));
+        validateChanges(changes, majors, certificates, exams, certificateIds, examIds);
+    }
 
+    /** 동일한 요청 시점 CURRENT 스냅샷을 사용해 AI 대안의 추가 조건을 검증한다. */
+    public void validate(SpecProfileAnalyzationSnapshot base, SpecProfileSimulationReqDto.Changes changes,
+                         Map<Long, Major> majors, Map<Long, Certification> certificates, Map<Long, LanguageExam> exams) {
+        Set<Long> certificateIds = new HashSet<>();
+        base.certificates().forEach(value -> certificateIds.add(value.certificateId()));
+        Set<Long> examIds = new HashSet<>();
+        base.languageExamScores().forEach(value -> examIds.add(value.languageExamId()));
+        validateChanges(changes, majors, certificates, exams, certificateIds, examIds);
+    }
+
+    /** 현재 프로필과 독립 스냅샷에 동일한 참조·점수·중복 규칙을 적용한다. */
+    private void validateChanges(SpecProfileSimulationReqDto.Changes changes,
+            Map<Long, Major> majors, Map<Long, Certification> certificates, Map<Long, LanguageExam> exams,
+            Set<Long> certificateIds, Set<Long> examIds) {
         for (SpecProfileSimulationReqDto.AcademicAbilityChange academic : changes.academicAbilities()) {
             Major major = majors.get(academic.majorId());
             requireReference(major != null);
