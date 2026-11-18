@@ -18,7 +18,8 @@ public class CorsConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://localhost:5173",
-                "http://localhost:5174"
+                "http://localhost:5174",
+                "https://lifelog-git-develop-atelier-hs-projects.vercel.app"
         ));
 
         config.setAllowedMethods(List.of(
