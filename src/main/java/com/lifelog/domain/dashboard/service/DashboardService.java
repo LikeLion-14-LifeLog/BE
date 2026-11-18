@@ -51,7 +51,7 @@ public class DashboardService {
             analysis = mapper.toAnalysisResDto(run, runResult);
         }
         /* (2) 기존 맞춤 조건·마감 정렬·전체 건수를 그대로 적용한다. */
-        JobPostingListResponse postings = jobPostingService.search(memberId, null, null, JobPostingSort.DEADLINE, 1, 3).content();
+        JobPostingListResponse postings = jobPostingService.search(memberId, null, JobPostingSort.DEADLINE, 1, 3).content();
         /* (3) 선택된 공고만 요건까지 한 번에 읽고 Entity 접근이 끝난 DTO로 반환한다. */
         List<Long> ids = postings.jobPostings().stream().map(card -> card.jobPostingId()).toList();
         Map<Long, JobPosting> supplements = ids.isEmpty() ? Map.of()

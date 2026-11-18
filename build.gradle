@@ -41,6 +41,9 @@ dependencies {
 	// Logging
 	implementation 'org.jboss.logging:jboss-logging'
 
+	// CSV 파일 파싱
+	implementation 'org.apache.commons:commons-csv:1.14.1'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

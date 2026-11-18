@@ -8,6 +8,8 @@ import java.util.List;
 public record JobPostingListResponse(
         @Schema(description = "맞춤 조건(희망 직무, 학력) 적용 여부. 희망 직무가 없으면 false이고 전체 공고를 보여줌", example = "true")
         boolean personalized,
+        @Schema(description = "맞춤 공고 기준 희망 직무 (화면에는 name만 표시). 희망 직무가 없으면 null", nullable = true)
+        JobPostingDesiredJobResponse desiredJob,
         @Schema(description = "탭별 건수")
         JobPostingTabCounts tabCounts,
         @Schema(description = "현재 페이지의 공고 카드")

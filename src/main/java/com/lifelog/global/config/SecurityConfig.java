@@ -53,14 +53,28 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 회원가입 및 로그인은 인증 없이 접근 가능
-                        .requestMatchers(
-                                "/api/auth/signup",
-                                "/api/auth/login",
-                                "/health"
-                        ).permitAll()
+                                // 인증 없이 접근 가능한 API
+                                .requestMatchers(
+                                        "/api/auth/signup",
+                                        "/api/auth/login",
+                                        "/health",
+                                        "/api/v1/statistics/exploratory-first-job-change"
+                                ).permitAll()
 
-                        // Swagger 허용 (개발용)
+
+                                // 커리어 패스 조회 API는 인증 없이 접근 가능
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/career-paths",
+                                        "/api/v1/career-paths/*",
+                                        "/api/v1/career-paths/exploratory/*",
+                                        "/api/v1/career-paths/yearly",
+                                        "/api/v1/career-paths/yearly/graph",
+                                        "/api/v1/career-paths/yearly/routes",
+                                        "/api/v1/career-paths/yearly/routes/*/*"
+                                ).permitAll()
+
+                                // Swagger 허용 (개발용)
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -76,6 +90,11 @@ public class SecurityConfig {
                                 "/api/admin/job-postings/sync",
                                 "/api/admin/job-postings/sync/status"
                         ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/career-paths/exploratory/graph"
+                        ).permitAll()
 
                         // 나머지 API는 인증 필요
                         .anyRequest().authenticated()

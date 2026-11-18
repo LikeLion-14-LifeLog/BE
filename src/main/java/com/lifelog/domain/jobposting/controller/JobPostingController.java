@@ -46,19 +46,18 @@ public class JobPostingController {
     @Operation(
             summary = "맞춤 공고 목록 조회",
             description = "모집 중이고 마감일이 지나지 않은 공고(상시 채용 포함) 중 내 희망 직무와 소분류가 같고 "
-                    + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망 직무가 없으면 전체 공고를 보여주고 personalized=false입니다. "
-                    + "jobCategory(직무 소분류, GET /api/job-postings/job-categories의 code)·region은 맞춤 조건 위에 추가로 적용합니다. "
-                    + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(jobCategory·region 제외), bookmarked는 내가 저장한 공고 수입니다."
+                    + "최소 학력이 내 학력 이하인 공고를 조회합니다. 희망 직무가 없으면 전체 공고를 보여주고 personalized=false, desiredJob=null입니다. "
+                    + "desiredJob은 기준이 된 희망 직무의 code·name입니다. "
+                    + "직무는 사용자가 고를 수 없고 항상 희망 직무 기준입니다. region은 맞춤 조건 위에 추가로 적용합니다. "
+                    + "tabCounts.recommended는 맞춤 조건까지 적용한 공고 수(region 제외), bookmarked는 내가 저장한 공고 수입니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "page·size 범위 오류 또는 jobCategory·region·sort 형식 오류")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "page·size 범위 오류 또는 region·sort 형식 오류")
     })
     @GetMapping("/job-postings")
     public ApiResponse<SliceResponse<JobPostingListResponse>> getJobPostings(
             @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
-            @Parameter(description = "직무 소분류 코드 3자리 (한국고용직업분류 2025, 없으면 전체)", example = "133")
-            @RequestParam(required = false) String jobCategory,
             @Parameter(description = "지역 (없으면 전체)", example = "SEOUL")
             @RequestParam(required = false) JobPostingRegion region,
             @Parameter(description = "정렬 (DEADLINE: 마감 임박순, POPULAR: 저장 많은 순)", example = "DEADLINE")
@@ -68,12 +67,14 @@ public class JobPostingController {
             @Parameter(description = "페이지 크기 (1~100)", example = "6")
             @RequestParam(defaultValue = "6") int size
     ) {
-        return ApiResponse.success(jobPostingService.search(memberId, jobCategory, region, sort, page, size));
+        return ApiResponse.success(jobPostingService.search(memberId, region, sort, page, size));
     }
 
     @Operation(
-            summary = "공고 직무 필터용 소분류 검색",
-            description = "공고 목록의 직무 필터(jobCategory)로 쓸 직무 소분류(한국고용직업분류 2025, 140개)를 검색합니다. "
+            summary = "공고 직무 필터용 소분류 검색 (사용 안함)",
+            deprecated = true,
+            description = "(사용 안함) 공고 목록 직무 필터(jobCategory)가 제거되어 현재 사용하지 않습니다. "
+                    + "공고 목록의 직무 필터(jobCategory)로 쓸 직무 소분류(한국고용직업분류 2025, 140개)를 검색합니다. "
                     + "검색형 선택 UI용이며, 검색어가 소분류명 또는 그 아래 세분류 직무명에 포함되면 해당 소분류를 반환합니다(대소문자 무시). "
                     + "검색어가 없으면 전체를 반환하며 code 오름차순입니다."
     )

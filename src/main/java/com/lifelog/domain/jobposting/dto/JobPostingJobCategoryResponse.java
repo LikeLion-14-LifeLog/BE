@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(description = "공고 직무 필터용 소분류 (검색형 선택 UI)")
+@Schema(description = "(사용 안함) 공고 직무 필터용 소분류 (검색형 선택 UI)")
 public record JobPostingJobCategoryResponse(
         @Schema(description = "소분류 코드 (공고 목록 jobCategory 값)", example = "133")
         String code,
