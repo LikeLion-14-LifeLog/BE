@@ -19,7 +19,8 @@ public class CorsConfig {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "https://lifelog-git-develop-atelier-hs-projects.vercel.app"
+                "https://lifelog-git-develop-atelier-hs-projects.vercel.app",
+                "https://lifelog-fe.nahjjun.com"
         ));
 
         config.setAllowedMethods(List.of(
