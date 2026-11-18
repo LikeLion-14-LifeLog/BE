@@ -45,7 +45,7 @@ class SpecProfilePostgresIntegrationTest extends SpecProfileSaveIntegrationTest 
         jdbc.execute("ALTER TABLE spec_profile ADD CONSTRAINT reject_new_profile CHECK (birth_year IS NOT NULL) NOT VALID");
         try {
             // when / then
-            assertThatThrownBy(() -> authService.signup(new SignupRequest("rollback@example.com", "password123")))
+            assertThatThrownBy(() -> authService.signup(new SignupRequest("rollback@example.com", "password123", "테스트사용자")))
                     .isInstanceOf(RuntimeException.class);
             assertThat(members.existsByEmail("rollback@example.com")).isFalse();
             assertThat(members.count()).isEqualTo(memberCount);

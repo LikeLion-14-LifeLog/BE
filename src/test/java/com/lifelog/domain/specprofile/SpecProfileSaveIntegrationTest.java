@@ -264,7 +264,7 @@ class SpecProfileSaveIntegrationTest {
     @DisplayName("가입 시 CURRENT는 기본값으로 생성된다")
     void 회원가입_CURRENT생성_성공() {
         // given / when
-        Long id = authService.signup(new SignupRequest("signup@example.com", "password123"));
+        Long id = authService.signup(new SignupRequest("signup@example.com", "password123", "테스트사용자"));
         // then
         List<SpecProfile> created = profiles.findAllByMemberIdAndType(id, SpecProfileType.CURRENT);
         assertThat(created).singleElement().satisfies(p -> {
