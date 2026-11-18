@@ -8,10 +8,28 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
+import com.lifelog.domain.specprofile.enums.SpecProfileType;
+import org.springframework.data.domain.Pageable;
+import java.util.List;
 import java.util.Optional;
 import java.util.Collection;
 
 public interface SpecProfileAnalyzationRunRepository extends JpaRepository<SpecProfileAnalyzationRun, Long> {
+    /**
+     * 대시보드에서 본인 프로필의 미삭제 실행을 최신 요청 시각과 PK 순서로 조회한다.
+     * @param memberId 인증 회원 ID
+     * @param type 조회할 프로필 유형
+     * @param pageable 조회 범위. 대시보드는 첫 실행 한 건만 요청한다
+     * @return 상태와 관계없는 최신 실행 목록
+     */
+    @Query("""
+            select r from SpecProfileAnalyzationRun r join fetch r.specProfile p
+            where p.member.id = :memberId and p.type = :type and r.deleteAt is null
+            order by r.createdAt desc, r.id desc
+            """)
+    List<SpecProfileAnalyzationRun> findLatestOwnedRuns(@Param("memberId") Long memberId,
+            @Param("type") SpecProfileType type, Pageable pageable);
+
     /**
      * 인증 회원 소유인 실행과 해당 프로필을 조회한다.
      * @param runId 실행 ID
