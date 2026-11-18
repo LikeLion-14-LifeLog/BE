@@ -38,15 +38,19 @@ public class SpecProfileAnalyzationResult {
     @Column(name = "result_id")
     private Long id;
 
+    /** AI 예측 대상 연차. 0은 첫 취업, 3과 5는 취업 후 해당 연차를 의미한다. */
     @Column(name = "annual", nullable = false)
     private int annual;
 
+    /** AI가 예측한 사용자의 해당 연차 연봉 하한(원). 통계적 신뢰구간의 하한은 아니다. */
     @Column(name = "annual_income_min", nullable = false)
     private Long annualIncomeMin;
 
+    /** AI가 예측한 사용자의 해당 연차 대표 예상 연봉(원). 비교 표본의 산술평균과 구분한다. */
     @Column(name = "annual_income_expected", nullable = false)
     private Long annualIncomeExpected;
 
+    /** AI가 예측한 사용자의 해당 연차 연봉 상한(원). 통계적 신뢰구간의 상한은 아니다. */
     @Column(name = "annual_income_max", nullable = false)
     private Long annualIncomeMax;
 
@@ -68,15 +72,19 @@ public class SpecProfileAnalyzationResult {
     @Column(name = "job_sub_category_name")
     private String jobSubCategoryName;
 
+    /** 서버가 통계 계산에 사용한 고유 비교 표본 인원수. 사람당 관측 연도 하나를 선택하며 분석의 모든 연차에 같은 값을 저장한다. */
     @Column(name = "sample_count")
     private Integer sampleCount;
 
+    /** 서버가 계산한 비교 표본의 실제 연환산 소득 최솟값(원). 분석 공통 통계로, 해당 연차의 AI 예측 하한과 구분한다. */
     @Column(name = "annual_salary_min_krw", precision = 19, scale = 2)
     private BigDecimal annualSalaryMinKrw;
 
+    /** 서버가 계산한 비교 표본의 실제 연환산 소득 최댓값(원). 분석 공통 통계로, 해당 연차의 AI 예측 상한과 구분한다. */
     @Column(name = "annual_salary_max_krw", precision = 19, scale = 2)
     private BigDecimal annualSalaryMaxKrw;
 
+    /** 서버가 계산한 비교 표본의 실제 연환산 소득 산술평균(원). 분석 공통 통계이며 소수 둘째 자리까지 반올림한다. */
     @Column(name = "annual_salary_mean_krw", precision = 19, scale = 2)
     private BigDecimal annualSalaryMeanKrw;
 

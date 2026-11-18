@@ -114,7 +114,7 @@ public class SpecProfileMapper {
         return AcademicAbility.builder().specProfile(profile).type(request.type()).status(request.status())
                 .location(request.location()).universityGrade(request.universityGrade())
                 .universityStandardGrade(request.universityStandardGrade())
-                .graduatedAt(request.graduatedYearMonth().atDay(1)).build();
+                .graduatedAt(request.graduatedYearMonth() == null ? null : request.graduatedYearMonth().atDay(1)).build();
     }
 
     /** 학력과 전공을 연결한다. */
@@ -125,13 +125,13 @@ public class SpecProfileMapper {
     /** 보유 자격증 요청을 엔티티로 변환한다. */
     public SpecProfileCertificate toCertificate(CertificateSaveReqDto request, SpecProfile profile, Certification certificate) {
         return SpecProfileCertificate.builder().specProfile(profile).certificate(certificate)
-                .acquiredAt(request.acquiredYearMonth().atDay(1)).build();
+                .acquiredAt(request.acquiredYearMonth() == null ? null : request.acquiredYearMonth().atDay(1)).build();
     }
 
     /** 어학 성적 요청을 엔티티로 변환한다. */
     public LanguageExamScore toLanguageScore(LanguageExamScoreSaveReqDto request, SpecProfile profile, LanguageExam exam) {
         return LanguageExamScore.builder().specProfile(profile).languageExam(exam).scoreNumeric(request.scoreNumeric())
-                .scoreGrade(request.scoreGrade()).acquiredAt(request.acquiredYearMonth().atDay(1))
+                .scoreGrade(request.scoreGrade()).acquiredAt(request.acquiredYearMonth() == null ? null : request.acquiredYearMonth().atDay(1))
                 .expiresAt(request.expiresYearMonth() == null ? null : request.expiresYearMonth().atDay(1)).build();
     }
 

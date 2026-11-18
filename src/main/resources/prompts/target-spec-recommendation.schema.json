@@ -1,0 +1,78 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["options"],
+  "properties": {
+    "options": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["title", "changes", "improvementReason"],
+        "properties": {
+          "title": {"type": "string"},
+          "changes": {"$ref": "#/$defs/changes"},
+          "improvementReason": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "changes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["academicAbilities", "certificates", "languageExamScores", "experiences"],
+      "properties": {
+        "academicAbilities": {"type": "array", "items": {"$ref": "#/$defs/academic"}},
+        "certificates": {"type": "array", "items": {"$ref": "#/$defs/certificate"}},
+        "languageExamScores": {"type": "array", "items": {"$ref": "#/$defs/language"}},
+        "experiences": {"type": "array", "items": {"$ref": "#/$defs/experience"}}
+      }
+    },
+    "academic": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "status", "location", "universityGrade", "universityStandardGrade", "graduatedYearMonth", "majorAffiliation", "majorId"],
+      "properties": {
+        "type": {"type": "string", "enum": ["HIGH_SCHOOL", "COLLEGE", "UNIVERSITY", "GRADUATE_SCHOOL_MASTER", "GRADUATE_SCHOOL_DOCTORAL", "GRADUATE_SCHOOL", "ETC"]},
+        "status": {"type": "string", "enum": ["ATTENDING", "LEAVE_FROM_SCHOOL", "GRADUATE_POSTPONED", "GRADUATED", "DROPPED_OUT", "COMPLETED"]},
+        "location": {"type": "string", "enum": ["SEOUL", "BUSAN", "DAEGU", "INCHEON", "GWANGJU", "DAEJEON", "ULSAN", "SEJONG", "GYEONGGI", "GANGWON", "CHUNGBUK", "CHUNGNAM", "JEONBUK", "JEONNAM", "GYEONGBUK", "GYEONGNAM", "JEJU", "FOREIGN"]},
+        "universityGrade": {"type": ["number", "null"]},
+        "universityStandardGrade": {"type": ["number", "null"]},
+        "graduatedYearMonth": {"type": ["string", "null"]},
+        "majorAffiliation": {"type": "string", "enum": ["HUMANITIES", "SOCIAL_SCIENCES", "NATURAL_SCIENCES", "ENGINEERING", "MEDICINE_PHARMACY", "EDUCATION", "ARTS_PHYSICAL_EDUCATION"]},
+        "majorId": {"type": "integer"}
+      }
+    },
+    "certificate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["certificateId", "acquiredYearMonth"],
+      "properties": {
+        "certificateId": {"type": "integer"},
+        "acquiredYearMonth": {"type": ["string", "null"]}
+      }
+    },
+    "language": {
+      "type": "object", "additionalProperties": false,
+      "required": ["languageExamId", "scoreNumeric", "scoreGrade", "acquiredYearMonth", "expiresYearMonth"],
+      "properties": {
+        "languageExamId": {"type": "integer"},
+        "scoreNumeric": {"type": ["number", "null"]},
+        "scoreGrade": {"type": ["string", "null"]},
+        "acquiredYearMonth": {"type": ["string", "null"]},
+        "expiresYearMonth": {"type": ["string", "null"]}
+      }
+    },
+    "experience": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "title", "startedYearMonth", "endedYearMonth", "description", "awarded", "organizerName", "awardGrade"],
+      "properties": {
+        "type": {"type": "string", "enum": ["INTERNSHIP", "PROJECT", "CONTEST", "PRACTICUM", "CLUB", "OTHER", "TRAINING", "OPEN_SOURCE", "ETC"]},
+        "title": {"type": "string"},
+        "startedYearMonth": {"type": "string"},
+        "endedYearMonth": {"type": ["string", "null"]},
+        "description": {"type": ["string", "null"]},
+        "awarded": {"type": "boolean"},
+        "organizerName": {"type": ["string", "null"]},
+        "awardGrade": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

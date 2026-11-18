@@ -9,6 +9,7 @@ import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
 import com.lifelog.domain.specprofile.repository.SpecProfileCertificateRepository;
 import com.lifelog.global.exception.CustomException;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,9 +34,10 @@ public class SpecProfileCertificateService {
      * @param profile 소유 프로필
      * @param requests 저장할 전체 보유 자격증 목록
      * @param certificationsById 조회 및 검증된 마스터 참조 Map
+     * @return 입력 순서에 대응하는 저장 자격증 목록
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void syncCertificates(SpecProfile profile, List<CertificateSaveReqDto> requests, Map<Long, Certification> certificationsById) {
+    public List<SpecProfileCertificate> syncCertificates(SpecProfile profile, List<CertificateSaveReqDto> requests, Map<Long, Certification> certificationsById) {
         log.info("[SpecProfileCertificateService] syncCertificates() - START | profileId: {}", profile.getId());
         /* (1) 본인 프로필의 보유 자격증을 조회하고 수정할 PK의 소유권을 확인한다. */
         List<SpecProfileCertificate> existingCertificates = certificateRepository.findAllBySpecProfileId(profile.getId());
@@ -58,6 +60,7 @@ public class SpecProfileCertificateService {
         /* (3) 신규 항목은 생성하고 기존 항목은 PK와 소유 프로필을 유지한다.
          * 자격증 참조와 취득월을 함께 덮어쓴다.
          */
+        List<SpecProfileCertificate> savedCertificates = new ArrayList<>();
         for (CertificateSaveReqDto request : requests) {
             Certification requestedCertification = certificationsById.get(request.certificateId());
             if (requestedCertification == null) {
@@ -65,12 +68,14 @@ public class SpecProfileCertificateService {
             }
             SpecProfileCertificate mappedSpecProfileCertificate = mapper.toCertificate(request, profile, requestedCertification);
             if (request.specProfileCertificateId() == null) {
-                certificateRepository.save(mappedSpecProfileCertificate);
+                savedCertificates.add(certificateRepository.save(mappedSpecProfileCertificate));
             } else {
                 SpecProfileCertificate specProfileCertificate = existingSpecProfileCertificateById.get(request.specProfileCertificateId());
                 specProfileCertificate.update(mappedSpecProfileCertificate);
+                savedCertificates.add(specProfileCertificate);
             }
         }
         log.info("[SpecProfileCertificateService] syncCertificates() - END | profileId: {}", profile.getId());
+        return List.copyOf(savedCertificates);
     }
 }

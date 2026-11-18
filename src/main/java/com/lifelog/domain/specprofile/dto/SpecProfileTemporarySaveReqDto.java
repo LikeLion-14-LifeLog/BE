@@ -25,8 +25,8 @@ import java.util.List;
               "universityGrade": 3.75,
               "universityStandardGrade": 4.5,
               "graduatedYearMonth": "2025-02",
-              "majorAffiliation": "HUMANITIES",
-              "majorId": 10
+              "majorAffiliation": "ENGINEERING",
+              "majorId": 17398
             }
           ],
           "certificates": [

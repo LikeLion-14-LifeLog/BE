@@ -40,7 +40,7 @@ public class AcademicAbility extends BaseTimeEntity {
     @Column(name = "location", length = 20)
     private ResidentialArea location;
 
-    @Column(name = "university_grade", precision = 3, scale = 2)
+    @Column(name = "university_grade", precision = 5, scale = 2)
     private BigDecimal universityGrade;
 
     @Column(name = "university_standard_grade", precision = 5, scale = 1)
@@ -48,6 +48,14 @@ public class AcademicAbility extends BaseTimeEntity {
 
     @Column(name = "graduated_at")
     private LocalDate graduatedAt;
+
+    @Column(name = "target_additional", nullable = false)
+    private boolean targetAdditional;
+
+    /** CURRENT 복제 항목과 사용자가 추가한 목표 항목을 구분한다. */
+    public void markTargetAdditional(boolean targetAdditional) {
+        this.targetAdditional = targetAdditional;
+    }
 
     /** PK와 소유 프로필을 유지하고 학력 입력값을 덮어쓴다. */
     public void update(AcademicAbility source) {

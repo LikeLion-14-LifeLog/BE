@@ -8,6 +8,7 @@ import com.lifelog.domain.specprofile.mapper.SpecProfileMapper;
 import com.lifelog.domain.specprofile.repository.ExperienceRepository;
 import com.lifelog.global.exception.CustomException;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,9 +32,10 @@ public class ExperienceService {
      * 경험 PK를 기준으로 요청에서 빠진 행을 삭제하고 생성 또는 수정한다.
      * @param profile 소유 프로필
      * @param requests 저장할 전체 경험 목록
+     * @return 입력 순서에 대응하는 저장 경험 목록
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void syncExperiences(SpecProfile profile, List<ExperienceSaveReqDto> requests) {
+    public List<Experience> syncExperiences(SpecProfile profile, List<ExperienceSaveReqDto> requests) {
         log.info("[ExperienceService] syncExperiences() - START | profileId: {}", profile.getId());
         /* (1) 본인 프로필의 경험을 조회하고 수정할 PK의 소유권을 확인한다. */
         List<Experience> existingExperiences = experienceRepository.findAllBySpecProfileId(profile.getId());
@@ -56,15 +58,18 @@ public class ExperienceService {
         /* (3) 신규 항목은 생성하고 기존 항목은 PK와 소유 프로필을 유지한다.
          * 동일한 활동명도 별도 PK이면 유지하며 종료월과 수상 정보의 null도 반영한다.
          */
+        List<Experience> savedExperiences = new ArrayList<>();
         for (ExperienceSaveReqDto request : requests) {
             Experience mappedExperience = mapper.toExperience(request, profile);
             if (request.experienceId() == null) {
-                experienceRepository.save(mappedExperience);
+                savedExperiences.add(experienceRepository.save(mappedExperience));
             } else {
                 Experience experience = existingExperienceById.get(request.experienceId());
                 experience.update(mappedExperience);
+                savedExperiences.add(experience);
             }
         }
         log.info("[ExperienceService] syncExperiences() - END | profileId: {}", profile.getId());
+        return List.copyOf(savedExperiences);
     }
 }

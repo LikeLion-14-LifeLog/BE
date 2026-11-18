@@ -25,6 +25,9 @@ public interface SpecProfileRepository extends JpaRepository<SpecProfile, Long> 
     /** 프로필 개수 검증 후 기존 프로필을 조회한다. */
     List<SpecProfile> findAllByMemberIdAndType(Long memberId, SpecProfileType type);
 
+    /** 본인 프로필 중 명시적으로 선택된 목표만 조회하며 false와 null은 제외한다. */
+    List<SpecProfile> findAllByMemberIdAndTypeAndTargetSpecSelectedTrue(Long memberId, SpecProfileType type);
+
     /** 동일 CURRENT에 대한 저장을 트랜잭션 종료까지 직렬화한다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from SpecProfile p where p.member.id = :memberId and p.type = :type")

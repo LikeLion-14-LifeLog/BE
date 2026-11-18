@@ -38,9 +38,10 @@ public class AcademicAbilityService {
      * @param profile 소유 프로필
      * @param academicAbilityRequests 저장할 전체 학력 목록
      * @param majorById 조회 및 검증된 전공 Map
+     * @return 입력 순서에 대응하는 저장 학력 목록
      * */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void syncAcademicAbilities(SpecProfile profile, List<AcademicAbilitySaveReqDto> academicAbilityRequests,
+    public List<AcademicAbility> syncAcademicAbilities(SpecProfile profile, List<AcademicAbilitySaveReqDto> academicAbilityRequests,
                                        Map<Long, Major> majorById) {
         log.info("[AcademicAbilityService] syncAcademicAbilities() - START");
         /*
@@ -89,6 +90,7 @@ public class AcademicAbilityService {
          * (5) 요청 학력 생성 또는 수정
          * PK가 없으면 신규 생성하고, 있으면 기존 PK와 소유 프로필을 유지하며 입력값을 덮어쓴다.
          */
+        List<AcademicAbility> savedAcademics = new ArrayList<>();
         for (AcademicAbilitySaveReqDto academicAbilityRequest : academicAbilityRequests) {
             AcademicAbility mappedAcademicAbility = mapper.toAcademicAbility(academicAbilityRequest, profile);
             AcademicAbility academicAbility;
@@ -98,6 +100,7 @@ public class AcademicAbilityService {
                 academicAbility = existingAcademicAbilityMapById.get(academicAbilityRequest.academicAbilityId());
                 academicAbility.update(mappedAcademicAbility);
             }
+            savedAcademics.add(academicAbility);
             /*
              * (6) 학력별 전공 연결 동기화
              * 연결이 없으면 생성하고, 하나면 기존 연결의 전공을 변경한다.
@@ -118,6 +121,7 @@ public class AcademicAbilityService {
             }
         }
         log.info("[AcademicAbilityService] syncAcademicAbilities() - END");
+        return List.copyOf(savedAcademics);
     }
 
 }
