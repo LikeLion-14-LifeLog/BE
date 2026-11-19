@@ -22,8 +22,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
 
@@ -40,12 +42,12 @@ public class EmployeeCardService {
     private static final Set<MediaType> ALLOWED_TYPES = Set.of(MediaType.IMAGE_JPEG, MediaType.IMAGE_PNG, IMAGE_WEBP);
 
     static final String PROMPT_PATH = "prompts/employee-card-character.v1.txt";
-    // 사용자 사진 뒤에 파일 이름순으로 붙여 보내는 스타일 참고 이미지
-    static final String REFERENCE_PATTERN = "classpath*:prompts/employee-card-references/*";
+    // 사용자 사진 뒤에 붙여 보내는 스타일 참고 이미지 (성별 폴더별, 파일 이름순)
+    static final String REFERENCE_PATTERN = "classpath*:prompts/employee-card-references/%s/*";
 
     private final OpenAiImageClient imageClient;
     private final String basePrompt;
-    private final List<OpenAiImageInput> references;
+    private final Map<EmployeeCardGender, List<OpenAiImageInput>> references;
     // 서버 메모리와 OpenAI 비용을 고려해 동시에 생성하는 수를 제한
     private final Semaphore permits;
 
@@ -63,10 +65,11 @@ public class EmployeeCardService {
         MediaType contentType = validatePhoto(request.photo());
         byte[] photo = readBytes(request.photo());
 
-        // 첫 번째 이미지는 사용자 사진, 그 뒤는 참고 이미지 (프롬프트가 이 순서를 전제로 함)
-        List<OpenAiImageInput> images = new ArrayList<>(references.size() + 1);
+        // 첫 번째 이미지는 사용자 사진, 그 뒤는 선택한 성별의 참고 이미지 (프롬프트가 이 순서를 전제로 함)
+        List<OpenAiImageInput> genderReferences = references.get(request.gender());
+        List<OpenAiImageInput> images = new ArrayList<>(genderReferences.size() + 1);
         images.add(new OpenAiImageInput(photo, contentType, "photo." + contentType.getSubtype()));
-        images.addAll(references);
+        images.addAll(genderReferences);
 
         if (!permits.tryAcquire()) {
             throw new CustomException(EmployeeCardErrorCode.GENERATION_BUSY);
@@ -93,12 +96,26 @@ public class EmployeeCardService {
         }
     }
 
-    private static List<OpenAiImageInput> loadReferences() {
+    private static Map<EmployeeCardGender, List<OpenAiImageInput>> loadReferences() {
+        Map<EmployeeCardGender, List<OpenAiImageInput>> loaded = new EnumMap<>(EmployeeCardGender.class);
+        for (EmployeeCardGender gender : EmployeeCardGender.values()) {
+            loaded.put(gender, loadReferences(referenceFolder(gender)));
+        }
+        return loaded;
+    }
+
+    // 성별 폴더 이름 (MALE → male)
+    static String referenceFolder(EmployeeCardGender gender) {
+        return gender.name().toLowerCase(Locale.ROOT);
+    }
+
+    private static List<OpenAiImageInput> loadReferences(String folder) {
+        String pattern = REFERENCE_PATTERN.formatted(folder);
         Resource[] resources;
         try {
-            resources = new PathMatchingResourcePatternResolver().getResources(REFERENCE_PATTERN);
+            resources = new PathMatchingResourcePatternResolver().getResources(pattern);
         } catch (IOException e) {
-            throw new IllegalStateException("사원증 참고 이미지 폴더를 읽을 수 없습니다", e);
+            throw new IllegalStateException("사원증 참고 이미지 폴더를 읽을 수 없습니다: " + pattern, e);
         }
         List<OpenAiImageInput> loaded = Arrays.stream(resources)
                 .filter(resource -> resource.getFilename() != null && imageType(resource.getFilename()) != null)
@@ -106,9 +123,9 @@ public class EmployeeCardService {
                 .map(EmployeeCardService::toInput)
                 .toList();
         if (loaded.isEmpty()) {
-            log.warn("[EmployeeCardService] 사원증 참고 이미지가 없어 사용자 사진만 보냅니다 | pattern: {}", REFERENCE_PATTERN);
+            log.warn("[EmployeeCardService] 사원증 참고 이미지가 없어 사용자 사진만 보냅니다 | pattern: {}", pattern);
         } else {
-            log.info("[EmployeeCardService] 사원증 참고 이미지 {}장 로드 | {}", loaded.size(),
+            log.info("[EmployeeCardService] 사원증 참고 이미지 로드 | folder: {}, files: {}", folder,
                     loaded.stream().map(OpenAiImageInput::filename).toList());
         }
         return loaded;
