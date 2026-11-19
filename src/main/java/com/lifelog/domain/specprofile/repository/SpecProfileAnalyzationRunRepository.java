@@ -16,6 +16,15 @@ import java.util.Collection;
 
 public interface SpecProfileAnalyzationRunRepository extends JpaRepository<SpecProfileAnalyzationRun, Long> {
     /**
+     * 인증 회원의 미삭제 실행 중 허용된 상태에 해당하는 최신 실행을 조회한다.
+     * @param memberId 인증 회원 ID
+     * @param statuses 조회를 허용할 실행 상태
+     * @return 요청 시각과 PK 내림차순의 첫 실행 또는 빈 값
+     */
+    Optional<SpecProfileAnalyzationRun> findFirstBySpecProfileMemberIdAndStatusInAndDeleteAtIsNullOrderByCreatedAtDescIdDesc(
+            Long memberId, Collection<SpecProfileAnalyzationStatus> statuses);
+
+    /**
      * 대시보드에서 본인 프로필의 미삭제 실행을 최신 요청 시각과 PK 순서로 조회한다.
      * @param memberId 인증 회원 ID
      * @param type 조회할 프로필 유형

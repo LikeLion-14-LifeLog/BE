@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunLatestResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import java.util.List;
 
@@ -50,6 +51,19 @@ public class SpecProfileService {
     private final SpecProfileAnalyzationResultQueryService specProfileAnalyzationResultQueryService;
     private final SpecProfileAnalyzationSseRegistry specProfileAnalyzationSseRegistry;
     private final SpecProfileAnalyzationRunStateService specProfileAnalyzationRunStateService;
+
+    /**
+     * 본인의 대기·진행·완료 상태 중 최신 분석 실행 ID 조회를 위임한다.
+     * @param memberId 인증된 회원 ID
+     * @return 최신 분석 실행 ID
+     */
+    public SpecProfileAnalyzationRunLatestResDto getLatestAnalyzationRun(Long memberId) {
+        log.info("[SpecProfileService] 최신 분석 실행 조회 | getLatestAnalyzationRun() - START | memberId: {}", memberId);
+        /* (1) 조회 서비스에서 소유권과 상태를 만족하는 최신 실행 ID를 가져온다. */
+        SpecProfileAnalyzationRunLatestResDto result = specProfileAnalyzationService.getLatestRun(memberId);
+        log.info("[SpecProfileService] 최신 분석 실행 조회 | getLatestAnalyzationRun() - END | runId: {}", result.runId());
+        return result;
+    }
 
     /**
      * 인증 회원이 선택한 목표의 저장된 추가 조건만 조회한다.

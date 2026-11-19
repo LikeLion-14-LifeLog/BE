@@ -3,6 +3,7 @@ package com.lifelog.domain.specprofile.controller;
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunLatestResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
@@ -34,6 +35,42 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Tag(name = "SpecProfile", description = "회원 스펙 API")
 @SecurityRequirement(name = "bearerAuth")
 public interface SpecProfileControllerDocs {
+    @Operation(summary = "최신 분석 실행 ID 조회", description = """
+            ### 1. API 역할
+            - 로그인 회원 본인의 QUEUED, IN_PROGRESS, COMPLETED 상태인 최신 분석 실행 PK를 조회합니다.
+            - 삭제된 실행과 CANCELED, FAILED 상태는 제외합니다.
+            - createdAt 내림차순, 같은 시각이면 실행 PK 내림차순으로 한 건을 선택합니다.
+            ### 2. Request Header
+            - Authorization: Bearer {accessToken}. 요청 Content-Type 지정은 필요하지 않습니다.
+            ### 3. Path Variable
+            - 없음
+            ### 4. Query String
+            - 없음
+            ### 5. Request Body
+            - 없음
+            ### 6. Response Header
+            - Content-Type: application/json
+            ### 7. Response Body
+            - success: true, code: COMMON_200, message: runId 조회 성공.
+            - data.runId: 조회 조건을 만족하는 최신 분석 실행 PK(int64).
+            - 조회 가능한 본인 실행이 없으면 RUN_NOT_FOUND(404)를 반환합니다.
+            - 인증 오류는 기존 공통 코드 AUTH_401(401), AUTH_403(403)을 사용합니다.
+            """)
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "runId 조회 성공",
+                content = @Content(schema = @Schema(implementation = SpecProfileAnalyzationRunLatestResDto.class),
+                        examples = @ExampleObject(value = """
+                                {"success":true,"code":"COMMON_200","message":"runId 조회 성공","data":{"runId":101}}
+                                """))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "조회 가능한 본인 실행 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @GetMapping(value = "/api/spec-profile/runs/latest", produces = "application/json")
+    ApiResponse<SpecProfileAnalyzationRunLatestResDto> getLatestAnalyzationRun(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId);
+
     @Operation(summary = "저장한 목표 스펙 조회", description = """
             ### 1. API 역할
             - 로그인 회원의 type=TARGET, targetSpecSelected=true인 목표의 추가 조건만 조회합니다.
