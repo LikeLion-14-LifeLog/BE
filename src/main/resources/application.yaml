@@ -20,6 +20,12 @@ spring:
       hibernate:
         format_sql: true
 
+  # 사원증 사진 업로드 (기본 1MB로는 휴대폰 사진이 안 올라감)
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000
@@ -47,6 +53,18 @@ openai:
   read-timeout: 60s
   max-attempts: 3
   max-input-chars: ${OPEN_API_MAX_INPUT_CHARS:200000}
+  # 사원증 캐릭터 생성 (Images API 이미지 편집)
+  image:
+    # 사원증 전용 키 (연봉 분석 키와 분리)
+    api-key: ${OPEN_API_KEY_CARD:}
+    model: ${OPEN_API_MODEL_CARD:gpt-image-1}
+    size: 1024x1024
+    quality: ${OPEN_API_IMAGE_QUALITY:medium}
+    read-timeout: 180s
+
+employee-card:
+  # 동시에 생성하는 최대 수 (초과 요청은 429)
+  max-concurrent: 2
 
 job-posting:
   sync:

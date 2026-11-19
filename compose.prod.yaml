@@ -28,6 +28,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       SEOUL_OPENAPI_KEY: ${SEOUL_OPENAPI_KEY:?Set SEOUL_OPENAPI_KEY in .env}
+      # OpenAI (연봉 분석용 키와 사원증 캐릭터용 키·모델을 분리)
+      OPEN_API_KEY: ${OPEN_API_KEY:-}
+      OPEN_API_KEY_CARD: ${OPEN_API_KEY_CARD:-}
+      OPEN_API_MODEL_CARD: ${OPEN_API_MODEL_CARD:-gpt-image-1}
       # 채용공고 매일 새벽 4시 자동 수집 (.env에서 false로 끌 수 있음)
       JOB_POSTING_SYNC_SCHEDULER_ENABLED: ${JOB_POSTING_SYNC_SCHEDULER_ENABLED:-true}
       # 기본 힙(RAM의 25%)으로는 채용공고 수집 중 OOM이 나서 직접 지정

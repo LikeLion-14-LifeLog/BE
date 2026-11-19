@@ -15,6 +15,7 @@ public enum CommonErrorCode implements ErrorCode {
     NOT_FOUND("COMMON_404", "정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     METHOD_NOT_ALLOWED("COMMON_405", "지원하지 않는 요청 방식입니다.", HttpStatus.METHOD_NOT_ALLOWED),
     ALREADY_PROCESSED("COMMON_409", "이미 처리된 요청입니다.", HttpStatus.CONFLICT),
+    PAYLOAD_TOO_LARGE("COMMON_413", "업로드 파일이 너무 큽니다.", HttpStatus.CONTENT_TOO_LARGE),
     INTERNAL_SERVER_ERROR("COMMON_500", "서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final String code;
