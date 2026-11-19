@@ -22,6 +22,7 @@ import tools.jackson.databind.JsonNode;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * OpenAI Images API(이미지 편집) 호출만 담당한다.
@@ -59,23 +60,17 @@ public class OpenAiImageClient {
     }
 
     /**
-     * 입력 이미지를 프롬프트대로 편집한다.
-     * @param image 입력 이미지 원본 바이트
-     * @param contentType 입력 이미지 형식 (png·jpeg·webp)
+     * 입력 이미지들을 프롬프트대로 편집한다.
+     * @param images 입력 이미지 (보낸 순서대로 첫 번째, 두 번째… 이미지가 됨)
      * @param prompt 편집 지시
      * @return 결과 이미지(PNG) 바이트
      */
-    public byte[] edit(byte[] image, MediaType contentType, String prompt) {
-        log.info("[OpenAiImageClient] 이미지 편집 요청 | edit() - START | model: {}, size: {}, quality: {}", model, size, quality);
+    public byte[] edit(List<OpenAiImageInput> images, String prompt) {
+        log.info("[OpenAiImageClient] 이미지 편집 요청 | edit() - START | model: {}, size: {}, quality: {}, images: {}",
+                model, size, quality, images.size());
         if (apiKey == null || apiKey.isBlank()) {
             throw new CustomException(OpenApiErrorCode.OPEN_API_KEY_NOT_CONFIGURED);
         }
-
-        // MultipartBodyBuilder는 WebFlux(reactive-streams) 의존이라 MVC 환경에서 쓰지 않음
-        HttpHeaders imageHeaders = new HttpHeaders();
-        imageHeaders.setContentType(contentType);
-        imageHeaders.setContentDisposition(ContentDisposition.formData()
-                .name("image").filename("photo." + contentType.getSubtype()).build());
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("model", model);
@@ -83,7 +78,16 @@ public class OpenAiImageClient {
         body.add("size", size);
         body.add("quality", quality);
         body.add("n", "1");
-        body.add("image", new HttpEntity<>(new ByteArrayResource(image), imageHeaders));
+        // 여러 장은 OpenAI 규격대로 image[] 필드를 반복
+        String imageField = images.size() > 1 ? "image[]" : "image";
+        for (OpenAiImageInput image : images) {
+            // MultipartBodyBuilder는 WebFlux(reactive-streams) 의존이라 MVC 환경에서 쓰지 않음
+            HttpHeaders imageHeaders = new HttpHeaders();
+            imageHeaders.setContentType(image.contentType());
+            imageHeaders.setContentDisposition(ContentDisposition.formData()
+                    .name(imageField).filename(image.filename()).build());
+            body.add(imageField, new HttpEntity<>(new ByteArrayResource(image.bytes()), imageHeaders));
+        }
 
         JsonNode response;
         try {

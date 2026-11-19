@@ -10,6 +10,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.util.Base64;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,6 +27,7 @@ class OpenAiImageClientTest {
 
     private static final byte[] PHOTO = {10, 20, 30};
     private static final byte[] RESULT = {1, 2, 3, 4};
+    private static final OpenAiImageInput PHOTO_INPUT = new OpenAiImageInput(PHOTO, MediaType.IMAGE_PNG, "photo.png");
 
     private MockRestServiceServer server;
     private OpenAiImageClient client;
@@ -50,7 +52,25 @@ class OpenAiImageClientTest {
                 .andRespond(withSuccess("{\"data\":[{\"b64_json\":\"" + Base64.getEncoder().encodeToString(RESULT) + "\"}]}",
                         MediaType.APPLICATION_JSON));
 
-        assertThat(client.edit(PHOTO, MediaType.IMAGE_PNG, "prompt")).containsExactly(RESULT);
+        assertThat(client.edit(List.of(PHOTO_INPUT), "prompt")).containsExactly(RESULT);
+        server.verify();
+    }
+
+    @Test
+    void 여러_장이면_image배열_필드로_순서대로_보냄() {
+        OpenAiImageInput reference = new OpenAiImageInput(new byte[]{40}, MediaType.IMAGE_JPEG, "01-style.jpg");
+        server.expect(requestTo("https://api.openai.test/v1/images/edits"))
+                .andExpect(content().string(containsString("name=\"image[]\"; filename=\"photo.png\"")))
+                .andExpect(content().string(containsString("name=\"image[]\"; filename=\"01-style.jpg\"")))
+                .andExpect(content().string(containsString("Content-Type: image/jpeg")))
+                .andExpect(request -> {
+                    String body = ((org.springframework.mock.http.client.MockClientHttpRequest) request).getBodyAsString();
+                    assertThat(body.indexOf("photo.png")).isLessThan(body.indexOf("01-style.jpg"));
+                })
+                .andRespond(withSuccess("{\"data\":[{\"b64_json\":\"" + Base64.getEncoder().encodeToString(RESULT) + "\"}]}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(client.edit(List.of(PHOTO_INPUT, reference), "prompt")).containsExactly(RESULT);
         server.verify();
     }
 
@@ -60,7 +80,7 @@ class OpenAiImageClientTest {
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
                         .body("{\"error\":{\"code\":\"moderation_blocked\",\"message\":\"blocked\"}}"));
 
-        assertThatThrownBy(() -> client.edit(PHOTO, MediaType.IMAGE_PNG, "prompt"))
+        assertThatThrownBy(() -> client.edit(List.of(PHOTO_INPUT), "prompt"))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(OpenApiErrorCode.OPEN_API_REFUSED);
@@ -71,7 +91,7 @@ class OpenAiImageClientTest {
         server.expect(requestTo("https://api.openai.test/v1/images/edits"))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
-        assertThatThrownBy(() -> client.edit(PHOTO, MediaType.IMAGE_PNG, "prompt"))
+        assertThatThrownBy(() -> client.edit(List.of(PHOTO_INPUT), "prompt"))
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(OpenApiErrorCode.OPEN_API_RATE_LIMITED);
     }
@@ -81,7 +101,7 @@ class OpenAiImageClientTest {
         server.expect(requestTo("https://api.openai.test/v1/images/edits"))
                 .andRespond(withSuccess("{\"data\":[]}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.edit(PHOTO, MediaType.IMAGE_PNG, "prompt"))
+        assertThatThrownBy(() -> client.edit(List.of(PHOTO_INPUT), "prompt"))
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(OpenApiErrorCode.OPEN_API_INVALID_RESPONSE);
     }
@@ -90,7 +110,7 @@ class OpenAiImageClientTest {
     void 키가_없으면_호출하지_않고_KEY_NOT_CONFIGURED() {
         OpenAiImageClient noKey = new OpenAiImageClient(RestClient.create(), "", "m", "1024x1024", "medium");
 
-        assertThatThrownBy(() -> noKey.edit(PHOTO, MediaType.IMAGE_PNG, "prompt"))
+        assertThatThrownBy(() -> noKey.edit(List.of(PHOTO_INPUT), "prompt"))
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(OpenApiErrorCode.OPEN_API_KEY_NOT_CONFIGURED);
     }

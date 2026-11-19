@@ -15,7 +15,6 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,24 +39,32 @@ class EmployeeCardControllerTest {
 
     @Test
     void 비로그인으로_사진과_성별을_보내면_PNG를_그대로_반환() throws Exception {
-        given(imageClient.edit(any(), any(), any())).willReturn(CHARACTER);
+        given(imageClient.edit(any(), any())).willReturn(CHARACTER);
 
         mockMvc.perform(request(photo("photo.jpg", MediaType.IMAGE_JPEG_VALUE, 100), "FEMALE"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG))
                 .andExpect(content().bytes(CHARACTER));
 
-        verify(imageClient).edit(any(), eq(MediaType.IMAGE_JPEG), argThat(prompt -> prompt.contains("캐릭터의 성별: 여성")));
+        // 첫 번째는 사용자 사진, 그 뒤는 참고 이미지 폴더의 파일 이름순
+        verify(imageClient).edit(argThat(images -> images.size() == 3
+                        && images.get(0).contentType().equals(MediaType.IMAGE_JPEG)
+                        && images.get(0).bytes().length == 100
+                        && images.get(1).filename().equals("사원증예시_남.png")
+                        && images.get(1).contentType().equals(MediaType.IMAGE_PNG)
+                        && images.get(1).bytes().length > 0
+                        && images.get(2).filename().equals("사원증예시_여.png")),
+                argThat(prompt -> prompt.contains("#EDEDED") && prompt.contains("캐릭터의 성별: 여성")));
     }
 
     @Test
     void 남성이면_프롬프트에_남성으로_반영() throws Exception {
-        given(imageClient.edit(any(), any(), any())).willReturn(CHARACTER);
+        given(imageClient.edit(any(), any())).willReturn(CHARACTER);
 
         mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100), "MALE"))
                 .andExpect(status().isOk());
 
-        verify(imageClient).edit(any(), any(), argThat(prompt -> prompt.contains("캐릭터의 성별: 남성")));
+        verify(imageClient).edit(any(), argThat(prompt -> prompt.contains("캐릭터의 성별: 남성")));
     }
 
     @Test
@@ -71,7 +78,7 @@ class EmployeeCardControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
 
-        verify(imageClient, never()).edit(any(), any(), any());
+        verify(imageClient, never()).edit(any(), any());
     }
 
     @Test
@@ -80,7 +87,7 @@ class EmployeeCardControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
 
-        verify(imageClient, never()).edit(any(), any(), any());
+        verify(imageClient, never()).edit(any(), any());
     }
 
     @Test
@@ -89,7 +96,7 @@ class EmployeeCardControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("EMPLOYEE_CARD_400"));
 
-        verify(imageClient, never()).edit(any(), any(), any());
+        verify(imageClient, never()).edit(any(), any());
     }
 
     @Test
@@ -101,7 +108,7 @@ class EmployeeCardControllerTest {
 
     @Test
     void OpenAI가_거절하면_그_에러코드로_응답() throws Exception {
-        given(imageClient.edit(any(), any(), any())).willThrow(new CustomException(OpenApiErrorCode.OPEN_API_REFUSED));
+        given(imageClient.edit(any(), any())).willThrow(new CustomException(OpenApiErrorCode.OPEN_API_REFUSED));
 
         mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100), "MALE"))
                 .andExpect(status().isBadGateway())
