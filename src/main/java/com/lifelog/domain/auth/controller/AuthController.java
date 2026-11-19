@@ -1,4 +1,3 @@
-
 package com.lifelog.domain.auth.controller;
 
 import com.lifelog.domain.auth.dto.LoginRequest;
@@ -38,13 +37,8 @@ public class AuthController {
     public ApiResponse<Map<String, String>> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        String accessToken = authService.login(request);
-
         return ApiResponse.success(
-                Map.of(
-                        "accessToken", accessToken,
-                        "tokenType", "Bearer"
-                )
+                authService.login(request)
         );
     }
 }

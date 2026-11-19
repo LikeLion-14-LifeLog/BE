@@ -1,4 +1,3 @@
-
 package com.lifelog.domain.member.entity;
 
 import com.lifelog.domain.member.enums.MemberRole;
@@ -24,6 +23,9 @@ public class Member {
     private String email;
 
     @Column(nullable = false, length = 30)
+    private String nickname;
+
+    @Column(nullable = false, length = 30)
     private String status = "ACTIVE";
 
     @Enumerated(EnumType.STRING)
@@ -37,7 +39,12 @@ public class Member {
     private LocalDateTime updatedAt;
 
     public Member(String email) {
+        this(email, "사용자");
+    }
+
+    public Member(String email, String nickname) {
         this.email = email;
+        this.nickname = nickname;
         this.status = "ACTIVE";
     }
 
