@@ -7,6 +7,7 @@ import com.lifelog.domain.specprofile.dto.KeepSalaryAccumulatedSpec;
 import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSample;
 import com.lifelog.domain.specprofile.dto.KeepSalaryMatchedSampleStatistics;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationSnapshot;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSalaryClassificationData;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
 import com.lifelog.domain.specprofile.enums.AcademicAbilityStatus;
@@ -77,6 +78,37 @@ class OpenApiPromptBuilderTest {
         assertThat(original.has("companyGroupScale")).isFalse();
         assertThat(original.has("baseSnapshot")).isFalse();
         assertThat(analysis.schemaName()).isEqualTo("annual_salary_analyzation_v1");
+    }
+
+    @ParameterizedTest
+    @EnumSource(CompanyGroupScale.class)
+    @DisplayName("목표 예측에 저장된 현재의 0·3·5년 차 연봉 범위를 기업 규모와 무관한 비교 기준으로 전달한다")
+    void 저장기준연봉_시뮬레이션프롬프트전달_성공(CompanyGroupScale scale) {
+        // given
+        List<KeepSalaryMatchedSample> samples = samples(false);
+        SpecProfileAnnualSalaryAnalyzationResDto baseline = SpecProfileAnnualSalaryAnalyzationResDto.builder()
+                .summary("기존 현재 진단").salaryResults(List.of(
+                        new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(0, 34000000L, 36000000L, 38000000L, BigDecimal.TEN),
+                        new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(3, 44000000L, 46000000L, 48000000L, null),
+                        new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(5, 54000000L, 56000000L, 58000000L, null)))
+                .statistics(statistics(samples)).recommendation("경험을 보완해 보세요.").salaryNotice("AI 참고 추정").build();
+        OpenApiPromptBuilder builder = new OpenApiPromptBuilder(jsonMapper, 200000);
+        OpenApiPrompt original = builder.buildAnnualSalarySimulationPrompt(snapshot(), conditions, samples,
+                statistics(samples), scale, snapshot());
+        // when
+        OpenApiPrompt prompt = builder.buildAnnualSalarySimulationPrompt(snapshot(), conditions, samples,
+                statistics(samples), scale, snapshot(), baseline);
+        JsonNode input = jsonMapper.readTree(prompt.inputJson());
+        JsonNode expectedBaseline = jsonMapper.readTree(jsonMapper.writeValueAsString(baseline));
+        // then
+        assertThat(input.path("baseAnalysis").path("summary").asString()).isEqualTo("기존 현재 진단");
+        assertThat(input.path("baseAnalysis").path("salaryResults"))
+                .isEqualTo(expectedBaseline.path("salaryResults"));
+        assertThat(input.path("baseAnalysis").path("statistics"))
+                .isEqualTo(expectedBaseline.path("statistics"));
+        assertThat(input.path("companyGroupScale").asString()).isEqualTo(scale.name());
+        assertThat(input.path("samples")).isEqualTo(jsonMapper.readTree(original.inputJson()).path("samples"));
+        assertThat(prompt.responseSchema()).isEqualTo(original.responseSchema());
     }
 
     @Test

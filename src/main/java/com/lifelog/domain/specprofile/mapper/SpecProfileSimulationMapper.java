@@ -64,6 +64,11 @@ public class SpecProfileSimulationMapper {
                 .experiences(append(base.experiences(), experiences)).build();
     }
 
+    /** 저장된 현재 분석을 변경 없이 비교 기준으로 사용하며 추가 준비가 없는 상태로 감싼다. */
+    public SpecProfileSimulationAnalysis toStoredBaseAnalysis(SpecProfileAnnualSalaryAnalyzationResDto analysis) {
+        return new SpecProfileSimulationAnalysis(analysis, "추가 준비 없음", "추가 비용 없음", "현재 보유 스펙을 기준으로 분석했어요.");
+    }
+
     /** 현재·목표의 연차별 예측과 추가 목표의 준비 정보를 조합한다. */
     public SpecProfileSimulationResDto toResDto(Long profileId, CompanyGroupScale companyGroupScale,
             SpecProfileSimulationAnalysis base, SpecProfileSimulationAnalysis simulated) {

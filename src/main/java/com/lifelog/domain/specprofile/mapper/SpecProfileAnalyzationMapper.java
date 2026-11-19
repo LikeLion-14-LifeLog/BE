@@ -14,6 +14,15 @@ import java.util.List;
 @Component
 public class SpecProfileAnalyzationMapper {
     /**
+     * 최신 분석 실행을 PK만 포함한 응답으로 변환한다.
+     * @param run 조회된 최신 실행
+     * @return 최신 실행 ID 응답
+     */
+    public SpecProfileAnalyzationRunLatestResDto toRunLatestResDto(SpecProfileAnalyzationRun run) {
+        return SpecProfileAnalyzationRunLatestResDto.create(run.getId());
+    }
+
+    /**
      * 중단된 실행을 한국 시간의 최초 중단 시각과 함께 응답으로 변환한다.
      * @param run 중단된 실행
      * @return 중단 응답

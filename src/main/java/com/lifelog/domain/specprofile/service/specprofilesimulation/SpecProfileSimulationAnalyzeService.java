@@ -45,13 +45,15 @@ public class SpecProfileSimulationAnalyzeService {
     /**
      * 기존 분류·표본·통계·검증을 재사용하고 기업 규모를 포함한 전용 프롬프트로 예측한다.
      * @param snapshot 현재 또는 목표 스냅샷
-     * @param companyGroupScale 두 시나리오에 동일하게 적용할 기업 규모
+     * @param companyGroupScale 목표 시나리오에 적용할 기업 규모
      * @param baseSnapshot 추가 목표를 구분하기 위한 현재 스펙
+     * @param baseAnalysis 비교 기준인 저장된 현재 분석
      * @return 저장되지 않은 분석 결과와 목표 준비 정보
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public SpecProfileSimulationAnalysis analyze(SpecProfileAnalyzationSnapshot snapshot,
-            CompanyGroupScale companyGroupScale, SpecProfileAnalyzationSnapshot baseSnapshot) {
+            CompanyGroupScale companyGroupScale, SpecProfileAnalyzationSnapshot baseSnapshot,
+            SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis) {
         log.info("[SpecProfileSimulationAnalyzeService] 스냅샷 분석 | analyze() - START | profileId: {}", snapshot.specProfileId());
         /* (1) 기존 규칙으로 분류 조건과 비교 표본을 선택한다. */
         SpecProfileSalaryClassificationData classified = scoreBandService.classify(
@@ -60,7 +62,7 @@ public class SpecProfileSimulationAnalyzeService {
         KeepSalaryMatchedSampleStatistics statistics = statisticsService.calculate(samples);
         /* (2) 기업 규모는 전용 프롬프트에 전달하고 기존 응답 계약으로 예측값을 검증한다. */
         OpenApiPrompt prompt = promptBuilder.buildAnnualSalarySimulationPrompt(
-                snapshot, classified, samples, statistics, companyGroupScale, baseSnapshot);
+                snapshot, classified, samples, statistics, companyGroupScale, baseSnapshot, baseAnalysis);
         SpecProfileSimulationAiResDto simulationAi = openApiUtil.request(prompt, SpecProfileSimulationAiResDto.class);
         responseValidator.validateSimulationDetails(simulationAi);
         AnnualSalaryAnalyzationAiResDto ai = simulationMapper.toAnalyzationAiResDto(simulationAi);
