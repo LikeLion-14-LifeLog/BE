@@ -124,7 +124,8 @@ public interface SpecProfileControllerDocs {
             - DB에는 사용자 TARGET(type=TARGET, sort_order=1, 선택됨)과 해당 스펙만 저장·덮어씁니다.
             - 목표 기업 규모와 추가 항목 구분도 함께 저장하여 GET /api/spec-profile/target으로 다시 조회할 수 있습니다.
             - 시뮬레이션 결과·준비 정보·AI 대안·분석 실행 이력은 저장하지 않고 동기로 반환합니다.
-            - 동일 조건의 최근 메모리 캐시가 있으면 사용자 분석을 재사용하고, 없으면 재분석합니다.
+            - 동일 조건의 최근 메모리 캐시가 있으면 사용자 분석을 재사용하고, 없으면 두 번째 요청의 일괄 분석에 포함합니다.
+            - 정상 처리 시 AI는 추천안 생성 1회와 연봉·준비 정보·종합 평가 일괄 처리 1회로 총 2회 호출합니다.
             ### 2. Request Header
             - Authorization: Bearer {accessToken}. Content-Type: application/json.
             - Swagger에서는 Authorize에 로그인 토큰을 설정한 뒤 GET /api/spec-profile로 본인의 data.specProfileId를 확인하세요.
@@ -152,11 +153,12 @@ public interface SpecProfileControllerDocs {
             - options는 slotNumber 1, 2, 3 순서입니다. 1은 USER_INPUT/selected=true, 2·3은 AI_RECOMMENDATION/selected=false입니다.
             - targetSpecProfileId: 사용자 슬롯만 실제 저장 ID이며 AI 대안은 필드 생략 없이 null입니다.
             - title, changes: 준비안 이름과 다시 제출할 수 있는 추가 스펙. 대안 선택 시 changes를 이 PUT에 제출합니다.
-            - expectedStartingSalary: 각 선택지를 기존 시뮬레이터로 분석한 첫 취업 예상 연봉(원).
+            - expectedStartingSalary: 기존 표본·통계·검증 규칙으로 일괄 예측한 각 선택지의 첫 취업 예상 연봉(원).
             - salaryIncreaseAmount: 각 예상 초봉에서 공통 CURRENT 예상 초봉을 뺀 값. 음수일 수 있습니다.
             - preparationPeriod, estimatedCost, decisionCriteria: 각 목표의 준비 기간·원화 비용·직무 활용도를 한 줄로 반환합니다.
               문장형 설명은 해요체이며 AI의 판단 과정·산정 가정·포함/제외 항목은 표시하지 않습니다.
-            - AI 대안은 재분석 후 기간·비용·활용도·연봉을 종합 평가하며 연봉 상승만을 필수 조건으로 삼지 않습니다.
+            - AI 대안은 같은 요청에서 기간·비용·활용도·연봉을 종합 평가하며 연봉 상승만을 필수 조건으로 삼지 않습니다.
+            - 생성·검증에 실패하면 추가 AI 재생성 없이 기존 오류를 반환합니다. 공통 HTTP 통신 재시도 정책은 동일합니다.
             - 생성·검증·분석에 실패하면 TARGET을 변경하지 않습니다. 분석 중 CURRENT 변경 시 409로 재요청을 안내합니다.
             """)
     @ApiResponses({

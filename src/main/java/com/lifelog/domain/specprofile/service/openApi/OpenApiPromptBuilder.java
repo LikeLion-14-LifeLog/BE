@@ -9,6 +9,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetScenarioDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileTargetReferenceResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationPreparedAnalysis;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
 import com.lifelog.global.exception.CustomException;
@@ -31,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -142,19 +144,18 @@ public class OpenApiPromptBuilder {
     }
 
     /**
-     * CURRENT·사용자 목표의 확정 분석과 실제 참조 목록으로 추가 스펙 대안 생성을 요청한다.
+     * CURRENT·사용자 목표와 재사용 가능한 분석·실제 참조 목록으로 대안을 생성한다.
      * @param base 요청 CURRENT
-     * @param baseAnalysis 공통 기업 규모로 계산한 현재 분석
+     * @param baseAnalysis 같은 조건의 캐시 분석. 없으면 null
      * @param storedAnalysis 동일 CURRENT의 기존 저장 진단. 없으면 null
-     * @param user 사용자 목표와 준비 정보
+     * @param user 사용자 목표와 선택적인 캐시 준비 정보
      * @param scale 공통 기업 규모
      * @param references 사용 가능한 실제 마스터 ID
-     * @param feedback 이전 생성의 검증 실패 이유
      * @return 대안 두 개를 생성할 프롬프트
      */
     public OpenApiPrompt buildTargetSpecRecommendationPrompt(SpecProfileAnalyzationSnapshot base,
             SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis, SpecProfileAnnualSalaryAnalyzationResDto storedAnalysis,
-            SpecProfileTargetScenarioDto user, CompanyGroupScale scale, SpecProfileTargetReferenceResDto references, String feedback) {
+            SpecProfileTargetScenarioDto user, CompanyGroupScale scale, SpecProfileTargetReferenceResDto references) {
         log.info("[OpenApiPromptBuilder] 목표 대안 프롬프트 생성 | buildTargetSpecRecommendationPrompt() - START");
         ObjectNode input = jsonMapper.createObjectNode();
         input.set("currentSpec", toPromptSnapshot(base));
@@ -165,8 +166,6 @@ public class OpenApiPromptBuilder {
         input.set("allowedReferences", jsonMapper.valueToTree(references));
         if (scale == null) input.putNull("companyGroupScale");
         else input.put("companyGroupScale", scale.name());
-        if (feedback == null) input.putNull("validationFeedback");
-        else input.put("validationFeedback", feedback);
         OpenApiPrompt result = buildTargetPrompt(targetRecommendationInstructions, input,
                 "target_spec_recommendation_v1", targetRecommendationSchema);
         log.info("[OpenApiPromptBuilder] 목표 대안 프롬프트 생성 | buildTargetSpecRecommendationPrompt() - END");
@@ -174,18 +173,20 @@ public class OpenApiPromptBuilder {
     }
 
     /**
-     * 재분석을 마친 값만 사용해 사용자 목표 대비 두 대안의 종합 우수성을 평가한다.
+     * 서버가 준비한 모든 시나리오의 연봉·준비 정보와 종합 평가를 한 번에 요청한다.
      * @param base 요청 CURRENT
-     * @param baseAnalysis 공통 현재 분석
+     * @param baseAnalysis 재사용 가능한 현재 분석. 없으면 null
      * @param user 사용자 목표
-     * @param alternatives 슬롯 2·3의 확정 결과
+     * @param alternatives 슬롯 2·3의 추천 스펙
      * @param scale 공통 기업 규모
-     * @return 수치를 수정하지 않는 종합 평가 프롬프트
+     * @param prepared 슬롯별 실제 비교 표본·통계·예측 입력
+     * @return 예측과 종합 평가를 포함한 일괄 요청
      */
-    public OpenApiPrompt buildTargetSpecEvaluationPrompt(SpecProfileAnalyzationSnapshot base,
+    public OpenApiPrompt buildTargetSpecAnalysisPrompt(SpecProfileAnalyzationSnapshot base,
             SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis, SpecProfileTargetScenarioDto user,
-            List<SpecProfileTargetScenarioDto> alternatives, CompanyGroupScale scale) {
-        log.info("[OpenApiPromptBuilder] 대안 종합 평가 생성 | buildTargetSpecEvaluationPrompt() - START");
+            List<SpecProfileTargetScenarioDto> alternatives, CompanyGroupScale scale,
+            Map<Integer, SpecProfileSimulationPreparedAnalysis> prepared) {
+        log.info("[OpenApiPromptBuilder] 목표 일괄 분석 생성 | buildTargetSpecAnalysisPrompt() - START");
         ObjectNode input = jsonMapper.createObjectNode();
         input.set("currentSpec", toPromptSnapshot(base));
         input.set("currentSimulationAnalysis", toPromptReport(baseAnalysis));
@@ -198,13 +199,41 @@ public class OpenApiPromptBuilder {
         }
         if (scale == null) input.putNull("companyGroupScale");
         else input.put("companyGroupScale", scale.name());
-        OpenApiPrompt result = buildTargetPrompt(targetEvaluationInstructions, input, "target_spec_evaluation_v1", targetEvaluationSchema);
-        log.info("[OpenApiPromptBuilder] 대안 종합 평가 생성 | buildTargetSpecEvaluationPrompt() - END");
+        ArrayNode analysisInputs = input.putArray("analysisInputs");
+        for (Map.Entry<Integer, SpecProfileSimulationPreparedAnalysis> entry : prepared.entrySet()) {
+            analysisInputs.addObject().put("slotNumber", entry.getKey())
+                    .set("input", jsonMapper.readTree(entry.getValue().prompt().inputJson()));
+        }
+        OpenApiPrompt result = buildTargetPrompt(instructions + "\n\n" + simulationInstructions + "\n\n" + targetEvaluationInstructions,
+                input, "target_spec_analysis_v1", buildTargetAnalysisSchema(prepared.keySet()));
+        log.info("[OpenApiPromptBuilder] 목표 일괄 분석 생성 | buildTargetSpecAnalysisPrompt() - END | count: {}", prepared.size());
+        return result;
+    }
+
+    /** 요청한 슬롯만 반환하도록 기존 예측·평가 계약으로 엄격한 일괄 응답 스키마를 구성한다. */
+    private JsonNode buildTargetAnalysisSchema(Set<Integer> slots) {
+        ObjectNode result = jsonMapper.createObjectNode().put("type", "object").put("additionalProperties", false);
+        result.putArray("required").add("analyses").add("evaluation");
+        ObjectNode properties = result.putObject("properties");
+        properties.set("evaluation", targetEvaluationSchema.deepCopy());
+        ObjectNode analyses = properties.putObject("analyses").put("type", "array")
+                .put("minItems", slots.size()).put("maxItems", slots.size());
+        ObjectNode item = analyses.putObject("items").put("type", "object").put("additionalProperties", false);
+        item.putArray("required").add("slotNumber").add("analysis");
+        ObjectNode itemProperties = item.putObject("properties");
+        ArrayNode allowedSlots = itemProperties.putObject("slotNumber").put("type", "integer").putArray("enum");
+        slots.stream().sorted().forEach(allowedSlots::add);
+        JsonNode predictionSchema = simulationSchema.deepCopy();
+        for (String field : List.of("summary", "comparisonGroupDescription", "recommendation")) {
+            ((ObjectNode) predictionSchema.path("properties").path(field)).put("maxLength", 160);
+        }
+        itemProperties.set("analysis", predictionSchema);
         return result;
     }
 
     /** 별도로 전달한 상세 스펙과 중복되는 적용 스펙의 사용자 항목 PK를 보고서에서 제거한다. */
     private ObjectNode toPromptReport(SpecProfileAnnualSalaryAnalyzationResDto report) {
+        if (report == null) return null;
         ObjectNode result = jsonMapper.valueToTree(report);
         result.remove("appliedSpecs");
         return result;
@@ -216,6 +245,10 @@ public class OpenApiPromptBuilder {
         result.put("title", scenario.title());
         result.set("changes", jsonMapper.valueToTree(scenario.changes()));
         result.set("spec", toPromptSnapshot(scenario.snapshot()));
+        if (scenario.analysis() == null) {
+            result.putNull("analysis").putNull("preparationPeriod").putNull("estimatedCost").putNull("decisionCriteria");
+            return result;
+        }
         result.set("analysis", toPromptReport(scenario.analysis().analysis()));
         result.put("preparationPeriod", scenario.analysis().preparationPeriod());
         result.put("estimatedCost", scenario.analysis().estimatedCost());

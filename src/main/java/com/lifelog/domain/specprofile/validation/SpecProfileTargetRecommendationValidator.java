@@ -39,7 +39,19 @@ public class SpecProfileTargetRecommendationValidator {
         if (mapper.sameChanges(options.get(0).changes(), options.get(1).changes())) fail();
     }
 
-    /** 확정된 재분석 결과로 두 대안 모두 종합적으로 우수하다고 평가되었는지 확인한다. */
+    /**
+     * 일괄 예측에 요청한 슬롯이 누락·중복·추가되지 않았는지 검증한다.
+     * @param response 일괄 예측·평가 응답
+     * @param expectedSlots 실제로 예측을 요청한 슬롯 번호
+     */
+    public void validateAnalyses(SpecProfileTargetAnalysisAiResDto response, Set<Integer> expectedSlots) {
+        if (response == null || !validator.validate(response).isEmpty()) fail();
+        List<Integer> actualSlots = response.analyses().stream()
+                .map(SpecProfileTargetAnalysisAiResDto.Prediction::slotNumber).sorted().toList();
+        if (!actualSlots.equals(expectedSlots.stream().sorted().toList())) fail();
+    }
+
+    /** 최종 예측 결과로 두 대안 모두 종합적으로 우수하다고 평가되었는지 확인한다. */
     public void validateEvaluation(SpecProfileTargetEvaluationAiResDto response) {
         if (response == null || !validator.validate(response).isEmpty()) fail();
         if (!response.evaluations().stream().map(SpecProfileTargetEvaluationAiResDto.Evaluation::slotNumber)
