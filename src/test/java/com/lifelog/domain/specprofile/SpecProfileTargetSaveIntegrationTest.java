@@ -126,7 +126,7 @@ class SpecProfileTargetSaveIntegrationTest {
     CyclicBarrier evaluationBarrier;
 
     @BeforeEach
-    void 준비() {
+    void 준비() throws Exception {
         member = members.saveAndFlush(new Member(UUID.randomUUID() + "@target.test"));
         profile = profiles.saveAndFlush(SpecProfile.builder().member(member).birthYear((short) 1999)
                 .residenceRegion(ResidentialArea.SEOUL).build());
@@ -156,6 +156,7 @@ class SpecProfileTargetSaveIntegrationTest {
                 .scoreNumeric(new BigDecimal("875")).acquiredAt(LocalDate.of(2024, 8, 1)).build());
         experiences.saveAndFlush(Experience.builder().specProfile(profile).type(ExperienceType.PROJECT)
                 .title("현재 프로젝트").startedAt(LocalDate.of(2024, 1, 1)).build());
+        saveCurrentAnalysis(36000000L);
         inputs.clear();
         simulationCalls.set(0);
         recommendationCalls.set(0);
@@ -266,12 +267,12 @@ class SpecProfileTargetSaveIntegrationTest {
                 .andExpect(jsonPath("$.data.changes.experiences.length()").value(1))
                 .andExpect(jsonPath("$.data.changes.experiences[0].endedYearMonth").value("2027-06"));
         assertThat(analysisState()).isEqualTo(analysisBefore);
-        assertThat(simulationCalls.get()).isEqualTo(4);
+        assertThat(simulationCalls.get()).isEqualTo(3);
         assertThat(cacheRegistry.find(member.getId())).isEmpty();
         List<JsonNode> analysisInputs = inputs.stream().filter(value -> value.has("snapshot")).toList();
         assertThat(analysisInputs).allSatisfy(value -> assertThat(value.path("companyGroupScale").asString()).isEqualTo("LARGE"));
-        assertThat(analysisInputs.get(2).path("snapshot").path("academicAbilities").size()).isEqualTo(1);
-        assertThat(analysisInputs.get(3).path("snapshot").path("certificates").size()).isEqualTo(1);
+        assertThat(analysisInputs.get(1).path("snapshot").path("academicAbilities").size()).isEqualTo(1);
+        assertThat(analysisInputs.get(2).path("snapshot").path("certificates").size()).isEqualTo(1);
     }
 
     @Test
@@ -288,7 +289,7 @@ class SpecProfileTargetSaveIntegrationTest {
     }
 
     @Test
-    @DisplayName("기업 규모가 다른 캐시는 재사용하지 않고 모든 시나리오를 같은 새 규모로 분석한다")
+    @DisplayName("기업 규모가 다른 캐시는 재사용하지 않고 목표 시나리오를 새 규모로 분석한다")
     void 기업규모변경_캐시무효_성공() throws Exception {
         // given
         simulate(fullRequest()).andExpect(status().isOk());
@@ -296,20 +297,77 @@ class SpecProfileTargetSaveIntegrationTest {
         inputs.clear();
         // when / then
         save(fullRequest().replace("LARGE", "SMALL")).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isEqualTo(4);
+        assertThat(simulationCalls.get()).isEqualTo(3);
         assertThat(inputs).allSatisfy(value -> assertThat(value.path("companyGroupScale").asString()).isEqualTo("SMALL"));
     }
 
     @Test
-    @DisplayName("현재 하위 스펙이 바뀌면 같은 사용자 캐시라도 재분석한다")
-    void 현재스펙변경_캐시무효_성공() throws Exception {
+    @DisplayName("저장된 현재 분석의 초봉·3년차·5년차를 POST와 규모가 다른 PUT의 비교 기준으로 유지한다")
+    void 저장연차별연봉_시뮬레이션과목표추천기준고정_성공() throws Exception {
+        // given
+        saveCurrentAnalysis(45000000L);
+        Map<String, List<Map<String, Object>>> analysisBefore = analysisState();
+        // when
+        JsonNode simulation = data(simulate(fullRequest()).andExpect(status().isOk()));
+        // then
+        assertThat(simulation.path("base").path("salaryResults").valueStream().toList())
+                .extracting(value -> value.path("annualIncomeExpected").asLong())
+                .containsExactly(45000000L, 55000000L, 65000000L);
+        assertThat(simulationCalls.get()).isEqualTo(1);
+        assertThat(inputs).hasSize(1).allSatisfy(value -> assertThat(value.path("baseAnalysis").path("salaryResults").valueStream().toList())
+                .extracting(result -> result.path("annualIncomeExpected").asLong())
+                .containsExactly(45000000L, 55000000L, 65000000L));
+
+        // when
+        resetAiRequests();
+        JsonNode target = data(save(fullRequest().replace("LARGE", "SMALL")).andExpect(status().isOk()));
+        // then
+        assertThat(target.path("baseExpectedStartingSalary").asLong()).isEqualTo(45000000L);
+        assertThat(target.path("options").get(0).path("expectedStartingSalary").asLong()).isEqualTo(41000000L);
+        assertThat(target.path("options").get(0).path("salaryIncreaseAmount").asLong()).isEqualTo(-4000000L);
+        assertThat(simulationCalls.get()).isEqualTo(3);
+        assertThat(inputs.stream().filter(value -> value.has("snapshot")).toList()).hasSize(3).allSatisfy(value -> {
+            assertThat(value.path("companyGroupScale").asString()).isEqualTo("SMALL");
+            assertThat(value.path("baseAnalysis").path("salaryResults").valueStream().toList())
+                    .extracting(result -> result.path("annualIncomeExpected").asLong())
+                    .containsExactly(45000000L, 55000000L, 65000000L);
+        });
+        assertThat(analysisState()).isEqualTo(analysisBefore);
+    }
+
+    @Test
+    @DisplayName("현재 스펙이 같아도 새 저장 분석이 생기면 이전 기준 연봉의 사용자 캐시를 재사용하지 않는다")
+    void 새현재분석완료_이전기준캐시무효_성공() throws Exception {
         // given
         simulate(fullRequest()).andExpect(status().isOk());
+        saveCurrentAnalysis(42000000L);
+        resetAiRequests();
+        // when
+        JsonNode response = data(save(fullRequest()).andExpect(status().isOk()));
+        // then
+        assertThat(response.path("baseExpectedStartingSalary").asLong()).isEqualTo(42000000L);
+        assertThat(response.path("options").get(0).path("salaryIncreaseAmount").asLong()).isEqualTo(-1000000L);
+        assertThat(simulationCalls.get()).isEqualTo(3);
+        assertThat(inputs.stream().filter(value -> value.has("snapshot")).toList()).hasSize(3).allSatisfy(value ->
+                assertThat(value.path("baseAnalysis").path("salaryResults").get(0).path("annualIncomeExpected").asLong())
+                        .isEqualTo(42000000L));
+    }
+
+    @Test
+    @DisplayName("현재 하위 스펙이 바뀌면 캐시가 있어도 다시 현재 분석을 요구하고 기존 TARGET을 보존한다")
+    void 현재스펙변경_현재분석필요_실패() throws Exception {
+        // given
+        long targetId = data(save(fullRequest()).andExpect(status().isOk())).path("selectedTargetSpecProfileId").asLong();
+        List<String> previousTitles = experiences.findAllBySpecProfileId(targetId).stream().map(Experience::getTitle).toList();
+        simulate(fullRequest()).andExpect(status().isOk());
         jdbc.update("UPDATE experience SET title='변경된 현재 프로젝트' WHERE spec_profile_id=?", profile.getId());
-        simulationCalls.set(0);
+        resetAiRequests();
         // when / then
-        save(fullRequest()).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isEqualTo(4);
+        simulate(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_4"));
+        save(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_4"));
+        assertThat(experiences.findAllBySpecProfileId(targetId).stream().map(Experience::getTitle).toList()).isEqualTo(previousTitles);
+        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isEqualTo(1);
+        assertThat(inputs).isEmpty();
     }
 
     @Test
@@ -324,7 +382,7 @@ class SpecProfileTargetSaveIntegrationTest {
         simulationCalls.set(0);
         // when / then
         save(fullRequest()).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isEqualTo(4);
+        assertThat(simulationCalls.get()).isEqualTo(3);
     }
 
     @Test
@@ -342,7 +400,7 @@ class SpecProfileTargetSaveIntegrationTest {
         // when
         JsonNode response = data(save(fullRequest()).andExpect(status().isOk()));
         // then
-        assertThat(simulationCalls.get()).isEqualTo(4);
+        assertThat(simulationCalls.get()).isEqualTo(3);
         assertThat(response.path("options").valueStream().toList()).hasSize(3).allSatisfy(option -> {
             assertThat(option.path("estimatedCost").asString()).isEqualTo("약 35만 원");
             assertThat(option.path("decisionCriteria").asString()).isEqualTo("실무 경험을 중시하는 채용에 적합해요.");
@@ -358,7 +416,7 @@ class SpecProfileTargetSaveIntegrationTest {
         assertThat(response.path("companyGroupScale").isNull()).isTrue();
         assertThat(response.path("options").get(0).path("title").asString()).isEqualTo("현재 스펙 유지");
         assertThat(response.path("options").get(0).path("salaryIncreaseAmount").asLong()).isZero();
-        assertThat(simulationCalls.get()).isEqualTo(3);
+        assertThat(simulationCalls.get()).isEqualTo(2);
         assertThat(inputs).allSatisfy(value -> assertThat(value.path("companyGroupScale").isNull()).isTrue());
     }
 
@@ -366,6 +424,7 @@ class SpecProfileTargetSaveIntegrationTest {
     @DisplayName("반복 요청은 같은 TARGET ID를 갱신하고 하위 항목을 누적하지 않는다")
     void 목표덮어쓰기_행중복방지_성공() throws Exception {
         // given
+        Map<String, List<Map<String, Object>>> analysisBefore = analysisState();
         long firstId = data(save(fullRequest()).andExpect(status().isOk())).path("selectedTargetSpecProfileId").asLong();
         // when
         long secondId = data(save(fullRequest().replace("사용자 인턴", "수정한 인턴")).andExpect(status().isOk()))
@@ -375,7 +434,7 @@ class SpecProfileTargetSaveIntegrationTest {
         assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isEqualTo(1);
         assertThat(experiences.findAllBySpecProfileId(firstId)).hasSize(2)
                 .extracting(Experience::getTitle).contains("수정한 인턴").doesNotContain("사용자 인턴");
-        assertThat(analysisState().values()).allSatisfy(value -> assertThat(value).isEmpty());
+        assertThat(analysisState()).isEqualTo(analysisBefore);
     }
 
     @Test
@@ -419,33 +478,52 @@ class SpecProfileTargetSaveIntegrationTest {
     @DisplayName("기존 CURRENT 분석 결과를 추천 입력에 전달하고 분석 테이블을 변경하지 않는다")
     void 기존분석조회_추천입력전달_성공() throws Exception {
         // given
-        simulate(fullRequest()).andExpect(status().isOk());
-        SpecProfileSimulationContext cached = cacheRegistry.find(member.getId()).orElseThrow();
-        SpecProfileAnalyzationRun run = runs.saveAndFlush(SpecProfileAnalyzationRun.builder().specProfile(profile).job(job)
-                .createdAt(LocalDateTime.now()).status(SpecProfileAnalyzationStatus.COMPLETED)
-                .specProfileSnapshotJson(jsonMapper.writeValueAsString(cached.base())).build());
-        results.saveAllAndFlush(resultMapper.toResults(run, cached.baseAnalysis()));
         Map<String, List<Map<String, Object>>> before = analysisState();
-        inputs.clear();
         // when / then
         save(fullRequest()).andExpect(status().isOk());
         JsonNode recommendationInput = inputs.stream().filter(value -> value.has("allowedReferences")).findFirst().orElseThrow();
-        assertThat(recommendationInput.path("currentStoredAnalysis").path("summary").asString()).isEqualTo("시뮬레이션 요약");
+        assertThat(recommendationInput.path("currentStoredAnalysis").path("summary").asString()).isEqualTo("저장된 현재 분석");
+        assertThat(recommendationInput.path("currentSimulationAnalysis").path("summary").asString()).isEqualTo("저장된 현재 분석");
         assertThat(recommendationInput.path("userTarget").path("preparationPeriod").asString()).isEqualTo("약 6개월");
         assertThat(analysisState()).isEqualTo(before);
     }
 
     @Test
-    @DisplayName("불완전한 기존 CURRENT 진단은 제외하고 저장하지 않은 현재 분석으로 비교한다")
-    void 기존결과불완전_조회롤백전파없이_성공() throws Exception {
+    @DisplayName("저장된 현재 분석이 없으면 POST와 PUT 모두 AI 호출 없이 거절하고 기존 TARGET을 보존한다")
+    void 현재분석없음_기존목표보존_실패() throws Exception {
         // given
+        long targetId = data(save(fullRequest()).andExpect(status().isOk())).path("selectedTargetSpecProfileId").asLong();
+        List<String> previousTitles = experiences.findAllBySpecProfileId(targetId).stream().map(Experience::getTitle).toList();
+        simulate(fullRequest()).andExpect(status().isOk());
+        clearCurrentAnalyses();
+        resetAiRequests();
+        // when / then
+        simulate(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_4"));
+        save(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_4"));
+        assertThat(experiences.findAllBySpecProfileId(targetId).stream().map(Experience::getTitle).toList()).isEqualTo(previousTitles);
+        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isEqualTo(1);
+        assertThat(inputs).isEmpty();
+        assertThat(analysisState().values()).allSatisfy(value -> assertThat(value).isEmpty());
+    }
+
+    @Test
+    @DisplayName("최신 완료 CURRENT 진단이 불완전하면 과거 결과로 대체하지 않고 현재 분석을 요구한다")
+    void 기존결과불완전_현재분석필요_실패() throws Exception {
+        // given
+        long targetId = data(save(fullRequest()).andExpect(status().isOk())).path("selectedTargetSpecProfileId").asLong();
+        List<String> previousTitles = experiences.findAllBySpecProfileId(targetId).stream().map(Experience::getTitle).toList();
         runs.saveAndFlush(SpecProfileAnalyzationRun.builder().specProfile(profile).job(job).createdAt(LocalDateTime.now())
                 .status(SpecProfileAnalyzationStatus.COMPLETED).specProfileSnapshotJson(jsonMapper.writeValueAsString(
                         snapshotMapper.toSnapshot(queryService.getCurrentProfile(member.getId())))).build());
+        Map<String, List<Map<String, Object>>> before = analysisState();
+        resetAiRequests();
         // when / then
-        save(fullRequest()).andExpect(status().isOk());
-        assertThat(runs.count()).isEqualTo(1);
-        assertThat(results.count()).isZero();
+        simulate(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_4"));
+        save(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_4"));
+        assertThat(inputs).isEmpty();
+        assertThat(experiences.findAllBySpecProfileId(targetId).stream().map(Experience::getTitle).toList()).isEqualTo(previousTitles);
+        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isEqualTo(1);
+        assertThat(analysisState()).isEqualTo(before);
     }
 
     @Test
@@ -506,11 +584,12 @@ class SpecProfileTargetSaveIntegrationTest {
     @DisplayName("분석 도중 CURRENT 변경을 감지하면 목표 저장 전에 409를 반환한다")
     void 분석중CURRENT변경_낡은목표저장_실패() throws Exception {
         // given
+        Map<String, List<Map<String, Object>>> analysisBefore = analysisState();
         changeCurrentDuringEvaluation = true;
         // when / then
         save(fullRequest()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TARGET_409_1"));
         assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isZero();
-        assertThat(analysisState().values()).allSatisfy(value -> assertThat(value).isEmpty());
+        assertThat(analysisState()).isEqualTo(analysisBefore);
     }
 
     @Test
@@ -610,6 +689,46 @@ class SpecProfileTargetSaveIntegrationTest {
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(0, salary - 2000000, salary, salary + 2000000),
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(3, salary + 8000000, salary + 10000000, salary + 12000000)),
                 "KEEP 비교 표본", "준비해 보세요.", period, "약 35만 원", "실무 경험을 중시하는 채용에 적합해요.");
+    }
+
+    private void saveCurrentAnalysis(long startingSalary) throws Exception {
+        SpecProfileAnalyzationSnapshot snapshot = snapshotMapper.toSnapshot(queryService.getCurrentProfile(member.getId()));
+        SpecProfileAnalyzationRun run = runs.saveAndFlush(SpecProfileAnalyzationRun.builder().specProfile(profile).job(job)
+                .createdAt(LocalDateTime.now()).status(SpecProfileAnalyzationStatus.COMPLETED)
+                .specProfileSnapshotJson(jsonMapper.writeValueAsString(snapshot)).build());
+        List<SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult> salaries = List.of(0, 3, 5).stream()
+                .map(annual -> {
+                    long salary = startingSalary + (annual == 0 ? 0L : annual == 3 ? 10000000L : 20000000L);
+                    return SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult.builder().annual(annual)
+                            .annualIncomeMin(salary - 2000000L).annualIncomeExpected(salary).annualIncomeMax(salary + 2000000L)
+                            .topPercent(annual == 0 ? new BigDecimal("50") : null).build();
+                }).toList();
+        KeepSalaryMatchedSampleStatistics statistics = KeepSalaryMatchedSampleStatistics.builder().sampleCount(10)
+                .annualSalaryMinKrw(new BigDecimal("30000000")).annualSalaryMaxKrw(new BigDecimal("50000000"))
+                .annualSalaryMeanKrw(new BigDecimal("36000000")).annualSalaryModesKrw(List.of(new BigDecimal("36000000")))
+                .modeFrequency(2).annualSalaryP25Krw(new BigDecimal("32000000"))
+                .annualSalaryMedianKrw(new BigDecimal("36000000")).annualSalaryP75Krw(new BigDecimal("40000000")).build();
+        SpecProfileAnnualSalaryAnalyzationResDto report = SpecProfileAnnualSalaryAnalyzationResDto.builder()
+                .summary("저장된 현재 분석").salaryResults(salaries)
+                .comparisonGroup(SpecProfileAnnualSalaryAnalyzationResDto.ComparisonGroup.builder()
+                        .jobSubCategoryCode("133").jobSubCategoryName("개발직").sampleCount(10)
+                        .observationYears(List.of(2024)).description("저장된 KEEP 비교 표본").build())
+                .statistics(statistics).recommendation("저장된 직무 준비 안내").salaryNotice("저장된 연봉 분석 안내").build();
+        results.saveAllAndFlush(resultMapper.toResults(run, report));
+    }
+
+    private void clearCurrentAnalyses() {
+        for (String table : List.of("spec_profile_analyzation_result_salary_mode", "spec_profile_analyzation_result_observation_year",
+                "spec_profile_analyzation_result", "spec_profile_analyzation_event_log", "spec_profile_analyzation_run")) {
+            jdbc.update("DELETE FROM " + table);
+        }
+    }
+
+    private void resetAiRequests() {
+        inputs.clear();
+        simulationCalls.set(0);
+        recommendationCalls.set(0);
+        evaluationCalls.set(0);
     }
 
     private Map<String, List<Map<String, Object>>> analysisState() {

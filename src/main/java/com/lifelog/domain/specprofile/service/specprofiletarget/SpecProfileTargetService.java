@@ -6,6 +6,7 @@ import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
 import com.lifelog.domain.specprofile.exception.SpecProfileErrorCode;
 import com.lifelog.domain.specprofile.exception.SpecProfileTargetErrorCode;
 import com.lifelog.domain.specprofile.mapper.SpecProfileTargetMapper;
+import com.lifelog.domain.specprofile.mapper.SpecProfileSimulationMapper;
 import com.lifelog.domain.specprofile.policy.SpecProfileTargetCachePolicy;
 import com.lifelog.domain.specprofile.service.openApi.OpenApiPromptBuilder;
 import com.lifelog.domain.specprofile.service.specprofilesimulation.SpecProfileSimulationAnalyzeService;
@@ -37,6 +38,7 @@ public class SpecProfileTargetService {
     private final SpecProfileTargetQueryService queryService;
     private final SpecProfileTargetSaveService saveService;
     private final SpecProfileTargetMapper mapper;
+    private final SpecProfileSimulationMapper simulationMapper;
     private final OpenApiPromptBuilder promptBuilder;
     private final OpenApiUtil openApiUtil;
 
@@ -52,13 +54,13 @@ public class SpecProfileTargetService {
         /* (1) 사용자 입력을 검증하고 하나의 CURRENT 스냅샷을 전체 비교에서 사용한다. */
         recommendationValidator.validateDates(request.changes());
         SpecProfileSimulationContext prepared = preparationService.prepare(memberId, mapper.toSimulationRequest(request));
-        UserSimulation simulation = resolveUserSimulation(memberId, prepared, request.companyGroupScale());
+        SpecProfileAnnualSalaryAnalyzationResDto stored = queryService.requireStoredCurrentAnalysis(memberId, prepared.base());
+        UserSimulation simulation = resolveUserSimulation(memberId, prepared, request.companyGroupScale(), stored);
         SpecProfileAnalyzationSnapshot target = prepared.simulated() == null ? prepared.base() : prepared.simulated();
         SpecProfileTargetScenarioDto user = SpecProfileTargetScenarioDto.builder()
                 .title(mapper.toUserTitle(prepared.base(), target, request.changes())).changes(request.changes())
                 .snapshot(target).analysis(simulation.user()).build();
         /* (2) 기존 CURRENT 진단은 읽기만 하며, 추천 및 대안별 재분석 결과는 요청 메모리에 유지한다. */
-        SpecProfileAnnualSalaryAnalyzationResDto stored = queryService.findStoredCurrentAnalysis(memberId, prepared.base());
         SpecProfileTargetReferenceResDto references = referenceQueryService.findAllowedReferences(prepared.base(), target);
         List<SpecProfileTargetScenarioDto> alternatives = generateAlternatives(prepared.base(), simulation.base(), stored,
                 user, request.companyGroupScale(), references);
@@ -69,8 +71,9 @@ public class SpecProfileTargetService {
         return response;
     }
 
-    /** 동일 조건의 최근 완료 시뮬레이션을 재사용하고 누락·불일치 시 기존 분석기를 실행한다. */
-    private UserSimulation resolveUserSimulation(Long memberId, SpecProfileSimulationContext prepared, CompanyGroupScale scale) {
+    /** 저장된 현재 분석을 기준으로 동일 조건의 목표 캐시를 재사용하거나 목표만 예측한다. */
+    private UserSimulation resolveUserSimulation(Long memberId, SpecProfileSimulationContext prepared, CompanyGroupScale scale,
+            SpecProfileAnnualSalaryAnalyzationResDto stored) {
         log.debug("[SpecProfileTargetService] 사용자 목표 분석 | resolveUserSimulation() - START | memberId: {}", memberId);
         SpecProfileSimulationContext cached = null;
         try {
@@ -79,12 +82,12 @@ public class SpecProfileTargetService {
             log.warn("[SpecProfileTargetService] 최근 캐시 조회 실패, 재분석 진행 | memberId: {}", memberId, exception);
         }
         UserSimulation result;
-        if (cachePolicy.canReuse(prepared, cached, scale)) {
-            result = new UserSimulation(cached.baseAnalysis(), mapper.toCachedUserAnalysis(cached));
+        if (cachePolicy.canReuse(prepared, cached, scale, stored)) {
+            result = new UserSimulation(stored, mapper.toCachedUserAnalysis(cached));
         } else {
-            SpecProfileSimulationAnalysis base = analyzeService.analyze(prepared.base(), scale, prepared.base());
+            SpecProfileSimulationAnalysis base = simulationMapper.toStoredBaseAnalysis(stored);
             SpecProfileSimulationAnalysis user = prepared.simulated() == null ? base
-                    : analyzeService.analyze(prepared.simulated(), scale, prepared.base());
+                    : analyzeService.analyze(prepared.simulated(), scale, prepared.base(), stored);
             result = new UserSimulation(base.analysis(), user);
         }
         log.debug("[SpecProfileTargetService] 사용자 목표 분석 | resolveUserSimulation() - END | memberId: {}", memberId);
@@ -109,7 +112,7 @@ public class SpecProfileTargetService {
                 List<SpecProfileTargetScenarioDto> alternatives = new ArrayList<>();
                 for (SpecProfileTargetRecommendationAiResDto.Option option : recommendation.options()) {
                     SpecProfileAnalyzationSnapshot snapshot = preparationService.prepareChanges(base, mapper.toSimulationChanges(option.changes()));
-                    SpecProfileSimulationAnalysis analysis = analyzeService.analyze(snapshot, scale, base);
+                    SpecProfileSimulationAnalysis analysis = analyzeService.analyze(snapshot, scale, base, baseAnalysis);
                     alternatives.add(SpecProfileTargetScenarioDto.builder().title(option.title()).changes(option.changes())
                             .snapshot(snapshot).analysis(analysis).build());
                 }

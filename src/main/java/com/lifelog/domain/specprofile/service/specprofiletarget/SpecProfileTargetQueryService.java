@@ -100,6 +100,21 @@ public class SpecProfileTargetQueryService {
     }
 
     /**
+     * 비교 기준으로 사용할 현재 스펙의 저장 진단을 확인한다.
+     * @param memberId 인증 회원
+     * @param base 요청 CURRENT
+     * @return 현재 스펙과 일치하는 완료 진단
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public SpecProfileAnnualSalaryAnalyzationResDto requireStoredCurrentAnalysis(Long memberId, SpecProfileAnalyzationSnapshot base) {
+        log.info("[SpecProfileTargetQueryService] 기준 연봉 확인 | requireStoredCurrentAnalysis() - START | profileId: {}", base.specProfileId());
+        SpecProfileAnnualSalaryAnalyzationResDto result = findStoredCurrentAnalysis(memberId, base);
+        if (result == null) throw new CustomException(SpecProfileTargetErrorCode.CURRENT_ANALYSIS_REQUIRED);
+        log.info("[SpecProfileTargetQueryService] 기준 연봉 확인 | requireStoredCurrentAnalysis() - END | profileId: {}", base.specProfileId());
+        return result;
+    }
+
+    /**
      * 현재 스냅샷과 일치하는 최신 완료 진단을 조회하며 없는 결과는 저장하지 않는다.
      * @param memberId 인증 회원
      * @param base 요청 CURRENT

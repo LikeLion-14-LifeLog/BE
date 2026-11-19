@@ -6,6 +6,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationOutcome;
 import com.lifelog.domain.specprofile.mapper.SpecProfileSimulationMapper;
+import com.lifelog.domain.specprofile.service.specprofiletarget.SpecProfileTargetQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,10 @@ public class SpecProfileSimulationService {
     private final SpecProfileSimulationAnalyzeService analyzeService;
     private final SpecProfileSimulationCacheRegistry cacheRegistry;
     private final SpecProfileSimulationMapper simulationMapper;
+    private final SpecProfileTargetQueryService queryService;
 
     /**
-     * 현재·목표 연봉을 계산하고 완료 결과를 회원별 메모리 캐시에 보관하며 DB에는 저장하지 않는다.
+     * 저장된 현재 분석과 목표 예측을 비교하고 완료 결과를 회원별 메모리 캐시에 보관한다.
      * @param memberId 인증 회원 ID
      * @param request 추가할 목표 조건과 공통 기업 규모
      * @return 현재·목표 연봉과 캐싱 성공 여부
@@ -32,10 +34,11 @@ public class SpecProfileSimulationService {
         log.info("[SpecProfileSimulationService] 연봉 시뮬레이션 | simulate() - START | memberId: {}", memberId);
         /* (1) 읽기 트랜잭션을 완료한 뒤 독립된 현재·목표 스냅샷을 받는다. */
         SpecProfileSimulationContext context = preparationService.prepare(memberId, request);
-        /* (2) 동일 기업 규모 조건으로 현재·목표를 분석한다. 실패는 호출자에게 그대로 전달한다. */
-        SpecProfileSimulationAnalysis base = analyzeService.analyze(context.base(), request.companyGroupScale(), context.base());
+        /* (2) 현재의 저장된 초봉·3년차·5년차를 유지하고 목표 스펙만 새로 예측한다. */
+        SpecProfileSimulationAnalysis base = simulationMapper.toStoredBaseAnalysis(
+                queryService.requireStoredCurrentAnalysis(memberId, context.base()));
         SpecProfileSimulationAnalysis simulated = context.simulated() == null ? null
-                : analyzeService.analyze(context.simulated(), request.companyGroupScale(), context.base());
+                : analyzeService.analyze(context.simulated(), request.companyGroupScale(), context.base(), base.analysis());
         /* (3) 저장 작업 없이 연차별 예측과 목표 준비 정보를 응답에 포함한다. */
         SpecProfileSimulationResDto result = simulationMapper.toResDto(context.base().specProfileId(),
                 request.companyGroupScale(), base, simulated);

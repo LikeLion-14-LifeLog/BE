@@ -17,13 +17,15 @@ public class SpecProfileTargetCachePolicy {
     private final SpecProfileTargetMapper mapper;
     private final AnnualSalaryAnalyzationResponseValidator responseValidator;
 
-    /** 동일 CURRENT·추가 스펙·기업 규모의 완전한 최신 결과만 재사용한다. */
-    public boolean canReuse(SpecProfileSimulationContext prepared, SpecProfileSimulationContext cached, CompanyGroupScale scale) {
+    /** 동일 CURRENT·추가 스펙·기업 규모·저장 기준 분석의 완전한 최신 결과만 재사용한다. */
+    public boolean canReuse(SpecProfileSimulationContext prepared, SpecProfileSimulationContext cached, CompanyGroupScale scale,
+            SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis) {
         if (cached == null || cached.base() == null || cached.simulated() == null || prepared.simulated() == null
                 || cached.response() == null || !Objects.equals(scale, cached.companyGroupScale())) return false;
         return mapper.comparisonKey(prepared.base()).equals(mapper.comparisonKey(cached.base()))
                 && mapper.comparisonKey(prepared.simulated()).equals(mapper.comparisonKey(cached.simulated()))
                 && validReport(cached.baseAnalysis()) && validReport(cached.simulatedAnalysis())
+                && mapper.comparisonKey(baseAnalysis).equals(mapper.comparisonKey(cached.baseAnalysis()))
                 && responseValidator.isSimulationDisplayReady(cached.response().preparationPeriod(),
                     cached.response().estimatedCost(), cached.response().decisionCriteria());
     }
