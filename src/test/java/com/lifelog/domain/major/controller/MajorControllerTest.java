@@ -17,6 +17,7 @@ import com.lifelog.global.exception.GlobalExceptionHandler;
 import com.lifelog.global.exception.CommonErrorCode;
 import com.lifelog.global.response.SliceResponse;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,6 +25,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -32,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,16 +51,23 @@ class MajorControllerTest {
     @MockitoBean private JwtProvider jwtProvider;
     @MockitoBean private MemberRepository memberRepository;
 
+    @BeforeEach
+    void 인증회원설정() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(42L, null, authentication.getAuthorities()));
+    }
+
     @Test
     @DisplayName("기본 조회는 ApiResponse 내부에 majors와 페이징 정보를 펼쳐서 반환한다")
     void 기본조회_응답형식_성공() throws Exception {
         // given
-        var major = MajorResDto.create(101L, MajorMainField.ENGINEERING, "컴퓨터ㆍ통신", "전산학ㆍ컴퓨터공학",
+        MajorResDto major = MajorResDto.create(101L, MajorMainField.ENGINEERING, "컴퓨터ㆍ통신", "전산학ㆍ컴퓨터공학",
                 "컴퓨터공학과", "U04080100061", DegreeProcess.UNIVERSITY);
-        given(service.searchMajors(null, null, 1, 20)).willReturn(SliceResponse.of(
+        given(service.searchMajors(42L, null, null, 1, 20)).willReturn(SliceResponse.of(
                 new PageImpl<>(List.of(major), PageRequest.of(0, 20), 1), MajorListResDto.create(List.of(major))));
         // when / then
-        mvc.perform(get("/api/majors"))
+        mvc.perform(get("/api/majors").param("memberId", "999"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("COMMON_200"))
@@ -79,7 +91,7 @@ class MajorControllerTest {
     @DisplayName("쿼리 조건을 바인딩하고 빈 결과는 빈 배열로 반환한다")
     void 필터_빈결과_성공() throws Exception {
         // given
-        given(service.searchMajors("검색", MajorMainField.ENGINEERING, 2, 10)).willReturn(SliceResponse.of(
+        given(service.searchMajors(42L, "검색", MajorMainField.ENGINEERING, 2, 10)).willReturn(SliceResponse.of(
                 new PageImpl<>(List.of(), PageRequest.of(1, 10), 0), MajorListResDto.create(List.of())));
         // when / then
         mvc.perform(get("/api/majors").param("keyword", "검색").param("mainField", "ENGINEERING")
@@ -105,12 +117,20 @@ class MajorControllerTest {
     }
 
     @Test
+    @DisplayName("회원 인증 없이 전공 목록을 조회하면 401을 반환한다")
+    void 전공조회_실패_미인증() throws Exception {
+        // given / when / then
+        mvc.perform(get("/api/majors").with(anonymous()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("페이지 번호와 크기 검증 실패는 공통 400 응답을 반환한다")
     void 검색조건_실패_검증오류() throws Exception {
         // given
-        given(service.searchMajors(null, null, 0, 20))
+        given(service.searchMajors(42L, null, null, 0, 20))
                 .willThrow(new CustomException(CommonErrorCode.INVALID_PAGE));
-        given(service.searchMajors(null, null, 1, 101))
+        given(service.searchMajors(42L, null, null, 1, 101))
                 .willThrow(new CustomException(CommonErrorCode.INVALID_SIZE));
         // when / then
         mvc.perform(get("/api/majors").param("page", "0"))

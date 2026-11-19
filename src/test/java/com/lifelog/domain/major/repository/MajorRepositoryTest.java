@@ -14,6 +14,8 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import java.util.List;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -87,6 +89,28 @@ class MajorRepositoryTest {
         assertThat(result.getTotalElements()).isEqualTo(4);
         assertThat(result.getTotalPages()).isEqualTo(2);
         assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("검색어와 계열을 생략해도 지정한 학위과정 조건과 전체 집계를 유지한다")
+    void 학위과정_검색조합_성공() {
+        // given
+        Major college = major("C00", "Computer Science", MajorMainField.ENGINEERING);
+        college.update(Major.builder().code("C00").name("Computer Science").mainField(MajorMainField.ENGINEERING)
+                .middleField(MajorMiddleField.COMPUTER_COMMUNICATIONS)
+                .subField(MajorSubField.COMPUTER_SCIENCE_ENGINEERING).degreeProcess(DegreeProcess.COLLEGE).build());
+        repository.saveAndFlush(college);
+        // when / then
+        assertThat(repository.searchMajors("pUtEr", null, List.of(DegreeProcess.UNIVERSITY), PageRequest.of(0, 20))
+                .getContent()).extracting(Major::getCode).containsExactly("C02");
+        assertThat(repository.searchMajors(null, MajorMainField.ENGINEERING,
+                List.of(DegreeProcess.UNIVERSITY), PageRequest.of(0, 20)).getTotalElements()).isEqualTo(2);
+        assertThat(repository.searchMajors(null, null, List.of(), PageRequest.of(0, 20)).getContent()).isEmpty();
+        for (String keyword : new String[]{"%", "_", "\\"}) {
+            Page<Major> result = repository.searchMajors(keyword, null,
+                    List.of(DegreeProcess.UNIVERSITY), PageRequest.of(0, 20));
+            assertThat(result.getContent()).extracting(Major::getCode).containsExactly("C04");
+        }
     }
 
     private Major major(String code, String name, MajorMainField mainField) {

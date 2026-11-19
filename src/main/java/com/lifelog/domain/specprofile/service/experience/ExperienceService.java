@@ -46,6 +46,8 @@ public class ExperienceService {
         Set<Long> unownedRequestedIdSet = new HashSet<>(requestedExperienceIdSet);
         unownedRequestedIdSet.removeAll(existingExperienceById.keySet());
         if (!unownedRequestedIdSet.isEmpty()) {
+            log.error("[ExperienceService] 요청한 경험 PK가 해당 프로필에 존재하지 않습니다 | syncExperiences() - END | profileId: {}, experienceIds: {}",
+                    profile.getId(), unownedRequestedIdSet);
             throw new CustomException(SpecProfileErrorCode.CHILD_NOT_FOUND);
         }
 

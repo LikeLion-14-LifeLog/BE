@@ -48,6 +48,8 @@ public class LanguageExamScoreService {
         Set<Long> unownedRequestedIdSet = new HashSet<>(requestedLanguageExamScoreIdSet);
         unownedRequestedIdSet.removeAll(existingLanguageExamScoreById.keySet());
         if (!unownedRequestedIdSet.isEmpty()) {
+            log.error("[LanguageExamScoreService] 요청한 어학 성적 PK가 해당 프로필에 존재하지 않습니다 | syncLanguageExamScores() - END | profileId: {}, languageExamScoreIds: {}",
+                    profile.getId(), unownedRequestedIdSet);
             throw new CustomException(SpecProfileErrorCode.CHILD_NOT_FOUND);
         }
 

@@ -39,6 +39,9 @@ class MajorOpenApiTest {
         }
         assertThat(document.at("/paths/~1api~1admin~1majors~1init/put").isMissingNode()).isFalse();
         assertThat(document.at("/components/securitySchemes/bearerAuth/scheme").asString()).isEqualTo("bearer");
+        for (JsonNode parameter : document.at("/paths/~1api~1majors/get/parameters")) {
+            assertThat(parameter.path("name").asString()).isNotEqualTo("memberId");
+        }
         for (String path : new String[]{"~1api~1majors/get", "~1api~1certifications/get",
                 "~1api~1admin~1majors~1init/put", "~1api~1admin~1certifications~1init/put"}) {
             JsonNode operation = document.at("/paths/" + path);

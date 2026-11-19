@@ -178,8 +178,10 @@ class MajorInitServiceTest {
 
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration
-    @EntityScan(basePackageClasses = Major.class)
-    @EnableJpaRepositories(basePackageClasses = MajorRepository.class)
+    @EntityScan(basePackages = "com.lifelog.domain")
+    @EnableJpaRepositories(basePackageClasses = {MajorRepository.class,
+            com.lifelog.domain.specprofile.repository.AcademicAbilityRepository.class,
+            com.lifelog.domain.member.repository.MemberRepository.class})
     @Import({MajorService.class, MajorInitService.class, MajorCsvReader.class, MajorMapper.class})
     static class TestApplication {
     }

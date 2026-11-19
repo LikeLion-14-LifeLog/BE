@@ -17,9 +17,9 @@ public class MajorController implements MajorControllerDocs {
 
     @Override
     public ApiResponse<SliceResponse<MajorListResDto>> searchMajors(
-            String keyword, MajorMainField mainField, int page, int size) {
+            Long memberId, String keyword, MajorMainField mainField, int page, int size) {
         return ApiResponse.success("요청이 성공적으로 처리되었습니다.",
-                majorService.searchMajors(keyword, mainField, page, size));
+                majorService.searchMajors(memberId, keyword, mainField, page, size));
     }
 
     @Override
