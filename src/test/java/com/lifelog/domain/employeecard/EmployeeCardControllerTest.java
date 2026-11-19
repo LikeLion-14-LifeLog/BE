@@ -50,11 +50,11 @@ class EmployeeCardControllerTest {
         verify(imageClient).edit(argThat(images -> images.size() == 3
                         && images.get(0).contentType().equals(MediaType.IMAGE_JPEG)
                         && images.get(0).bytes().length == 100
-                        && images.get(1).filename().equals("01-style.jpg")
-                        && images.get(1).contentType().equals(MediaType.IMAGE_JPEG)
-                        && images.get(2).filename().equals("02-style.png")
-                        && images.get(2).contentType().equals(MediaType.IMAGE_PNG)),
-                argThat(prompt -> prompt.contains("세미 리얼리스틱") && prompt.contains("캐릭터의 성별: 여성")));
+                        && images.get(1).filename().equals("사원증예시_남.png")
+                        && images.get(1).contentType().equals(MediaType.IMAGE_PNG)
+                        && images.get(1).bytes().length > 0
+                        && images.get(2).filename().equals("사원증예시_여.png")),
+                argThat(prompt -> prompt.contains("#EDEDED") && prompt.contains("캐릭터의 성별: 여성")));
     }
 
     @Test
