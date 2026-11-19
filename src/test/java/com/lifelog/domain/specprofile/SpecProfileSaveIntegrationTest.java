@@ -279,7 +279,7 @@ class SpecProfileSaveIntegrationTest {
         // given
         String token = jwt.createAccessToken(member.getId());
         // when / then
-        mvc.perform(put("/api/spec-profiles/current/temporary").header("Authorization", "Bearer " + token)
+        mvc.perform(put("/api/spec-profile/temporary").header("Authorization", "Bearer " + token)
                 .contentType("application/json").content(jsonBody("null", "[]")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
@@ -294,15 +294,15 @@ class SpecProfileSaveIntegrationTest {
     @DisplayName("미인증과 잘못된 JWT는 401, 잘못된 배열 요소는 400이다")
     void API_실패_인증및바인딩() throws Exception {
         // given / when / then
-        mvc.perform(put("/api/spec-profiles/current/temporary").contentType("application/json")
+        mvc.perform(put("/api/spec-profile/temporary").contentType("application/json")
                 .content(jsonBody("null", "[]"))).andExpect(status().isUnauthorized());
-        mvc.perform(put("/api/spec-profiles/current/temporary").header("Authorization", "Bearer invalid")
+        mvc.perform(put("/api/spec-profile/temporary").header("Authorization", "Bearer invalid")
                 .contentType("application/json").content(jsonBody("null", "[]"))).andExpect(status().isUnauthorized());
-        mvc.perform(put("/api/spec-profiles/current/temporary")
+        mvc.perform(put("/api/spec-profile/temporary")
                 .header("Authorization", "Bearer " + jwt.createAccessToken(member.getId()))
                 .contentType("application/json").content(jsonBody("[null]", "[]")))
                 .andExpect(status().isBadRequest());
-        mvc.perform(put("/api/spec-profiles/current/temporary")
+        mvc.perform(put("/api/spec-profile/temporary")
                 .header("Authorization", "Bearer " + jwt.createAccessToken(member.getId()))
                 .contentType("application/json").content(jsonBody("null", "null")))
                 .andExpect(status().isBadRequest());
@@ -322,11 +322,11 @@ class SpecProfileSaveIntegrationTest {
             """.formatted(job.getId(), certificate.getId(), exam.getId());
         String token = jwt.createAccessToken(member.getId());
         // when / then
-        mvc.perform(put("/api/spec-profiles/current/temporary").header("Authorization", "Bearer " + token)
+        mvc.perform(put("/api/spec-profile/temporary").header("Authorization", "Bearer " + token)
                 .contentType("application/json").content(body)).andExpect(status().isCreated());
         assertThat(scores.findAll()).singleElement().satisfies(score ->
                 assertThat(score.getExpiresAt()).isEqualTo(YearMonth.of(2026, 8).atDay(1)));
-        mvc.perform(put("/api/spec-profiles/current/temporary").header("Authorization", "Bearer " + token)
+        mvc.perform(put("/api/spec-profile/temporary").header("Authorization", "Bearer " + token)
                 .contentType("application/json").content(body.replace("2024-11", "2024-13")))
                 .andExpect(status().isBadRequest());
     }
@@ -443,7 +443,7 @@ class SpecProfileSaveIntegrationTest {
         // given
         String body = jsonBody("[]", "[]").replace("\"" + field + "\":[]", "\"" + field + "\":[null]");
         // when / then
-        mvc.perform(put("/api/spec-profiles/current/temporary")
+        mvc.perform(put("/api/spec-profile/temporary")
                 .header("Authorization", "Bearer " + jwt.createAccessToken(member.getId()))
                 .contentType("application/json").content(body))
                 .andExpect(status().isBadRequest());
@@ -458,7 +458,7 @@ class SpecProfileSaveIntegrationTest {
         // given
         String body = jsonBody("null", "[]").replace("\"" + field + "\":[]", "\"" + field + "\":null");
         // when / then
-        mvc.perform(put("/api/spec-profiles/current/temporary")
+        mvc.perform(put("/api/spec-profile/temporary")
                 .header("Authorization", "Bearer " + jwt.createAccessToken(member.getId()))
                 .contentType("application/json").content(body))
                 .andExpect(status().isBadRequest());
