@@ -43,7 +43,7 @@ class SpecProfileTargetPromptBuilderTest {
     void 추천프롬프트_분석전달과식별자제거_성공() {
         // given / when
         OpenApiPrompt prompt = new OpenApiPromptBuilder(jsonMapper, 200000).buildTargetSpecRecommendationPrompt(
-                snapshot, report, report, user, CompanyGroupScale.LARGE, references);
+                snapshot, report, report, user, CompanyGroupScale.LARGE, references, "중복 준비안을 바꿔 주세요");
         JsonNode input = jsonMapper.readTree(prompt.inputJson());
         // then
         assertThat(prompt.schemaName()).isEqualTo("target_spec_recommendation_v1");
@@ -62,7 +62,7 @@ class SpecProfileTargetPromptBuilderTest {
     void 추천스키마_입력형식일치_성공() {
         // given / when
         JsonNode schema = new OpenApiPromptBuilder(jsonMapper, 200000).buildTargetSpecRecommendationPrompt(
-                snapshot, report, null, user, null, references).responseSchema();
+                snapshot, report, null, user, null, references, null).responseSchema();
         // then
         assertRecordSchema(schema.path("$defs").path("changes"), SpecProfileTargetChanges.class);
         assertRecordSchema(schema.path("$defs").path("academic"), SpecProfileTargetChanges.AcademicAbilityChange.class);
@@ -74,33 +74,21 @@ class SpecProfileTargetPromptBuilderTest {
     }
 
     @Test
-    @DisplayName("일괄 분석은 실제 표본 입력과 필요한 슬롯만 예측하고 기존 캐시를 보존한다")
-    void 일괄프롬프트_예측슬롯과스키마_성공() {
+    @DisplayName("종합 평가는 최종 재분석 값과 슬롯을 전달하며 평가 결과만 생성한다")
+    void 평가프롬프트_최종수치고정_성공() {
         // given / when
-        SpecProfileSimulationPreparedAnalysis prepared = preparedAnalysis();
-        OpenApiPrompt prompt = new OpenApiPromptBuilder(jsonMapper, 200000).buildTargetSpecAnalysisPrompt(
-                snapshot, report, user, List.of(user, user), CompanyGroupScale.SMALL, Map.of(2, prepared, 3, prepared));
+        OpenApiPrompt prompt = new OpenApiPromptBuilder(jsonMapper, 200000).buildTargetSpecEvaluationPrompt(
+                snapshot, report, user, List.of(user, user), CompanyGroupScale.SMALL);
         JsonNode input = jsonMapper.readTree(prompt.inputJson());
         // then
-        assertThat(prompt.schemaName()).isEqualTo("target_spec_analysis_v1");
+        assertThat(prompt.schemaName()).isEqualTo("target_spec_evaluation_v1");
         assertThat(input.path("alternatives").get(0).path("slotNumber").asInt()).isEqualTo(2);
         assertThat(input.path("alternatives").get(1).path("slotNumber").asInt()).isEqualTo(3);
         assertThat(input.path("alternatives").get(0).path("analysis").path("salaryResults").get(0).path("annualIncomeExpected").asLong())
                 .isEqualTo(36000000L);
-        assertThat(input.path("analysisInputs").valueStream().map(value -> value.path("slotNumber").asInt()).toList())
-                .containsExactlyInAnyOrder(2, 3);
-        assertThat(input.path("analysisInputs").get(0).path("input").path("statistics").path("sampleCount").asInt()).isEqualTo(10);
-        assertRecordSchema(prompt.responseSchema(), SpecProfileTargetAnalysisAiResDto.class);
-        JsonNode analyses = prompt.responseSchema().path("properties").path("analyses");
-        assertThat(analyses.path("minItems").asInt()).isEqualTo(2);
-        assertThat(analyses.path("maxItems").asInt()).isEqualTo(2);
-        assertRecordSchema(analyses.path("items"), SpecProfileTargetAnalysisAiResDto.Prediction.class);
-        assertRecordSchema(analyses.path("items").path("properties").path("analysis"), SpecProfileSimulationAiResDto.class);
-        assertThat(analyses.path("items").path("properties").path("slotNumber").path("enum").valueStream().map(JsonNode::asInt).toList())
-                .containsExactly(2, 3);
-        assertRecordSchema(prompt.responseSchema().path("properties").path("evaluation").path("properties").path("evaluations").path("items"),
+        assertRecordSchema(prompt.responseSchema().path("properties").path("evaluations").path("items"),
                 SpecProfileTargetEvaluationAiResDto.Evaluation.class);
-        assertThat(prompt.developerInstructions()).contains("연봉이 낮아도", "수정하거나 analyses에 추가하지 마라", "서버가 실제로 계산한");
+        assertThat(prompt.developerInstructions()).contains("연봉이 낮아도", "수정하지 마라");
     }
 
     @Test
@@ -108,41 +96,8 @@ class SpecProfileTargetPromptBuilderTest {
     void 추천입력한도초과_실패() {
         // given / when / then
         assertThatThrownBy(() -> new OpenApiPromptBuilder(jsonMapper, 1).buildTargetSpecRecommendationPrompt(
-                snapshot, report, null, user, null, references)).isInstanceOfSatisfying(CustomException.class,
+                snapshot, report, null, user, null, references, null)).isInstanceOfSatisfying(CustomException.class,
                 value -> assertThat(value.getErrorCode()).isEqualTo(OpenApiErrorCode.OPEN_API_INPUT_TOO_LARGE));
-    }
-
-    @Test
-    @DisplayName("캐시가 없어도 AI를 선행 호출하지 않고 스펙과 null 분석으로 추천 입력을 만든다")
-    void 캐시없음_추천프롬프트_성공() {
-        // given
-        SpecProfileTargetScenarioDto uncachedUser = SpecProfileTargetScenarioDto.builder()
-                .title(user.title()).changes(user.changes()).snapshot(snapshot).build();
-        // when
-        OpenApiPrompt prompt = new OpenApiPromptBuilder(jsonMapper, 200000).buildTargetSpecRecommendationPrompt(
-                snapshot, null, null, uncachedUser, null, references);
-        // then
-        JsonNode input = jsonMapper.readTree(prompt.inputJson());
-        assertThat(input.path("currentSimulationAnalysis").isNull()).isTrue();
-        assertThat(input.path("userTarget").path("analysis").isNull()).isTrue();
-        assertThat(input.path("userTarget").path("spec").path("jobName").asString()).isEqualTo("개발자");
-        assertThat(input.has("validationFeedback")).isFalse();
-    }
-
-    @Test
-    @DisplayName("일괄 분석의 전체 입력이 한도를 넘으면 표본을 자르지 않고 거절한다")
-    void 일괄입력한도초과_실패() {
-        // given / when / then
-        assertThatThrownBy(() -> new OpenApiPromptBuilder(jsonMapper, 1).buildTargetSpecAnalysisPrompt(
-                snapshot, report, user, List.of(user, user), null, Map.of(2, preparedAnalysis(), 3, preparedAnalysis())))
-                .isInstanceOfSatisfying(CustomException.class,
-                        value -> assertThat(value.getErrorCode()).isEqualTo(OpenApiErrorCode.OPEN_API_INPUT_TOO_LARGE));
-    }
-
-    private SpecProfileSimulationPreparedAnalysis preparedAnalysis() {
-        return new SpecProfileSimulationPreparedAnalysis(snapshot, null, List.of(), null,
-                new OpenApiPrompt("예측 지침", "{\"snapshot\":{\"jobName\":\"개발자\"},\"statistics\":{\"sampleCount\":10},\"samples\":[]}",
-                        "annual_salary_simulation_v1", jsonMapper.createObjectNode()));
     }
 
     private void assertRecordSchema(JsonNode schema, Class<?> recordType) {
