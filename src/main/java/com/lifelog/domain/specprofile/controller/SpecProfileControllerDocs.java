@@ -399,7 +399,7 @@ public interface SpecProfileControllerDocs {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "최신 분석 실행이 대기 또는 진행 중"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "어학 데이터 미초기화 또는 프로필 무결성 오류")
     })
-    @PutMapping(value = "/api/spec-profiles/current/temporary", consumes = "application/json", produces = "application/json")
+    @PutMapping(value = "/api/spec-profile/temporary", consumes = "application/json", produces = "application/json")
     ResponseEntity<ApiResponse<Void>> saveTemporary(
             @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
             @Valid @RequestBody SpecProfileTemporarySaveReqDto request);
