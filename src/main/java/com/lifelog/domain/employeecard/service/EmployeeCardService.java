@@ -82,7 +82,7 @@ public class EmployeeCardService {
 
     // 선택한 성별을 캐릭터에 반영
     String buildPrompt(EmployeeCardGender gender) {
-        return basePrompt + "\n**[성별]**\n- 캐릭터의 성별: " + gender.getLabel() + "\n";
+        return basePrompt + "\n성별:\n- 캐릭터의 성별: " + gender.getLabel() + "\n";
     }
 
     private static String loadPrompt() {
