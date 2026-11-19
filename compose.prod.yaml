@@ -32,31 +32,11 @@ services:
       JOB_POSTING_SYNC_SCHEDULER_ENABLED: ${JOB_POSTING_SYNC_SCHEDULER_ENABLED:-true}
       # 기본 힙(RAM의 25%)으로는 채용공고 수집 중 OOM이 나서 직접 지정
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx512m}
-    # 서버에 직접 설치한 nginx가 80/443을 받아 여기로 프록시. 외부에는 공개하지 않음
       OPEN_API_KEY: ${OPEN_API_KEY:-}
       OPEN_API_MODEL: ${OPEN_API_MODEL:-gpt-6.1-sol}
-    # 외부에는 caddy(80/443)만 공개, 8080은 서버 내부 헬스 체크용
+    # 서버에 직접 설치한 nginx가 80/443을 받아 여기로 프록시. 외부에는 공개하지 않음
     ports:
       - "127.0.0.1:8080:8080"
 
-  caddy:
-    image: caddy:2
-    container_name: lifelog-caddy
-    restart: unless-stopped
-    depends_on:
-      - app
-    environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-
 volumes:
   lifelog-postgres-data:
-  caddy-data:
-  caddy-config:
