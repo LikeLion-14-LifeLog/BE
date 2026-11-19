@@ -104,16 +104,13 @@ public class SpecProfileTargetMapper {
         return comparisonKey(toSimulationChanges(first)).equals(comparisonKey(toSimulationChanges(second)));
     }
 
-    /**
-     * 추천 스펙과 해당 슬롯의 검증된 일괄 분석 결과를 결합한다.
-     * @param scenario 추천 스펙과 제목
-     * @param analysis 검증된 예측·준비 정보
-     * @return 분석 결과를 포함한 비교 시나리오
-     */
-    public SpecProfileTargetScenarioDto toAnalyzedScenario(SpecProfileTargetScenarioDto scenario,
-            SpecProfileSimulationAnalysis analysis) {
-        return SpecProfileTargetScenarioDto.builder().title(scenario.title()).changes(scenario.changes())
-                .snapshot(scenario.snapshot()).analysis(analysis).build();
+    /** 이전 생성안과 실제 종합 평가 이유를 함께 보내 재생성 시 같은 실패를 반복하지 않게 한다. */
+    public String toValidationFeedback(String message, SpecProfileTargetRecommendationAiResDto previous,
+            SpecProfileTargetEvaluationAiResDto evaluation) {
+        tools.jackson.databind.node.ObjectNode feedback = jsonMapper.createObjectNode().put("error", message);
+        if (previous != null) feedback.set("previousOptions", jsonMapper.valueToTree(previous.options()));
+        if (evaluation != null) feedback.set("finalEvaluations", jsonMapper.valueToTree(evaluation.evaluations()));
+        return feedback.toString();
     }
 
     /** JSON 객체 키·목록 순서와 소수의 불필요한 0을 정규화한다. */

@@ -36,8 +36,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -51,7 +49,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
-import tools.jackson.databind.node.ArrayNode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -66,7 +63,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -125,11 +121,9 @@ class SpecProfileTargetSaveIntegrationTest {
     Certification targetCertificate;
     Supplier<SpecProfileTargetRecommendationAiResDto> recommendation;
     boolean failRecommendation;
-    boolean failEvaluation;
     boolean rejectEvaluation;
     boolean changeCurrentDuringEvaluation;
     CyclicBarrier evaluationBarrier;
-    UnaryOperator<SpecProfileTargetAnalysisAiResDto> batchResponse;
 
     @BeforeEach
     void 준비() {
@@ -166,10 +160,9 @@ class SpecProfileTargetSaveIntegrationTest {
         simulationCalls.set(0);
         recommendationCalls.set(0);
         evaluationCalls.set(0);
-        failRecommendation = failEvaluation = rejectEvaluation = changeCurrentDuringEvaluation = false;
+        failRecommendation = rejectEvaluation = changeCurrentDuringEvaluation = false;
         evaluationBarrier = null;
         recommendation = this::validRecommendations;
-        batchResponse = UnaryOperator.identity();
         doAnswer(invocation -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             OpenApiPrompt prompt = invocation.getArgument(0);
@@ -178,7 +171,11 @@ class SpecProfileTargetSaveIntegrationTest {
             Class<?> responseType = invocation.getArgument(1);
             if (responseType == SpecProfileSimulationAiResDto.class) {
                 simulationCalls.incrementAndGet();
-                return simulationForSnapshot(input.path("snapshot"));
+                JsonNode spec = input.path("snapshot");
+                boolean user = spec.path("academicAbilities").size() > 1;
+                long salary = user ? 41000000L : spec.path("certificates").size() > 1 ? 39000000L
+                        : spec.path("experiences").size() > 1 ? 37000000L : 36000000L;
+                return simulationResponse(salary, user ? "약 6개월" : "약 2개월");
             }
             if (responseType == SpecProfileTargetRecommendationAiResDto.class) {
                 recommendationCalls.incrementAndGet();
@@ -186,19 +183,13 @@ class SpecProfileTargetSaveIntegrationTest {
                 assertThat(prompt.schemaName()).isEqualTo("target_spec_recommendation_v1");
                 return recommendation.get();
             }
-            if (responseType == SpecProfileTargetAnalysisAiResDto.class) {
+            if (responseType == SpecProfileTargetEvaluationAiResDto.class) {
                 evaluationCalls.incrementAndGet();
-                assertThat(prompt.schemaName()).isEqualTo("target_spec_analysis_v1");
-                if (failEvaluation) throw new CustomException(OpenApiErrorCode.OPEN_API_TIMEOUT);
                 if (changeCurrentDuringEvaluation) jdbc.update("UPDATE spec_profile SET birth_year=1998 WHERE spec_profile_id=?", profile.getId());
                 if (evaluationBarrier != null) evaluationBarrier.await(15, TimeUnit.SECONDS);
-                SpecProfileTargetEvaluationAiResDto evaluation = SpecProfileTargetEvaluationAiResDto.builder().evaluations(List.of(
+                return SpecProfileTargetEvaluationAiResDto.builder().evaluations(List.of(
                         new SpecProfileTargetEvaluationAiResDto.Evaluation(2, !rejectEvaluation, "기간·비용 부담을 줄이는 장점과 낮은 예상 연봉을 함께 고려"),
                         new SpecProfileTargetEvaluationAiResDto.Evaluation(3, !rejectEvaluation, "직무 포트폴리오 활용도와 짧은 준비 기간을 고려"))).build();
-                List<SpecProfileTargetAnalysisAiResDto.Prediction> predictions = input.path("analysisInputs").valueStream()
-                        .map(value -> new SpecProfileTargetAnalysisAiResDto.Prediction(value.path("slotNumber").asInt(),
-                                simulationForSnapshot(value.path("input").path("snapshot")))).toList();
-                return batchResponse.apply(SpecProfileTargetAnalysisAiResDto.create(predictions, evaluation));
             }
             throw new AssertionError("예상하지 않은 AI 요청 " + responseType);
         }).when(openApiUtil).request(any(OpenApiPrompt.class), any());
@@ -275,13 +266,9 @@ class SpecProfileTargetSaveIntegrationTest {
                 .andExpect(jsonPath("$.data.changes.experiences.length()").value(1))
                 .andExpect(jsonPath("$.data.changes.experiences[0].endedYearMonth").value("2027-06"));
         assertThat(analysisState()).isEqualTo(analysisBefore);
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
-        assertThat(inputs).hasSize(2);
+        assertThat(simulationCalls.get()).isEqualTo(4);
         assertThat(cacheRegistry.find(member.getId())).isEmpty();
-        List<JsonNode> analysisInputs = batchInput().path("analysisInputs").valueStream().map(value -> value.path("input")).toList();
-        assertThat(analysisInputs).hasSize(4);
+        List<JsonNode> analysisInputs = inputs.stream().filter(value -> value.has("snapshot")).toList();
         assertThat(analysisInputs).allSatisfy(value -> assertThat(value.path("companyGroupScale").asString()).isEqualTo("LARGE"));
         assertThat(analysisInputs.get(2).path("snapshot").path("academicAbilities").size()).isEqualTo(1);
         assertThat(analysisInputs.get(3).path("snapshot").path("certificates").size()).isEqualTo(1);
@@ -296,11 +283,7 @@ class SpecProfileTargetSaveIntegrationTest {
         simulationCalls.set(0);
         // when / then
         save(fullRequest()).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
-        assertThat(batchInput().path("analysisInputs").valueStream().map(value -> value.path("slotNumber").asInt()).toList())
-                .containsExactly(2, 3);
+        assertThat(simulationCalls.get()).isEqualTo(2);
         assertThat(cacheRegistry.find(member.getId()).orElseThrow()).isSameAs(cached);
     }
 
@@ -313,10 +296,7 @@ class SpecProfileTargetSaveIntegrationTest {
         inputs.clear();
         // when / then
         save(fullRequest().replace("LARGE", "SMALL")).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
-        assertThat(batchInput().path("analysisInputs")).hasSize(4);
+        assertThat(simulationCalls.get()).isEqualTo(4);
         assertThat(inputs).allSatisfy(value -> assertThat(value.path("companyGroupScale").asString()).isEqualTo("SMALL"));
     }
 
@@ -329,8 +309,7 @@ class SpecProfileTargetSaveIntegrationTest {
         simulationCalls.set(0);
         // when / then
         save(fullRequest()).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(batchInput().path("analysisInputs")).hasSize(4);
+        assertThat(simulationCalls.get()).isEqualTo(4);
     }
 
     @Test
@@ -345,8 +324,7 @@ class SpecProfileTargetSaveIntegrationTest {
         simulationCalls.set(0);
         // when / then
         save(fullRequest()).andExpect(status().isOk());
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(batchInput().path("analysisInputs")).hasSize(4);
+        assertThat(simulationCalls.get()).isEqualTo(4);
     }
 
     @Test
@@ -364,8 +342,7 @@ class SpecProfileTargetSaveIntegrationTest {
         // when
         JsonNode response = data(save(fullRequest()).andExpect(status().isOk()));
         // then
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(batchInput().path("analysisInputs")).hasSize(4);
+        assertThat(simulationCalls.get()).isEqualTo(4);
         assertThat(response.path("options").valueStream().toList()).hasSize(3).allSatisfy(option -> {
             assertThat(option.path("estimatedCost").asString()).isEqualTo("약 35만 원");
             assertThat(option.path("decisionCriteria").asString()).isEqualTo("실무 경험을 중시하는 채용에 적합해요.");
@@ -381,11 +358,7 @@ class SpecProfileTargetSaveIntegrationTest {
         assertThat(response.path("companyGroupScale").isNull()).isTrue();
         assertThat(response.path("options").get(0).path("title").asString()).isEqualTo("현재 스펙 유지");
         assertThat(response.path("options").get(0).path("salaryIncreaseAmount").asLong()).isZero();
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
-        assertThat(batchInput().path("analysisInputs").valueStream().map(value -> value.path("slotNumber").asInt()).toList())
-                .containsExactly(0, 2, 3);
+        assertThat(simulationCalls.get()).isEqualTo(3);
         assertThat(inputs).allSatisfy(value -> assertThat(value.path("companyGroupScale").isNull()).isTrue());
     }
 
@@ -489,8 +462,8 @@ class SpecProfileTargetSaveIntegrationTest {
     }
 
     @Test
-    @DisplayName("사용자 목표와 같은 AI 대안은 추가 재생성 없이 502로 처리하고 저장하지 않는다")
-    void 중복대안_추가호출없이_실패() throws Exception {
+    @DisplayName("사용자 목표와 같은 AI 대안은 한 번 재생성 후 502로 처리하고 저장하지 않는다")
+    void 중복대안_제한재생성후_실패() throws Exception {
         // given
         SpecProfileTargetChanges userChanges = jsonMapper.readValue(fullRequest(), SpecProfileTargetSaveReqDto.class).changes();
         recommendation = () -> SpecProfileTargetRecommendationAiResDto.builder().options(List.of(
@@ -498,24 +471,24 @@ class SpecProfileTargetSaveIntegrationTest {
                 validRecommendations().options().get(1))).build();
         // when / then
         save(fullRequest()).andExpect(status().isBadGateway()).andExpect(jsonPath("$.code").value("TARGET_502_1"));
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isZero();
+        assertThat(recommendationCalls.get()).isEqualTo(2);
         assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isZero();
     }
 
     @Test
-    @DisplayName("허용하지 않은 마스터 ID를 생성하면 추가 AI 호출 없이 거절한다")
-    void 잘못된대안참조_추가호출없이_실패() throws Exception {
+    @DisplayName("잘못된 첫 생성안과 오류를 다시 전달하여 유효한 대안을 한 번 재생성한다")
+    void 실패피드백전달_재생성_성공() throws Exception {
         // given
-        recommendation = () -> new SpecProfileTargetRecommendationAiResDto(List.of(
-                new SpecProfileTargetRecommendationAiResDto.Option("없는 자격증",
-                        new SpecProfileTargetChanges(null, List.of(new SpecProfileTargetChanges.CertificateChange(Long.MAX_VALUE, null)), null, null), "직무 활용도"),
-                validRecommendations().options().get(1)));
+        SpecProfileTargetChanges userChanges = jsonMapper.readValue(fullRequest(), SpecProfileTargetSaveReqDto.class).changes();
+        recommendation = () -> recommendationCalls.get() == 1 ? new SpecProfileTargetRecommendationAiResDto(List.of(
+                new SpecProfileTargetRecommendationAiResDto.Option("중복 사용자 목표", userChanges, "중복"),
+                validRecommendations().options().get(1))) : validRecommendations();
         // when / then
-        save(fullRequest()).andExpect(status().isBadGateway()).andExpect(jsonPath("$.code").value("TARGET_502_1"));
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isZero();
-        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isZero();
+        save(fullRequest()).andExpect(status().isOk());
+        assertThat(recommendationCalls.get()).isEqualTo(2);
+        List<JsonNode> attempts = inputs.stream().filter(value -> value.has("allowedReferences")).toList();
+        assertThat(attempts.get(1).path("validationFeedback").asString()).contains("previousOptions", "중복 사용자 목표");
+        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isEqualTo(1);
     }
 
     @Test
@@ -525,55 +498,8 @@ class SpecProfileTargetSaveIntegrationTest {
         rejectEvaluation = true;
         // when / then
         save(fullRequest()).andExpect(status().isBadGateway()).andExpect(jsonPath("$.code").value("TARGET_502_2"));
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
+        assertThat(evaluationCalls.get()).isEqualTo(2);
         assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isZero();
-    }
-
-    @Test
-    @DisplayName("두 번째 일괄 AI 요청이 실패해도 기존 목표와 하위 항목을 보존한다")
-    void 일괄AI실패_기존목표보존_성공() throws Exception {
-        // given
-        long id = data(save(fullRequest()).andExpect(status().isOk())).path("selectedTargetSpecProfileId").asLong();
-        List<String> previousTitles = experiences.findAllBySpecProfileId(id).stream().map(Experience::getTitle).toList();
-        failEvaluation = true;
-        recommendationCalls.set(0);
-        evaluationCalls.set(0);
-        // when / then
-        save(fullRequest().replace("사용자 인턴", "저장하면 안 되는 목표")).andExpect(status().isGatewayTimeout());
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
-        assertThat(experiences.findAllBySpecProfileId(id).stream().map(Experience::getTitle).toList()).isEqualTo(previousTitles);
-        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isEqualTo(1);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"MISSING_SLOT", "DUPLICATE_SLOT", "UNEXPECTED_SLOT", "INVALID_SALARY", "MISSING_PREPARATION", "MISSING_EVALUATION"})
-    @DisplayName("일괄 응답의 슬롯·연봉·준비 정보·평가가 잘못되면 두 번 호출한 뒤 저장 없이 거절한다")
-    void 잘못된일괄응답_추가호출과저장없이_실패(String invalid) throws Exception {
-        // given
-        batchResponse = response -> {
-            ObjectNode corrupted = (ObjectNode) jsonMapper.valueToTree(response);
-            ArrayNode predictions = (ArrayNode) corrupted.path("analyses");
-            switch (invalid) {
-                case "MISSING_SLOT" -> predictions.remove(0);
-                case "DUPLICATE_SLOT" -> predictions.set(1, predictions.get(0).deepCopy());
-                case "UNEXPECTED_SLOT" -> ((ObjectNode) predictions.get(0)).put("slotNumber", 9);
-                case "INVALID_SALARY" -> ((ObjectNode) predictions.get(0).path("analysis").path("salaryResults").get(0))
-                        .put("annualIncomeMin", Long.MAX_VALUE);
-                case "MISSING_PREPARATION" -> ((ObjectNode) predictions.get(0).path("analysis")).putNull("estimatedCost");
-                case "MISSING_EVALUATION" -> corrupted.putNull("evaluation");
-                default -> throw new AssertionError(invalid);
-            }
-            return jsonMapper.treeToValue(corrupted, SpecProfileTargetAnalysisAiResDto.class);
-        };
-        // when / then
-        save(fullRequest()).andExpect(status().isBadGateway());
-        assertThat(recommendationCalls.get()).isEqualTo(1);
-        assertThat(evaluationCalls.get()).isEqualTo(1);
-        assertThat(simulationCalls.get()).isZero();
-        assertThat(profiles.countByMemberIdAndType(member.getId(), SpecProfileType.TARGET)).isZero();
-        assertThat(analysisState().values()).allSatisfy(value -> assertThat(value).isEmpty());
     }
 
     @Test
@@ -684,17 +610,6 @@ class SpecProfileTargetSaveIntegrationTest {
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(0, salary - 2000000, salary, salary + 2000000),
                 new AnnualSalaryAnalyzationAiResDto.SalaryPrediction(3, salary + 8000000, salary + 10000000, salary + 12000000)),
                 "KEEP 비교 표본", "준비해 보세요.", period, "약 35만 원", "실무 경험을 중시하는 채용에 적합해요.");
-    }
-
-    private SpecProfileSimulationAiResDto simulationForSnapshot(JsonNode spec) {
-        boolean user = spec.path("academicAbilities").size() > 1;
-        long salary = user ? 41000000L : spec.path("certificates").size() > 1 ? 39000000L
-                : spec.path("experiences").size() > 1 ? 37000000L : 36000000L;
-        return simulationResponse(salary, user ? "약 6개월" : "약 2개월");
-    }
-
-    private JsonNode batchInput() {
-        return inputs.stream().filter(value -> value.has("analysisInputs")).findFirst().orElseThrow();
     }
 
     private Map<String, List<Map<String, Object>>> analysisState() {
