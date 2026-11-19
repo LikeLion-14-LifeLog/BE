@@ -61,6 +61,9 @@ public class SecurityConfig {
                                         "/api/v1/statistics/exploratory-first-job-change"
                                 ).permitAll()
 
+                                // 사원증 캐릭터 생성은 비로그인 허용 (동시 생성 수는 서비스에서 제한)
+                                .requestMatchers(HttpMethod.POST, "/api/employee-cards").permitAll()
+
 
                                 // 커리어 패스 조회 API는 인증 없이 접근 가능
                                 .requestMatchers(
