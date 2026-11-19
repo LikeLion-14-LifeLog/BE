@@ -124,7 +124,8 @@ public interface SpecProfileControllerDocs {
             - DB에는 사용자 TARGET(type=TARGET, sort_order=1, 선택됨)과 해당 스펙만 저장·덮어씁니다.
             - 목표 기업 규모와 추가 항목 구분도 함께 저장하여 GET /api/spec-profile/target으로 다시 조회할 수 있습니다.
             - 시뮬레이션 결과·준비 정보·AI 대안·분석 실행 이력은 저장하지 않고 동기로 반환합니다.
-            - 동일 조건의 최근 메모리 캐시가 있으면 사용자 분석을 재사용하고, 없으면 재분석합니다.
+            - 현재 스펙과 일치하는 기존 완료 분석의 초봉·3년차·5년차를 비교 기준으로 사용하며 현재 연봉을 다시 예측하지 않습니다.
+            - 저장 기준 분석까지 같은 최근 메모리 캐시가 있으면 사용자 목표 예측을 재사용하고, 없으면 목표만 재분석합니다.
             ### 2. Request Header
             - Authorization: Bearer {accessToken}. Content-Type: application/json.
             - Swagger에서는 Authorize에 로그인 토큰을 설정한 뒤 GET /api/spec-profile로 본인의 data.specProfileId를 확인하세요.
@@ -136,7 +137,8 @@ public interface SpecProfileControllerDocs {
             - baseSpecProfileId: 본인 CURRENT PK. 필수 양의 정수(int64).
             - Swagger 기본 예시는 인턴 경험 추가입니다. baseSpecProfileId의 10만 본인 CURRENT ID로 바꾸면 별도 마스터 ID 없이 요청할 수 있습니다.
             - CURRENT의 출생연도·거주지·희망 직무·학력 등 분석 필수 스펙이 먼저 입력되어 있어야 합니다.
-            - companyGroupScale: SMALL, LARGE 또는 null. 세 선택지에 동일하게 적용합니다.
+            - 현재 스펙의 완료 분석이 없거나 스펙이 변경되었거나 저장 결과가 불완전하면 TARGET_409_4로 먼저 연봉 분석을 안내합니다.
+            - companyGroupScale: SMALL, LARGE 또는 null. 추가 목표가 있는 사용자 선택지와 AI 대안 예측에 적용하며 추가 목표가 없으면 사용자 선택지는 저장된 현재 분석을 사용합니다.
             - changes: academicAbilities, certificates, languageExamScores, experiences 배열. 생략·null은 빈 목록입니다.
             - 추가 항목의 전공·자격증·시험은 실제 마스터 ID를 사용하며 현재 자격증·시험과 중복할 수 없습니다.
             - 날짜는 yyyy-MM이며 미래 월을 허용합니다. 졸업·취득·만료·종료월은 미정이면 null입니다.
@@ -153,7 +155,8 @@ public interface SpecProfileControllerDocs {
             - targetSpecProfileId: 사용자 슬롯만 실제 저장 ID이며 AI 대안은 필드 생략 없이 null입니다.
             - title, changes: 준비안 이름과 다시 제출할 수 있는 추가 스펙. 대안 선택 시 changes를 이 PUT에 제출합니다.
             - expectedStartingSalary: 각 선택지를 기존 시뮬레이터로 분석한 첫 취업 예상 연봉(원).
-            - salaryIncreaseAmount: 각 예상 초봉에서 공통 CURRENT 예상 초봉을 뺀 값. 음수일 수 있습니다.
+            - baseExpectedStartingSalary: 현재 스펙의 기존 완료 분석에 저장된 초봉. companyGroupScale로 재계산하지 않습니다.
+            - salaryIncreaseAmount: 각 예상 초봉에서 저장된 CURRENT 초봉을 뺀 값. 음수일 수 있습니다.
             - preparationPeriod, estimatedCost, decisionCriteria: 각 목표의 준비 기간·원화 비용·직무 활용도를 한 줄로 반환합니다.
               문장형 설명은 해요체이며 AI의 판단 과정·산정 가정·포함/제외 항목은 표시하지 않습니다.
             - AI 대안은 재분석 후 기간·비용·활용도·연봉을 종합 평가하며 연봉 상승만을 필수 조건으로 삼지 않습니다.
@@ -164,7 +167,7 @@ public interface SpecProfileControllerDocs {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력 조건·날짜·점수 오류 또는 사용자 목표 비교 표본 부족"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 CURRENT 또는 참조 정보 없음"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "분석 중 CURRENT 변경 또는 목표 슬롯 충돌"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "TARGET_409_4: 현재 스펙의 연봉 분석 필요 / 분석 중 CURRENT 변경 또는 목표 슬롯 충돌"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "AI 요청량 제한"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "프롬프트 준비 또는 목표 저장 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "유효한 대안 생성·종합 평가 또는 AI 응답 실패"),
@@ -178,7 +181,8 @@ public interface SpecProfileControllerDocs {
 
     @Operation(summary = "연봉 시뮬레이션 결과 요청", description = """
             ### 1. API 역할
-            - 본인 CURRENT 스펙과 목표 조건을 추가한 가상 스펙의 첫 취업·3년 차·5년 차 연봉을 계산합니다.
+            - 본인 CURRENT의 기존 연봉 분석 결과와 목표 조건을 추가한 가상 스펙의 첫 취업·3년 차·5년 차 연봉을 비교합니다.
+            - CURRENT는 현재 스펙과 일치하는 완료 분석의 저장값을 그대로 사용하고 목표 스펙만 새로 예측합니다. 기존 연봉 분석 API는 변경하지 않습니다.
             - 현재 항목은 유지하며 요청의 학력·자격증·어학·경험 목록을 각각 추가합니다.
             - 프로필, 분석 실행 이력, 이벤트, 결과는 DB에 저장하지 않습니다. 완료 결과를 동기로 반환합니다.
             - 전체 분석 성공 후 회원별 최신 스냅샷·기업 규모·현재/목표 분석을 메모리 캐시에 교체합니다.
@@ -190,6 +194,7 @@ public interface SpecProfileControllerDocs {
             - 없음
             ### 5. Request Body
             - baseSpecProfileId: 본인 CURRENT 프로필 PK. 필수 양의 정수(int64).
+            - 현재 스펙의 완료 분석이 없거나 스펙이 변경되었거나 저장 결과가 불완전하면 TARGET_409_4로 먼저 연봉 분석을 안내합니다.
             - companyGroupScale: SMALL 또는 LARGE. 선택값이며 생략·null이면 기업 규모를 지정하지 않습니다.
             - changes: 추가할 academicAbilities, certificates, languageExamScores, experiences 배열.
             - changes 또는 목록의 생략·null·빈 배열은 추가 조건 없음이며, 요청 간 조건을 누적하지 않습니다.
@@ -197,7 +202,7 @@ public interface SpecProfileControllerDocs {
             - 현재 스펙과 중복되는 자격증·시험 또는 요청 내 중복 자격증·시험은 거절합니다.
             - graduatedYearMonth, acquiredYearMonth, expiresYearMonth, endedYearMonth는 무시하며 검증·예측에 사용하지 않습니다.
             - 경험의 startedYearMonth는 yyyy-MM이며 미래 월을 허용합니다. 수상 시 기관명·수상 등급은 필수입니다.
-            - 기업 규모는 AI 예측 조건이며 기존 KEEP 표본의 필터 조건에 추가하지 않습니다.
+            - 기업 규모는 목표의 AI 예측 조건이며 저장된 현재 연봉과 기존 KEEP 표본의 필터 조건에 적용하지 않습니다.
             ### 6. Response Header
             - Content-Type: application/json
             ### 7. Response Body
@@ -206,6 +211,7 @@ public interface SpecProfileControllerDocs {
               "응답 캐싱에 실패했습니다. 현재 스펙으로 저장 요청 시 별도의 AI 호출 결과값이 저장되게 됩니다"
             - data: baseSpecProfileId, companyGroupScale, base, simulated, preparationPeriod, estimatedCost, decisionCriteria.
             - base·simulated는 salaryResults만 포함하며 추가 조건이 없으면 simulated는 필드 생략 없이 null입니다.
+            - base의 연차별 하한·예상·상한·상위 비율은 기존 연봉 분석 API의 저장 결과와 같습니다.
             - preparationPeriod: 추가 목표 조건을 달성하는 데 필요한 준비 기간만 한 줄로 반환합니다.
             - estimatedCost: 추가 목표 조건의 원화 비용·범위 또는 비용 상태만 간단히 반환합니다.
             - decisionCriteria: 희망 직무에서 목표 조건의 활용도만 해요체 한 문장으로 반환합니다.
@@ -220,6 +226,7 @@ public interface SpecProfileControllerDocs {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값·분류 조건 오류 또는 비교 표본 부족"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "본인 현재 스펙 또는 참조 정보 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "TARGET_409_4: 현재 스펙과 일치하는 완료 연봉 분석 필요"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "AI 요청량 제한"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "분석 입력 준비 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "AI 요청·응답 오류"),

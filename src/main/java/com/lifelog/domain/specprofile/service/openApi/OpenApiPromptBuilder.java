@@ -98,7 +98,7 @@ public class OpenApiPromptBuilder {
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
             KeepSalaryMatchedSampleStatistics statistics) {
         log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - START");
-        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, null, false, null);
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, null, false, null, null);
         log.info("[OpenApiPromptBuilder] 연봉 프롬프트 생성 | buildAnnualSalaryAnalyzationPrompt() - END");
         return result;
     }
@@ -116,7 +116,7 @@ public class OpenApiPromptBuilder {
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
             KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale) {
         log.info("[OpenApiPromptBuilder] 시뮬레이션 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - START");
-        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, snapshot);
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, snapshot, null);
         log.info("[OpenApiPromptBuilder] 시뮬레이션 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - END");
         return result;
     }
@@ -136,15 +136,36 @@ public class OpenApiPromptBuilder {
             KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale,
             SpecProfileAnalyzationSnapshot baseSnapshot) {
         log.info("[OpenApiPromptBuilder] 목표 준비 정보 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - START");
-        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, baseSnapshot);
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, baseSnapshot, null);
         log.info("[OpenApiPromptBuilder] 목표 준비 정보 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - END");
+        return result;
+    }
+
+    /**
+     * 저장된 현재 분석의 초봉·3년차·5년차를 비교 기준으로 목표 예측 입력에 포함한다.
+     * @param snapshot 목표 스냅샷
+     * @param conditions 구간 계산을 마친 분류 조건
+     * @param samples 실제 비교 표본
+     * @param statistics 서버 계산 통계
+     * @param companyGroupScale 목표 예측 기업 규모
+     * @param baseSnapshot 기준 현재 스펙
+     * @param baseAnalysis 현재 스펙으로 저장된 완료 분석
+     * @return 기준 분석과 목표 조건을 함께 포함한 전용 프롬프트
+     */
+    public OpenApiPrompt buildAnnualSalarySimulationPrompt(SpecProfileAnalyzationSnapshot snapshot,
+            SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
+            KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale,
+            SpecProfileAnalyzationSnapshot baseSnapshot, SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis) {
+        log.info("[OpenApiPromptBuilder] 기준 분석 비교 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - START");
+        OpenApiPrompt result = buildPrompt(snapshot, conditions, samples, statistics, companyGroupScale, true, baseSnapshot, baseAnalysis);
+        log.info("[OpenApiPromptBuilder] 기준 분석 비교 프롬프트 생성 | buildAnnualSalarySimulationPrompt() - END");
         return result;
     }
 
     /**
      * CURRENT·사용자 목표의 확정 분석과 실제 참조 목록으로 추가 스펙 대안 생성을 요청한다.
      * @param base 요청 CURRENT
-     * @param baseAnalysis 공통 기업 규모로 계산한 현재 분석
+     * @param baseAnalysis 비교 기준인 저장된 현재 분석
      * @param storedAnalysis 동일 CURRENT의 기존 저장 진단. 없으면 null
      * @param user 사용자 목표와 준비 정보
      * @param scale 공통 기업 규모
@@ -176,7 +197,7 @@ public class OpenApiPromptBuilder {
     /**
      * 재분석을 마친 값만 사용해 사용자 목표 대비 두 대안의 종합 우수성을 평가한다.
      * @param base 요청 CURRENT
-     * @param baseAnalysis 공통 현재 분석
+     * @param baseAnalysis 비교 기준인 저장된 현재 분석
      * @param user 사용자 목표
      * @param alternatives 슬롯 2·3의 확정 결과
      * @param scale 공통 기업 규모
@@ -240,7 +261,7 @@ public class OpenApiPromptBuilder {
     private OpenApiPrompt buildPrompt(SpecProfileAnalyzationSnapshot snapshot,
             SpecProfileSalaryClassificationData conditions, List<KeepSalaryMatchedSample> samples,
             KeepSalaryMatchedSampleStatistics statistics, CompanyGroupScale companyGroupScale, boolean simulation,
-            SpecProfileAnalyzationSnapshot baseSnapshot) {
+            SpecProfileAnalyzationSnapshot baseSnapshot, SpecProfileAnnualSalaryAnalyzationResDto baseAnalysis) {
         String developerInstructions = simulation ? instructions + "\n\n" + simulationInstructions : instructions;
         try {
             /* (1) DB 식별자를 제거하고 Enum 이름과 스냅샷의 상세 스펙을 보존한다. */
@@ -262,6 +283,7 @@ public class OpenApiPromptBuilder {
                 if (companyGroupScale == null) input.putNull("companyGroupScale");
                 else input.put("companyGroupScale", companyGroupScale.name());
                 input.set("baseSnapshot", toPromptSnapshot(baseSnapshot == null ? snapshot : baseSnapshot));
+                if (baseAnalysis != null) input.set("baseAnalysis", toPromptReport(baseAnalysis));
             }
             String inputJson = jsonMapper.writeValueAsString(input);
             /* (3) 한도를 넘으면 일부 표본을 임의로 생략하지 않고 명시적으로 실패한다. */

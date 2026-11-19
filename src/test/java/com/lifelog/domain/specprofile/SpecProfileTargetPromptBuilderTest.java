@@ -29,7 +29,10 @@ class SpecProfileTargetPromptBuilderTest {
             .languageExamScores(List.of()).experiences(List.of()).build();
     private final SpecProfileAnnualSalaryAnalyzationResDto report = SpecProfileAnnualSalaryAnalyzationResDto.builder()
             .summary("CURRENT 분석").recommendation("직무 준비")
-            .salaryResults(List.of(new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(0, 34000000L, 36000000L, 38000000L, null)))
+            .salaryResults(List.of(
+                    new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(0, 34000000L, 36000000L, 38000000L, null),
+                    new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(3, 44000000L, 46000000L, 48000000L, null),
+                    new SpecProfileAnnualSalaryAnalyzationResDto.SalaryResult(5, 54000000L, 56000000L, 58000000L, null)))
             .appliedSpecs(new SpecProfileAnnualSalaryAnalyzationResDto.AppliedSpecs(1999, null, 456L, "개발자",
                     List.of(), snapshot.certificates(), List.of(), List.of())).salaryNotice("관측 통계와 AI 예측 구분").build();
     private final SpecProfileTargetScenarioDto user = SpecProfileTargetScenarioDto.builder().title("사용자 목표")
@@ -37,6 +40,23 @@ class SpecProfileTargetPromptBuilderTest {
             .snapshot(snapshot).analysis(new SpecProfileSimulationAnalysis(report, "약 6개월", "약 35만 원", "직무 활용도")).build();
     private final SpecProfileTargetReferenceResDto references = new SpecProfileTargetReferenceResDto(List.of(),
             List.of(new SpecProfileTargetReferenceResDto.CertificateReference(77L, "목표 자격증")), List.of());
+
+    @Test
+    @DisplayName("목표 예측에는 저장된 현재 초봉·3년차·5년차와 범위를 그대로 전달하고 DB 식별자는 제거한다")
+    void 목표예측프롬프트_저장연차별기준전달_성공() {
+        // given
+        SpecProfileSalaryClassificationData conditions = new SpecProfileSalaryClassificationData("133", "개발직", List.of(), List.of(), 1);
+        // when
+        OpenApiPrompt prompt = new OpenApiPromptBuilder(jsonMapper, 200000).buildAnnualSalarySimulationPrompt(
+                snapshot, conditions, List.of(), null, CompanyGroupScale.SMALL, snapshot, report);
+        JsonNode input = jsonMapper.readTree(prompt.inputJson());
+        // then
+        assertThat(input.path("baseAnalysis").path("salaryResults"))
+                .isEqualTo(jsonMapper.readTree(jsonMapper.writeValueAsString(report.salaryResults())));
+        assertThat(input.path("baseAnalysis").path("summary").asString()).isEqualTo("CURRENT 분석");
+        assertThat(input.path("companyGroupScale").asString()).isEqualTo("SMALL");
+        assertThat(prompt.inputJson()).doesNotContain("specProfileId", "specProfileCertificateId", "certificateId", "jobId", "appliedSpecs");
+    }
 
     @Test
     @DisplayName("추천에는 CURRENT·사용자 목표 분석과 준비 정보를 전달하며 사용자 DB PK는 제거한다")
