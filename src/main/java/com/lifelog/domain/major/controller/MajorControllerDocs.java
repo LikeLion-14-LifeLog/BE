@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,14 +24,17 @@ public interface MajorControllerDocs {
 
     @Operation(summary = "전공 목록 조회 및 검색", description = """
             ### 1. API 역할
-            학과명을 대소문자 구분 없이 부분 일치 검색하고 대계열로 필터링합니다.
+            로그인 회원의 CURRENT 프로필에 저장된 학력 유형과 학위과정이 일치하는 전공만 조회합니다.
+            복수 학력은 각 학위과정을 함께 조회하며 석사·박사·일반 대학원은 GRADUATE_SCHOOL로 비교합니다.
+            CURRENT 학력이 없거나 전공 학위과정에 대응하지 않는 ETC 학력만 있으면 빈 목록을 반환합니다.
+            학과명을 대소문자 구분 없이 부분 일치 검색하고 대계열로 추가 필터링합니다.
             학과코드 오름차순이며 이름이 같아도 코드가 다르면 각각 반환합니다.
             ### 2. Request Header
             Authorization: Bearer {accessToken}. 로그인한 사용자 인증이 필요합니다.
             ### 3. Path Variable
             없음
             ### 4. Query String
-            keyword: 선택. 앞뒤 공백 제거 후 최대 100자. 누락·공백이면 전체 조회.
+            keyword: 선택. 앞뒤 공백 제거 후 최대 100자. 누락·공백이면 학과명 조건 생략.
             mainField: 선택. 대계열 enum. 생략하면 전체 계열.
             page: 선택. 기본값 1, 최솟값 1.
             size: 선택. 기본값 20, 1~100.
@@ -56,6 +60,7 @@ public interface MajorControllerDocs {
     })
     @GetMapping(value = "/api/majors", produces = MediaType.APPLICATION_JSON_VALUE)
     ApiResponse<SliceResponse<MajorListResDto>> searchMajors(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long memberId,
             @Parameter(description = "학과명 검색어. 앞뒤 공백 제거 후 최대 100자")
             @RequestParam(value = "keyword", required = false) String keyword,
             @Parameter(description = "대계열. 생략하면 전체 계열")

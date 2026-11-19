@@ -62,6 +62,8 @@ public class AcademicAbilityService {
         Set<Long> unownedAcademicAbilityIdSet = new HashSet<>(requestedAcademicAbilityIdSet);
         unownedAcademicAbilityIdSet.removeAll(existingAcademicAbilityMapById.keySet());
         if (!unownedAcademicAbilityIdSet.isEmpty()) {
+            log.error("[AcademicAbilityService] 요청한 학력 PK가 해당 프로필에 존재하지 않습니다 | syncAcademicAbilities() - END | profileId: {}, academicAbilityIds: {}",
+                    profile.getId(), unownedAcademicAbilityIdSet);
             throw new CustomException(SpecProfileErrorCode.CHILD_NOT_FOUND);
         }
         /*

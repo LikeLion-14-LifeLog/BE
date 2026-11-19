@@ -48,6 +48,8 @@ public class SpecProfileCertificateService {
         Set<Long> unownedRequestedIdSet = new HashSet<>(requestedSpecProfileCertificateIdSet);
         unownedRequestedIdSet.removeAll(existingSpecProfileCertificateById.keySet());
         if (!unownedRequestedIdSet.isEmpty()) {
+            log.error("[SpecProfileCertificateService] 요청한 보유 자격증 PK가 해당 프로필에 존재하지 않습니다 | syncCertificates() - END | profileId: {}, specProfileCertificateIds: {}",
+                    profile.getId(), unownedRequestedIdSet);
             throw new CustomException(SpecProfileErrorCode.CHILD_NOT_FOUND);
         }
 
