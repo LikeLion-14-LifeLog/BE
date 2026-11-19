@@ -3,6 +3,7 @@ package com.lifelog.domain.specprofile.controller;
 import com.lifelog.domain.specprofile.dto.SpecProfileTemporarySaveReqDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunLatestResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResultResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunStopResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationReqDto;
@@ -25,6 +26,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class SpecProfileController implements SpecProfileControllerDocs {
     private final SpecProfileService service;
+
+    @Override
+    public ApiResponse<SpecProfileAnalyzationRunLatestResDto> getLatestAnalyzationRun(Long memberId) {
+        return ApiResponse.success("runId 조회 성공", service.getLatestAnalyzationRun(memberId));
+    }
 
     @Override
     public ApiResponse<SpecProfileTargetResDto> getSelectedTarget(Long memberId) {

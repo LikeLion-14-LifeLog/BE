@@ -2,10 +2,12 @@ package com.lifelog.domain.specprofile.service.specprofileanalyzation;
 
 import com.lifelog.domain.job.entity.Job;
 import com.lifelog.domain.job.repository.JobRepository;
+import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunLatestResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileAnalyzationRunResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileResDto;
 import com.lifelog.domain.specprofile.entity.SpecProfile;
 import com.lifelog.domain.specprofile.entity.SpecProfileAnalyzationRun;
+import com.lifelog.domain.specprofile.enums.SpecProfileAnalyzationStatus;
 import com.lifelog.domain.specprofile.enums.SpecProfileType;
 import com.lifelog.domain.specprofile.event.SpecProfileAnnualSalaryAnalyzationRequestEvent;
 import com.lifelog.domain.specprofile.exception.SpecProfileAnalyzationErrorCode;
@@ -32,6 +34,11 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class SpecProfileAnalyzationService {
+    private static final List<SpecProfileAnalyzationStatus> LATEST_RUN_STATUSES = List.of(
+            SpecProfileAnalyzationStatus.QUEUED,
+            SpecProfileAnalyzationStatus.IN_PROGRESS,
+            SpecProfileAnalyzationStatus.COMPLETED);
+
     private final SpecProfileRepository profileRepository;
     private final SpecProfileAnalyzationRunRepository runRepository;
     private final SpecProfileAnalyzationEventLogRepository eventLogRepository;
@@ -42,6 +49,24 @@ public class SpecProfileAnalyzationService {
     private final SpecProfileAnalyzationMapper mapper;
     private final JsonMapper jsonMapper;
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * 본인의 미삭제 실행 중 대기·진행·완료 상태인 최신 실행 ID를 조회한다.
+     * @param memberId JWT로 인증된 회원 ID
+     * @return 최신 분석 실행 ID
+     */
+    @Transactional(readOnly = true)
+    public SpecProfileAnalyzationRunLatestResDto getLatestRun(Long memberId) {
+        log.info("[SpecProfileAnalyzationService] 최신 실행 조회 | getLatestRun() - START | memberId: {}", memberId);
+        /* (1) 회원 소유권과 허용 상태를 만족하는 미삭제 실행을 요청 시각과 PK 역순으로 조회한다. */
+        SpecProfileAnalyzationRun run = runRepository
+                .findFirstBySpecProfileMemberIdAndStatusInAndDeleteAtIsNullOrderByCreatedAtDescIdDesc(memberId, LATEST_RUN_STATUSES)
+                .orElseThrow(() -> new CustomException(SpecProfileAnalyzationErrorCode.RUN_NOT_FOUND));
+        /* (2) 분석을 다시 실행하지 않고 실행 ID만 응답으로 변환한다. */
+        SpecProfileAnalyzationRunLatestResDto result = mapper.toRunLatestResDto(run);
+        log.info("[SpecProfileAnalyzationService] 최신 실행 조회 | getLatestRun() - END | runId: {}", result.runId());
+        return result;
+    }
 
     /**
      * CURRENT 스펙의 스냅샷과 최초 실행 이벤트를 원자적으로 저장한다.
