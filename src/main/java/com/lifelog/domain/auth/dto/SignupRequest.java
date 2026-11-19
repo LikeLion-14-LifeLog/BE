@@ -1,4 +1,3 @@
-
 package com.lifelog.domain.auth.dto;
 
 import jakarta.validation.constraints.Email;
@@ -13,7 +12,11 @@ public record SignupRequest(
 
         @NotBlank(message = "비밀번호는 필수입니다.")
         @Size(min = 8, max = 72, message = "비밀번호는 8~72자로 입력해주세요.")
-        String password
+        String password,
+
+        @NotBlank(message = "닉네임은 필수입니다.")
+        @Size(max = 30, message = "닉네임은 30자 이하로 입력해주세요.")
+        String nickname
 
 ) {
 }

@@ -1,0 +1,2 @@
+ALTER TABLE member
+    ADD COLUMN nickname VARCHAR(30) NOT NULL DEFAULT '사용자';

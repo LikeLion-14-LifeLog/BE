@@ -5,6 +5,6 @@ spring:
       hibernate:
         format_sql: false
 
-# Caddy가 넘겨주는 X-Forwarded-* 헤더로 https 요청임을 인식
+# nginx가 넘겨주는 X-Forwarded-* 헤더로 https 요청임을 인식
 server:
   forward-headers-strategy: framework
