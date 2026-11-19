@@ -8,6 +8,7 @@ import com.lifelog.domain.specprofile.dto.SpecProfileAnnualSalaryAnalyzationResD
 import com.lifelog.domain.specprofile.dto.SpecProfileSalaryClassificationData;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAiResDto;
 import com.lifelog.domain.specprofile.dto.SpecProfileSimulationAnalysis;
+import com.lifelog.domain.specprofile.dto.SpecProfileSimulationPreparedAnalysis;
 import com.lifelog.domain.specprofile.enums.CompanyGroupScale;
 import com.lifelog.domain.specprofile.mapper.SpecProfileAnnualSalaryAnalyzationMapper;
 import com.lifelog.domain.specprofile.mapper.SpecProfileSimulationMapper;
@@ -53,25 +54,60 @@ public class SpecProfileSimulationAnalyzeService {
     public SpecProfileSimulationAnalysis analyze(SpecProfileAnalyzationSnapshot snapshot,
             CompanyGroupScale companyGroupScale, SpecProfileAnalyzationSnapshot baseSnapshot) {
         log.info("[SpecProfileSimulationAnalyzeService] 스냅샷 분석 | analyze() - START | profileId: {}", snapshot.specProfileId());
+        /* (1) 서버 계산과 AI 응답 구성을 분리하여 단일·일괄 예측에서 같은 검증을 사용한다. */
+        SpecProfileSimulationPreparedAnalysis prepared = prepareAnalysis(snapshot, companyGroupScale, baseSnapshot);
+        SpecProfileSimulationAiResDto simulationAi = openApiUtil.request(prepared.prompt(), SpecProfileSimulationAiResDto.class);
+        SpecProfileSimulationAnalysis result = completeAnalysis(prepared, simulationAi);
+        log.info("[SpecProfileSimulationAnalyzeService] 스냅샷 분석 | analyze() - END | profileId: {}", snapshot.specProfileId());
+        return result;
+    }
+
+    /**
+     * AI를 호출하지 않고 비교 표본·통계와 동일한 시뮬레이션 입력을 준비한다.
+     * @param snapshot 분석할 현재 또는 목표 스냅샷
+     * @param companyGroupScale 공통 기업 규모
+     * @param baseSnapshot 추가 목표를 구분할 현재 스펙
+     * @return 서버 계산 결과와 예측 프롬프트
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public SpecProfileSimulationPreparedAnalysis prepareAnalysis(SpecProfileAnalyzationSnapshot snapshot,
+            CompanyGroupScale companyGroupScale, SpecProfileAnalyzationSnapshot baseSnapshot) {
+        log.info("[SpecProfileSimulationAnalyzeService] 분석 입력 준비 | prepareAnalysis() - START | profileId: {}", snapshot.specProfileId());
         /* (1) 기존 규칙으로 분류 조건과 비교 표본을 선택한다. */
         SpecProfileSalaryClassificationData classified = scoreBandService.classify(
                 classificationQueryService.getClassificationData(snapshot));
         List<KeepSalaryMatchedSample> samples = recordSelectionService.findBestSamples(classified);
         KeepSalaryMatchedSampleStatistics statistics = statisticsService.calculate(samples);
-        /* (2) 기업 규모는 전용 프롬프트에 전달하고 기존 응답 계약으로 예측값을 검증한다. */
+        /* (2) 기업 규모와 기준 스펙을 예측 입력에 반영하며 외부 AI는 호출하지 않는다. */
         OpenApiPrompt prompt = promptBuilder.buildAnnualSalarySimulationPrompt(
                 snapshot, classified, samples, statistics, companyGroupScale, baseSnapshot);
-        SpecProfileSimulationAiResDto simulationAi = openApiUtil.request(prompt, SpecProfileSimulationAiResDto.class);
+        SpecProfileSimulationPreparedAnalysis result = new SpecProfileSimulationPreparedAnalysis(
+                snapshot, classified, samples, statistics, prompt);
+        log.info("[SpecProfileSimulationAnalyzeService] 분석 입력 준비 | prepareAnalysis() - END | samples: {}", samples.size());
+        return result;
+    }
+
+    /**
+     * 단일·일괄 AI 응답을 같은 규칙으로 검증하고 실제 비교 표본의 통계를 결합한다.
+     * @param prepared 서버에서 확정한 예측 입력
+     * @param simulationAi 해당 시나리오의 AI 예측
+     * @return 검증된 분석 결과와 목표 준비 정보
+     */
+    public SpecProfileSimulationAnalysis completeAnalysis(SpecProfileSimulationPreparedAnalysis prepared,
+            SpecProfileSimulationAiResDto simulationAi) {
+        log.info("[SpecProfileSimulationAnalyzeService] 예측 응답 구성 | completeAnalysis() - START | profileId: {}", prepared.snapshot().specProfileId());
+        /* (1) 준비 정보와 0·3·5년 차의 연봉 범위를 기존 규칙으로 검증한다. */
         responseValidator.validateSimulationDetails(simulationAi);
         AnnualSalaryAnalyzationAiResDto ai = simulationMapper.toAnalyzationAiResDto(simulationAi);
         responseValidator.validate(ai);
-        /* (3) 상위 비율은 AI 대신 서버가 실제 비교 표본으로 계산한다. */
+        /* (2) 상위 비율과 관측 통계는 AI 응답이 아닌 서버 계산값을 사용한다. */
         Long firstSalary = ai.salaryResults().stream().filter(prediction -> prediction.annual() == 0)
                 .findFirst().orElseThrow().annualIncomeExpected();
-        BigDecimal topPercent = statisticsService.calculateTopPercent(BigDecimal.valueOf(firstSalary), samples);
-        SpecProfileAnnualSalaryAnalyzationResDto analysis = analysisMapper.toResDto(ai, snapshot, classified, samples, statistics, topPercent);
+        BigDecimal topPercent = statisticsService.calculateTopPercent(BigDecimal.valueOf(firstSalary), prepared.samples());
+        SpecProfileAnnualSalaryAnalyzationResDto analysis = analysisMapper.toResDto(ai, prepared.snapshot(),
+                prepared.classified(), prepared.samples(), prepared.statistics(), topPercent);
         SpecProfileSimulationAnalysis result = simulationMapper.toAnalysis(analysis, simulationAi);
-        log.info("[SpecProfileSimulationAnalyzeService] 스냅샷 분석 | analyze() - END | profileId: {}", snapshot.specProfileId());
+        log.info("[SpecProfileSimulationAnalyzeService] 예측 응답 구성 | completeAnalysis() - END | profileId: {}", prepared.snapshot().specProfileId());
         return result;
     }
 }
