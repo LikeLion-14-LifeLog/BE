@@ -39,33 +39,35 @@ class EmployeeCardControllerTest {
     private OpenAiImageClient imageClient;
 
     @Test
-    void 비로그인으로_사진과_정보를_보내면_PNG를_그대로_반환() throws Exception {
+    void 비로그인으로_사진과_성별을_보내면_PNG를_그대로_반환() throws Exception {
         given(imageClient.edit(any(), any(), any())).willReturn(CHARACTER);
 
-        mockMvc.perform(request(photo("photo.jpg", MediaType.IMAGE_JPEG_VALUE, 100)))
+        mockMvc.perform(request(photo("photo.jpg", MediaType.IMAGE_JPEG_VALUE, 100), "FEMALE"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG))
                 .andExpect(content().bytes(CHARACTER));
 
-        verify(imageClient).edit(any(), eq(MediaType.IMAGE_JPEG), argThat(prompt -> !prompt.contains("Additional")));
+        verify(imageClient).edit(any(), eq(MediaType.IMAGE_JPEG), argThat(prompt -> prompt.contains("캐릭터의 성별: 여성")));
     }
 
     @Test
-    void 외형_설명이_있으면_프롬프트에_포함() throws Exception {
+    void 남성이면_프롬프트에_남성으로_반영() throws Exception {
         given(imageClient.edit(any(), any(), any())).willReturn(CHARACTER);
 
-        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100))
-                        .param("appearance", "검은 단발머리,\n 둥근 안경"))
+        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100), "MALE"))
                 .andExpect(status().isOk());
 
-        verify(imageClient).edit(any(), any(), argThat(prompt -> prompt.contains("검은 단발머리, 둥근 안경")));
+        verify(imageClient).edit(any(), any(), argThat(prompt -> prompt.contains("캐릭터의 성별: 남성")));
     }
 
     @Test
-    void 사진이_없으면_400() throws Exception {
-        mockMvc.perform(multipart(URL)
-                        .param("name", "홍길동").param("school", "한국대학교").param("department", "컴퓨터공학과")
-                        .with(anonymous()))
+    void 성별이_없거나_잘못된_값이면_400() throws Exception {
+        mockMvc.perform(multipart(URL).file(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100)).with(anonymous()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.data.gender").exists());
+
+        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100), "UNKNOWN"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
 
@@ -73,22 +75,17 @@ class EmployeeCardControllerTest {
     }
 
     @Test
-    void 이름이_비었거나_너무_길면_400() throws Exception {
-        mockMvc.perform(multipart(URL).file(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100))
-                        .param("name", " ").param("school", "한국대학교").param("department", "컴퓨터공학과")
-                        .with(anonymous()))
+    void 사진이_없으면_400() throws Exception {
+        mockMvc.perform(multipart(URL).param("gender", "MALE").with(anonymous()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.data.name").exists());
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
 
-        mockMvc.perform(multipart(URL).file(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100))
-                        .param("name", "가".repeat(21)).param("school", "한국대학교").param("department", "컴퓨터공학과")
-                        .with(anonymous()))
-                .andExpect(status().isBadRequest());
+        verify(imageClient, never()).edit(any(), any(), any());
     }
 
     @Test
     void 이미지가_아닌_파일이면_JSON_에러_400() throws Exception {
-        mockMvc.perform(request(photo("photo.gif", MediaType.IMAGE_GIF_VALUE, 100)))
+        mockMvc.perform(request(photo("photo.gif", MediaType.IMAGE_GIF_VALUE, 100), "MALE"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("EMPLOYEE_CARD_400"));
 
@@ -97,7 +94,7 @@ class EmployeeCardControllerTest {
 
     @Test
     void 빈_사진이면_400() throws Exception {
-        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 0)))
+        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 0), "MALE"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("EMPLOYEE_CARD_400"));
     }
@@ -106,14 +103,14 @@ class EmployeeCardControllerTest {
     void OpenAI가_거절하면_그_에러코드로_응답() throws Exception {
         given(imageClient.edit(any(), any(), any())).willThrow(new CustomException(OpenApiErrorCode.OPEN_API_REFUSED));
 
-        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100)))
+        mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100), "MALE"))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.code").value("OPEN_API_REFUSED"));
     }
 
-    private MockMultipartHttpServletRequestBuilder request(MockMultipartFile file) {
+    private MockMultipartHttpServletRequestBuilder request(MockMultipartFile file, String gender) {
         return (MockMultipartHttpServletRequestBuilder) multipart(URL).file(file)
-                .param("name", "홍길동").param("school", "한국대학교").param("department", "컴퓨터공학과")
+                .param("gender", gender)
                 .with(anonymous());
     }
 

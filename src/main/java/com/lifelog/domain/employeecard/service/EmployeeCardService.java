@@ -1,6 +1,7 @@
 package com.lifelog.domain.employeecard.service;
 
 import com.lifelog.domain.employeecard.dto.EmployeeCardCreateRequest;
+import com.lifelog.domain.employeecard.enums.EmployeeCardGender;
 import com.lifelog.domain.employeecard.exception.EmployeeCardErrorCode;
 import com.lifelog.global.exception.CustomException;
 import com.lifelog.global.infra.openai.OpenAiImageClient;
@@ -27,14 +28,13 @@ public class EmployeeCardService {
             MediaType.IMAGE_JPEG, MediaType.IMAGE_PNG, MediaType.parseMediaType("image/webp"));
 
     private static final String PROMPT = """
-            Transform the person in this photo into a single adorable 3D character in a Pixar-like animation style.
-            - Make it extra cute: big expressive sparkling eyes, soft rounded facial features, slightly larger head, \
-            rosy cheeks, smooth stylized skin and hair.
-            - Keep the person's recognizable features: face shape, hairstyle, hair color, skin tone, glasses and accessories.
-            - Head and shoulders, facing the camera, warm cheerful smile, wearing neat office attire.
-            - Background must be a flat solid light gray color #EDEDED with no gradient, pattern or objects.
-            - Soft studio lighting, high quality 3D render, suitable for an employee ID card photo.
-            - No text, logos, letters or watermarks in the image.
+            이 사진 속 인물을 아주 귀여운 3D 캐릭터 한 명으로 바꿔줘.
+            - 더 귀엽게: 크고 반짝이는 눈, 부드럽고 둥근 얼굴선, 살짝 큰 머리, 발그레한 볼, 매끈하게 다듬은 피부와 머리카락.
+            - 본인임을 알아볼 수 있는 특징은 유지: 얼굴형, 헤어스타일, 머리색, 피부톤, 안경과 액세서리.
+            - 정면을 보는 상반신 구도, 밝고 따뜻한 미소, 단정한 사무용 복장.
+            - 배경은 반드시 #EDEDED 밝은 회색 단색. 그라데이션, 무늬, 소품 없음.
+            - 부드러운 스튜디오 조명, 고품질 3D 렌더링, 사원증 사진에 어울리게.
+            - 이미지 안에 글자, 로고, 문자, 워터마크를 넣지 말 것.
             """;
 
     private final OpenAiImageClient imageClient;
@@ -57,7 +57,7 @@ public class EmployeeCardService {
             throw new CustomException(EmployeeCardErrorCode.GENERATION_BUSY);
         }
         try {
-            byte[] character = imageClient.edit(photo, contentType, buildPrompt(request.appearance()));
+            byte[] character = imageClient.edit(photo, contentType, buildPrompt(request.gender()));
             log.info("[EmployeeCardService] 캐릭터 생성 | createCharacterImage() - END | memberId: {}", memberId);
             return character;
         } finally {
@@ -65,13 +65,9 @@ public class EmployeeCardService {
         }
     }
 
-    // 외형 보조 설명은 사진을 보완하는 참고 정보로만 전달
-    String buildPrompt(String appearance) {
-        if (appearance == null || appearance.isBlank()) {
-            return PROMPT;
-        }
-        return PROMPT + "- Additional appearance notes from the user (use only to describe looks): "
-                + appearance.strip().replaceAll("\\s+", " ") + "\n";
+    // 선택한 성별을 캐릭터에 반영
+    String buildPrompt(EmployeeCardGender gender) {
+        return PROMPT + "- 캐릭터의 성별: " + gender.getLabel() + "\n";
     }
 
     private MediaType validatePhoto(MultipartFile photo) {
