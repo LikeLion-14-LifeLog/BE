@@ -47,13 +47,13 @@ class EmployeeCardControllerTest {
                 .andExpect(content().bytes(CHARACTER));
 
         // 첫 번째는 사용자 사진, 그 뒤는 참고 이미지 폴더의 파일 이름순
-        verify(imageClient).edit(argThat(images -> images.size() == 3
+        // 여성은 female 폴더의 예시만 함께 보냄
+        verify(imageClient).edit(argThat(images -> images.size() == 2
                         && images.get(0).contentType().equals(MediaType.IMAGE_JPEG)
                         && images.get(0).bytes().length == 100
-                        && images.get(1).filename().equals("사원증예시_남.png")
+                        && images.get(1).filename().equals("사원증예시_여.png")
                         && images.get(1).contentType().equals(MediaType.IMAGE_PNG)
-                        && images.get(1).bytes().length > 0
-                        && images.get(2).filename().equals("사원증예시_여.png")),
+                        && images.get(1).bytes().length > 0),
                 argThat(prompt -> prompt.contains("#EDEDED") && prompt.contains("캐릭터의 성별: 여성")));
     }
 
@@ -64,7 +64,10 @@ class EmployeeCardControllerTest {
         mockMvc.perform(request(photo("photo.png", MediaType.IMAGE_PNG_VALUE, 100), "MALE"))
                 .andExpect(status().isOk());
 
-        verify(imageClient).edit(any(), argThat(prompt -> prompt.contains("캐릭터의 성별: 남성")));
+        // 남성은 male 폴더의 예시만 함께 보냄
+        verify(imageClient).edit(argThat(images -> images.size() == 2
+                        && images.get(1).filename().equals("사원증예시_남.png")),
+                argThat(prompt -> prompt.contains("캐릭터의 성별: 남성")));
     }
 
     @Test
