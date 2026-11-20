@@ -7,7 +7,7 @@
 
 학력·전공·경험 등 내 스펙을 입력하면 공공 고용 패널 데이터를 기반으로 **예상 연봉 진단 · 조건별 연봉 시뮬레이션 · 선배들의 커리어 경로 · 맞춤 채용 공고**까지 제공하는 커리어 진단 서비스의 백엔드입니다.
 
-Spring Boot + PostgreSQL 기반의 REST API 서버로, 회원 인증, 스펙 프로필 관리, AI 연봉 분석, 커리어 경로 통계, 채용 공고 수집·추천, AI 캐릭터 사원증 생성을 담당합니다.
+Spring Boot + PostgreSQL 기반의 REST API 서버로, 회원 인증, 스펙 프로필 관리, AI 연봉 분석, 커리어 경로 통계, 채용 공고 수집·추천을 담당합니다.
 
 <br/>
 
@@ -39,11 +39,7 @@ Spring Boot + PostgreSQL 기반의 REST API 서버로, 회원 인증, 스펙 프
 - 직무 분류 · 필터 · 페이지네이션 조회, 상세 조회, 북마크
 - 대시보드에서 최근 진단 요약 · 추천 공고 · 스펙 입력 현황 제공
 
-### 6. 🪪 AI 캐릭터 사원증
-- 사용자 사진을 업로드하면 OpenAI 이미지 API로 3D 캐릭터 증명사진 생성
-- 성별별 스타일 참고 이미지와 버전 관리되는 프롬프트(`prompts/*.v1.txt`) 사용
-
-### 7. ⚠️ 공통
+### 6. ⚠️ 공통
 - `CustomException` + 도메인별 ErrorCode로 일관된 에러 응답
 - Swagger(springdoc) API 문서
 - Flyway로 DB 스키마 버전 관리
@@ -56,7 +52,7 @@ Spring Boot + PostgreSQL 기반의 REST API 서버로, 회원 인증, 스펙 프
 - **보안 / 인증:** Spring Security, JWT (jjwt 0.12)
 - **Database:** PostgreSQL 17, Spring Data JPA (Hibernate 7)
 - **Migration:** Flyway
-- **AI:** OpenAI API (텍스트 분석 · 이미지 생성)
+- **AI:** OpenAI API
 - **외부 데이터:** 서울 열린데이터광장 Open API, 공공 고용 패널 CSV
 - **API 문서:** springdoc-openapi (Swagger UI)
 - **Test:** JUnit 5, Spring Boot Test, H2, PostgreSQL 통합 테스트
@@ -78,7 +74,7 @@ Spring Boot + PostgreSQL 기반의 REST API 서버로, 회원 인증, 스펙 프
     └─ JobPostingSyncScheduler         (채용 공고 주기 동기화)
           │
           ├─ 🐘 PostgreSQL 17           (Flyway 마이그레이션)
-          ├─ 🤖 OpenAI API              (연봉 분석 · 목표 추천 · 사원증 이미지)
+          ├─ 🤖 OpenAI API              (연봉 분석 · 목표 추천)
           └─ 🏛️ 서울 열린데이터광장       (채용정보 recMntList)
 
 API
@@ -87,7 +83,6 @@ API
     ├─ /api/v1/career-paths         커리어 경로 · 연봉 분석 · 개인화 추천
     ├─ /api/v1/statistics           탐색형 통계
     ├─ /api/job-postings            채용 공고 · 북마크
-    ├─ /api/employee-cards          AI 캐릭터 사원증
     ├─ /api/dashboard               대시보드
     └─ /api/{majors, certifications, language-exams, jobs, residential-areas}   기준 데이터
 ```
@@ -118,7 +113,6 @@ BE/
    │  │  │  ├─ careerpath/        # 커리어 경로 · 연봉 분석 · 개인화 추천
    │  │  │  ├─ statistics/        # 탐색형 통계
    │  │  │  ├─ jobposting/        # 채용 공고 동기화 · 조회 · 북마크
-   │  │  │  ├─ employeecard/      # AI 캐릭터 사원증
    │  │  │  ├─ dashboard/         # 대시보드
    │  │  │  ├─ company/           # 기업
    │  │  │  └─ job · major · certification · languageexam · residentialarea   # 기준 데이터
@@ -192,8 +186,7 @@ API 문서: `http://localhost:8080/swagger-ui/index.html`
 <br/>
 
 ## 👥 팀 구성 (Backend)
-<p>
-  <a href="https://github.com/Ain134"><img src="https://github.com/Ain134.png" width="100"/></a>
-  <a href="https://github.com/nahjjun"><img src="https://github.com/nahjjun.png" width="100"/></a>
-  <a href="https://github.com/ju0321"><img src="https://github.com/ju0321.png" width="100"/></a>
-</p>
+| <a href="https://github.com/Ain134"><img src="https://github.com/Ain134.png" width="100"/></a> | <a href="https://github.com/nahjjun"><img src="https://github.com/nahjjun.png" width="100"/></a> | <a href="https://github.com/ju0321"><img src="https://github.com/ju0321.png" width="100"/></a> |
+|:---:|:---:|:---:|
+| [조아인 (@Ain134)](https://github.com/Ain134) | [나형준 (@nahjjun)](https://github.com/nahjjun) | [오지우 (@ju0321)](https://github.com/ju0321) |
+| Backend | Backend | Backend |
